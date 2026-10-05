@@ -1,3 +1,4 @@
+from django.http import HttpRequest
 from django.template.loader import render_to_string
 from django.utils.safestring import SafeString, mark_safe
 
@@ -11,8 +12,10 @@ class Component:
     def get_context(self) -> dict:
         return {"c": self, **self.props}
 
-    def render(self) -> SafeString:
-        return mark_safe(render_to_string(self.template_name, self.get_context()))
+    def render(self, request: HttpRequest | None = None) -> SafeString:
+        return mark_safe(
+            render_to_string(self.template_name, self.get_context(), request=request)
+        )
 
     def __html__(self) -> SafeString:
         return self.render()
