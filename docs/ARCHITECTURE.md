@@ -81,7 +81,7 @@ Decision: one user = one role. A person who needs two roles gets two separate ac
 - `GuardianStudentLink` connects a guardian to one or more students.
 
 Three layers of access, always in this order:
-1. **Role gate:** `RoleRequiredMixin` with `allowed_roles = [User.Role.TEACHER]` on every view. Wrong role gets 403.
+1. **Role gate:** `RoleRequiredMixin` with `allowed_roles = [Role.TEACHER]` on every view. Wrong role gets 403.
 2. **Scoped data:** `Model.objects.for_user(user)` returns only what that user may see (teacher: own batches; student: own records; guardian: linked students only; admin: own institute). Views never use an unscoped manager.
 3. **Plan flags:** `@requires_feature("fees")` for Basic vs Premium features.
 
