@@ -50,12 +50,12 @@ Status: `[ ]` open, `[x]` done. Priority: **High** = fix before merge or before 
 | C10 | Access test gaps after the C3/C4 fix (PR #7, `04ed6fa`): no test covers a page that never sets `allowed_roles` (changing the default to all roles leaves all 132 tests passing; the empty-list test sets `[]` explicitly). `ImproperlyConfigured` for an admin page without `menu_key` only fires at request time; add a test that walks every `PortalPageView` subclass with `portal = "admin"` and asserts `menu_key` is a key in `core/menus.py`. The two `test_mutation_sensitive_*` tests duplicate the tests above them. | PR #7 | Low | [ ] |
 | C11 | Admin profile menu (Account settings, Toolbar settings, Default portal, Institute settings, Manage users, Manage permissions, Select currency, Appearance, Sign out) is not in the menu config. Admin-only items (Institute settings, Manage users, Manage permissions, Select currency) must render and route only for `institute_admin`, never for `sub_admin`. Do with roadmap 1.2 (campus profile and settings). | PR #7 | High | [ ] |
 
-## Fix in roadmap 0.5 (tooling, Docker, CI)
+## Fix in roadmap 0.5 (tooling, CI)
 
 | # | Item | Source | Priority | Status |
 |---|---|---|---|---|
 | T1 | Tailwind build script: detect architecture (not only `linux-x64`) and verify the downloaded binary's checksum. | PR #3 | Low | [ ] |
-| T2 | Build the Tailwind CSS in Docker and CI (the built `app.css` is gitignored). | PR #3 | High | [ ] |
+| T2 | Build Tailwind CSS in CI (the built `app.css` is gitignored). | PR #3 | High | [ ] |
 | T3 | Dev and CI on PostgreSQL (dev currently SQLite, prod Postgres). | PR #1 | High | [ ] |
 | T4 | `.env` is not loaded by anything. Use `uv run --env-file .env`, or add a loader (needs approval). Remove the unused `DEBUG` line from `.env.example`. | PR #1 | Low | [ ] |
 
@@ -77,7 +77,7 @@ Status: `[ ]` open, `[x]` done. Priority: **High** = fix before merge or before 
 |---|---|---|---|
 | L1 | If a Content-Security-Policy is added, switch Alpine to its CSP-compatible build (the standard build needs `unsafe-eval`). | Low | [ ] |
 | L2 | Off-site backup copy of production data before real students are on it. | High | [ ] |
-| L3 | Check payment method for the chosen host (Render or Pethost) works from Pakistan before relying on it. | Low | [ ] |
+| L3 | Check that Pethost payment works from Pakistan before relying on it. Ask Pethost whether PostgreSQL and Redis are offered. | Low | [ ] |
 
 ## How this file is used
 

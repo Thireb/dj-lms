@@ -6,7 +6,7 @@ How the Django project is organised. Keep it simple: one Django project, many sm
 
 - Python 3.12+, Django 5.x.
 - PostgreSQL database.
-- Redis (or Render Key Value) for cache and task queue.
+- Redis for cache and task queue.
 - Celery + Celery Beat for background and scheduled jobs.
 - Django templates + Python component classes + django-crispy-forms + Tailwind CSS + HTMX + Alpine.js for UI (see `COMPONENTS.md` and `UI-GUIDELINES.md`).
 - WeasyPrint for PDFs (challans, salary receipts, certificates).
@@ -52,7 +52,8 @@ lms/
   static/
   tests/
   docs/              # these markdown files
-  render.yaml
+  Dockerfile         # deploy only (Phase 12)
+  compose.prod.yml   # deploy only (Phase 12)
   AGENTS.md
 ```
 

@@ -57,4 +57,4 @@ When asked to review a PR (use `gh pr view <n>` and `gh pr diff <n>`, or check o
 ## Out of scope for now
 
 - No Zoom, Google, WhatsApp or payment integrations. Manual meeting links only.
-- Deployment (Render or Pethost) is Phase 12. Do not set it up unless asked.
+- Deployment (Pethost, Docker) is Phase 12. Do not set it up unless asked. Local dev and CI do not use Docker.

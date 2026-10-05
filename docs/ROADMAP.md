@@ -13,7 +13,7 @@ Build order. Finish each phase before the next. Tick boxes as you go.
 - [x] 0.4 `apps/ui`: `Component` base class, all component classes from `COMPONENTS.md`, `/dev/components/` demo page.
 - [x] 0.4b crispy-forms setup: `BaseForm`, `TenantModelForm`, `HtmxModalForm`, layout objects `Section`, `Row`, `FormActions`.
 - [x] 0.4c Base page classes: `PortalPageView`, `DashboardPage`, `ListPage`, `DetailPage`, `FormPage`; menu classes per portal.
-- [ ] 0.5 Docker or local run script. CI that runs tests and lint.
+- [ ] 0.5 Local run script and CI that builds Tailwind and runs tests and lint. Docker moves to Phase 12.
 
 ## Phase 1: Accounts and institutes
 
@@ -100,7 +100,7 @@ Build order. Finish each phase before the next. Tick boxes as you go.
 
 ## Phase 12: Deploy
 
-- [ ] 12.1 `render.yaml` and first deploy (see `DEPLOYMENT.md`).
+- [ ] 12.1 Dockerfile, production compose file and first deploy on Pethost (see `DEPLOYMENT.md`).
 - [ ] 12.2 Object storage for uploads.
 - [ ] 12.3 Backups, error tracking, uptime check.
 
