@@ -1,0 +1,25 @@
+{% extends "ui/layouts/app_shell.html" %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block shell_content %}
+  <div class="space-y-10">
+    <header>
+      <h1 class="text-2xl font-semibold text-text">{{ page_title }}</h1>
+      <p class="mt-1 text-sm text-muted">Fake sample data for development only.</p>
+    </header>
+    {% for name, component in components.items %}
+      <section class="component-demo" data-component="{{ name }}">
+        <h2 class="mb-3 text-lg font-semibold capitalize text-text">{{ name|cut:"_" }}</h2>
+        <div class="rounded-lg border border-border bg-surface p-4">
+          {{ component }}
+        </div>
+      </section>
+    {% endfor %}
+  </div>
+{% endblock %}
+
+{% block extra_scripts %}
+  {% load static %}
+  <script src="{% static 'vendor/chart.js/chart.umd.min.js' %}" defer></script>
+{% endblock %}

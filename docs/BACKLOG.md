@@ -9,18 +9,22 @@ Status: `[ ]` open, `[x]` done. Priority: **High** = fix before merge or before 
 
 | # | Item | Source | Priority | Status |
 |---|---|---|---|---|
-| A1 | `@theme` must be `@theme inline` for portal-driven colors, otherwise every portal renders admin colors. Add a test that builds the CSS and checks `bg-primary` references `--portal-primary`. | PR #3 review | High | [ ] |
+| A1 | `@theme` must be `@theme inline` for portal-driven colors, otherwise every portal renders admin colors. Add a test that builds the CSS and checks `bg-primary` references `--portal-primary`. | PR #3 review | High | [x] on main |
 
-## Fix in PR B (components and forms)
+## Fix in PR B (components and forms) - PR #4 review
 
 | # | Item | Source | Priority | Status |
 |---|---|---|---|---|
-| B1 | CSRF for HTMX: `hx-headers` with `X-CSRFToken` on `<body>` in `base.html`. Test that an HTMX POST from a form works. | PR #3 | High | [ ] |
-| B2 | Load Chart.js only where a `ChartCard` renders (via `extra_scripts`), not on every page. | PR #3 | Low | [ ] |
-| B3 | `VENDOR_VERSIONS.md`: note Font Awesome icons are CC BY 4.0 (attribution kept in the file header). | PR #3 | Low | [ ] |
-| B4 | Exclude `*.md` from `ruff format` so the docs code blocks do not fail `format --check`. | PR #3 | Low | [ ] |
-| B5 | Escaping tests: text props (`Badge`, `DataTable` cells) are escaped; no `\|safe` or `mark_safe` outside `Component.render`. | PR B plan | High | [ ] |
-| B6 | `/dev/components/` returns 404 under prod settings and uses fake data only. | PR B plan | High | [ ] |
+| B1 | CSRF for HTMX. **Reopened:** `app_shell.html` overrides `{% block body_attrs %}` and drops `hx-headers`, so every real portal page has no CSRF header (verified on the rendered gallery). Fix: put `hx-headers` on the `<body>` tag in `base.html` outside the overridable block (or use `{{ block.super }}` in the shell). Test must assert the **rendered** body tag has `hx-headers`, not just that the test client can send the header. | PR #4 | High | [ ] |
+| B2 | Chart.js loads only with `ChartCard`. Done. Follow-up: the script tag repeats per card; load once per page. | PR #4 | Low | [x] (follow-up open) |
+| B3 | `VENDOR_VERSIONS.md` notes Font Awesome icons are CC BY 4.0. | PR #3 | Low | [x] |
+| B4 | `*.md` excluded from `ruff format`. | PR #3 | Low | [x] |
+| B5 | Escaping tests. **Partial:** only `Badge` and `DataTable` are tested. Add one parametrized test that puts an XSS string in every text prop of every component (my probe: all 21 buildable ones escape correctly today). Add a guard test: no `\|safe` or `mark_safe` anywhere except `Component.render` and the crispy `whole_uni_form.html` (allowlist those two). | PR #4 | High | [ ] |
+| B6 | `/dev/components/` returns 404 when `DEBUG=False`, fake data only. Done. | PR #4 | High | [x] |
+| B7 | **New:** `TenantModelForm` accepts `institute` but never uses it: `save()` fails with `IntegrityError` on `institute_id` (verified). Set `instance.institute` for new objects and limit related choice fields to that institute. Test: saving creates the row in that institute and a form for institute A cannot select a B object. | PR #4 | High | [ ] |
+| B8 | `ProgressBar`: coerce `value` to a number clamped 0 to 100 (it is interpolated into `style="width: ...%"`). | PR #4 | Low | [ ] |
+| B9 | URL props (`Button`, `QuickAction`, `Tabs` `hx-get`, `SectionCard` link): reject `javascript:` and other unsafe schemes with a small `safe_url()` helper. | PR #4 | Low | [ ] |
+| B10 | `CountdownCard` puts a value inside an Alpine expression string (`countdownCard('...')`), and `countdownCard` is not defined anywhere, so Alpine logs an error wherever the card renders. Use a `data-` attribute read by a defined Alpine component. Build it with roadmap 3.4 at the latest. | PR #4 | Medium | [ ] |
 
 ## Fix in PR C (pages and menus)
 

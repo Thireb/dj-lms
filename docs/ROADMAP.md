@@ -10,8 +10,8 @@ Build order. Finish each phase before the next. Tick boxes as you go.
 - [ ] 0.2 `core` app: `TenantModel`, tenant manager, tenant middleware, time zone middleware.
 - [x] 0.2b Hardening of 0.2: fail-closed tenant manager, `unscoped` manager, `tenant_context()`, reject users without a valid institute, `on_delete=PROTECT`, `config/settings/test.py`, one institute lookup per request, roles in `apps/core/roles.py`, `ruff format --check` clean.
 - [x] 0.3 Tailwind, HTMX, Alpine, Font Awesome Free set up (self-hosted, no CDN). `base.html` and `app_shell.html`.
-- [ ] 0.4 `apps/ui`: `Component` base class, all component classes from `COMPONENTS.md`, `/dev/components/` demo page.
-- [ ] 0.4b crispy-forms setup: `BaseForm`, `TenantModelForm`, `HtmxModalForm`, layout objects `Section`, `Row`, `FormActions`.
+- [x] 0.4 `apps/ui`: `Component` base class, all component classes from `COMPONENTS.md`, `/dev/components/` demo page.
+- [x] 0.4b crispy-forms setup: `BaseForm`, `TenantModelForm`, `HtmxModalForm`, layout objects `Section`, `Row`, `FormActions`.
 - [ ] 0.4c Base page classes: `PortalPageView`, `DashboardPage`, `ListPage`, `DetailPage`, `FormPage`; menu classes per portal.
 - [ ] 0.5 Docker or local run script. CI that runs tests and lint.
 

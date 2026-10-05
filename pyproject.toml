@@ -9,6 +9,7 @@ authors = [
 requires-python = ">=3.12"
 dependencies = [
     "django>=5.1,<6",
+    "django-crispy-forms>=2.3",
     "psycopg[binary]>=3.2",
 ]
 
@@ -32,6 +33,9 @@ select = ["E", "F", "I", "UP", "B"]
 
 [tool.ruff.lint.per-file-ignores]
 "**/migrations/*.py" = ["E501"]
+
+[tool.ruff.format]
+exclude = ["*.md"]
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "config.settings.test"

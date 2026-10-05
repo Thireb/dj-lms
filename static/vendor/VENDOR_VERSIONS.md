@@ -9,4 +9,6 @@
 
 Font Awesome Free is licensed under the SIL OFL 1.1 and MIT (see `static/vendor/fontawesome/LICENSE.txt`).
 
+Font Awesome **icons** (SVG/icon glyphs) are also available under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); keep attribution in this file when updating the vendored bundle.
+
 Tailwind CSS standalone CLI version is pinned in `static/css/TAILWIND_VERSION`.
