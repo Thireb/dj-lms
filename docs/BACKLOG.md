@@ -40,6 +40,8 @@ Status: `[ ]` open, `[x]` done. Priority: **High** = fix before merge or before 
 |---|---|---|---|---|
 | C1 | Menu items with a missing URL name render as disabled `#`, never `NoReverseMatch`; a test lists unbuilt items. | PR B/C plan | High | [x] |
 | C2 | Menu and mixin filtering use plain attributes (`user.allowed_menus`, `institute.features`) until `SubAdminProfile` and `Plan` exist. | PR B/C plan | High | [x] |
+| C3 | `MenuRequiredMixin` fail-closed: `sub_admin` on a view with no `menu_key` gets 403; admin portal pages without `menu_key` raise `ImproperlyConfigured` for institute admin paths. | PR #7 | High | [x] |
+| C4 | Page and mixin access tests: each demo page allows only its roles; every other role plus anonymous gets 403; mutation-sensitive coverage for empty `allowed_roles` and missing tenant institute. | PR #7 / AGENTS.md §7 | High | [x] |
 
 ## Fix in roadmap 0.5 (tooling, Docker, CI)
 

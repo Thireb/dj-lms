@@ -26,3 +26,21 @@ class DemoAdminPeopleList(ListPage):
     title = "Students"
     menu_key = menu_keys.PEOPLE
     allowed_roles = [Role.INSTITUTE_ADMIN, Role.SUB_ADMIN]
+
+
+class DemoAdminMissingMenuKey(DashboardPage):
+    """Intentionally misconfigured admin page for mixin tests."""
+
+    portal = "admin"
+    title = "Misconfigured"
+    menu_key = None
+    allowed_roles = [Role.INSTITUTE_ADMIN, Role.SUB_ADMIN]
+
+
+class DemoTeacherEmptyAllowedRoles(DashboardPage):
+    """Page with no allowed roles — every authenticated user must get 403."""
+
+    portal = "teacher"
+    title = "Closed"
+    menu_key = "dashboard"
+    allowed_roles = []

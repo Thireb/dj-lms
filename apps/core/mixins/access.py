@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from django.core.exceptions import ImproperlyConfigured
 from django.http import HttpRequest, HttpResponse, HttpResponseForbidden
 
 from apps.core.roles import Role, _is_super_admin, _user_role
@@ -45,11 +46,27 @@ class MenuRequiredMixin:
     menu_key: str | None = None
 
     def dispatch(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
-        key = getattr(self, "menu_key", None)
-        if key:
-            user = request.user
-            if _user_role(user) == Role.SUB_ADMIN:
-                allowed = getattr(user, "allowed_menus", None) or []
-                if key not in allowed:
-                    return HttpResponseForbidden("Forbidden.")
+        key = getattr(self, "menu_key", None) or None
+        portal = getattr(self, "portal", None)
+        user = request.user
+        authenticated = getattr(user, "is_authenticated", False)
+        role = _user_role(user) if authenticated else None
+
+        if role == Role.SUB_ADMIN and not key:
+            return HttpResponseForbidden("Forbidden.")
+
+        if (
+            portal == "admin"
+            and not key
+            and role in (Role.INSTITUTE_ADMIN, Role.SUB_ADMIN)
+        ):
+            raise ImproperlyConfigured(
+                f"{self.__class__.__name__} sets portal='admin' "
+                "but menu_key is missing."
+            )
+
+        if key and role == Role.SUB_ADMIN:
+            allowed = getattr(user, "allowed_menus", None) or []
+            if key not in allowed:
+                return HttpResponseForbidden("Forbidden.")
         return super().dispatch(request, *args, **kwargs)
