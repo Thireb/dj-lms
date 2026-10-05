@@ -16,7 +16,8 @@ class TimezoneMiddleware:
     def __call__(self, request: HttpRequest) -> HttpResponse:
         user = getattr(request, "user", None)
         if user is not None and getattr(user, "is_authenticated", False):
-            activate_timezone_for_user(user)
+            institute = getattr(request, "institute", None)
+            activate_timezone_for_user(user, institute=institute)
         try:
             return self.get_response(request)
         finally:
