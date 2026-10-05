@@ -10,6 +10,8 @@ def test_base_template_loads_static_paths() -> None:
     assert "vendor/htmx/htmx.min.js" in html
     assert "vendor/alpine/alpine.min.js" in html
     assert "css/app.css" in html
+    assert "chart.umd.min.js" not in html
+    assert "X-CSRFToken" in html
 
 
 def test_app_shell_sets_portal_data_attribute() -> None:

@@ -18,3 +18,5 @@ DATABASES = {  # noqa: F405
 PASSWORD_HASHERS = [  # noqa: F405
     "django.contrib.auth.hashers.MD5PasswordHasher",
 ]
+
+ROOT_URLCONF = "config.urls_test"  # noqa: F405

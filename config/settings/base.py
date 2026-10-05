@@ -17,10 +17,14 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "crispy_forms",
     "apps.core",
     "apps.institutes",
     "apps.ui",
 ]
+
+CRISPY_ALLOWED_TEMPLATE_PACKS = ("ui/forms",)
+CRISPY_TEMPLATE_PACK = "ui/forms"
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",

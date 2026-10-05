@@ -9,18 +9,18 @@ Status: `[ ]` open, `[x]` done. Priority: **High** = fix before merge or before 
 
 | # | Item | Source | Priority | Status |
 |---|---|---|---|---|
-| A1 | `@theme` must be `@theme inline` for portal-driven colors, otherwise every portal renders admin colors. Add a test that builds the CSS and checks `bg-primary` references `--portal-primary`. | PR #3 review | High | [ ] |
+| A1 | `@theme` must be `@theme inline` for portal-driven colors, otherwise every portal renders admin colors. Add a test that builds the CSS and checks `bg-primary` references `--portal-primary`. | PR #3 review | High | [x] |
 
 ## Fix in PR B (components and forms)
 
 | # | Item | Source | Priority | Status |
 |---|---|---|---|---|
-| B1 | CSRF for HTMX: `hx-headers` with `X-CSRFToken` on `<body>` in `base.html`. Test that an HTMX POST from a form works. | PR #3 | High | [ ] |
-| B2 | Load Chart.js only where a `ChartCard` renders (via `extra_scripts`), not on every page. | PR #3 | Low | [ ] |
-| B3 | `VENDOR_VERSIONS.md`: note Font Awesome icons are CC BY 4.0 (attribution kept in the file header). | PR #3 | Low | [ ] |
-| B4 | Exclude `*.md` from `ruff format` so the docs code blocks do not fail `format --check`. | PR #3 | Low | [ ] |
-| B5 | Escaping tests: text props (`Badge`, `DataTable` cells) are escaped; no `\|safe` or `mark_safe` outside `Component.render`. | PR B plan | High | [ ] |
-| B6 | `/dev/components/` returns 404 under prod settings and uses fake data only. | PR B plan | High | [ ] |
+| B1 | CSRF for HTMX: `hx-headers` with `X-CSRFToken` on `<body>` in `base.html`. Test that an HTMX POST from a form works. | PR #3 | High | [x] |
+| B2 | Load Chart.js only where a `ChartCard` renders (via `extra_scripts`), not on every page. | PR #3 | Low | [x] |
+| B3 | `VENDOR_VERSIONS.md`: note Font Awesome icons are CC BY 4.0 (attribution kept in the file header). | PR #3 | Low | [x] |
+| B4 | Exclude `*.md` from `ruff format` so the docs code blocks do not fail `format --check`. | PR #3 | Low | [x] |
+| B5 | Escaping tests: text props (`Badge`, `DataTable` cells) are escaped; no `\|safe` or `mark_safe` outside `Component.render`. | PR B plan | High | [x] |
+| B6 | `/dev/components/` returns 404 under prod settings and uses fake data only. | PR B plan | High | [x] |
 
 ## Fix in PR C (pages and menus)
 

@@ -4,18 +4,18 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="csrf-token" content="{{ csrf_token }}" />
     <title>{% block title %}LMS{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'vendor/fontawesome/css/all.min.css' %}" />
     <link rel="stylesheet" href="{% static 'css/app.css' %}" />
     {% block extra_head %}{% endblock %}
   </head>
   <body
-    {% block body_attrs %}class="min-h-screen"{% endblock %}
+    {% block body_attrs %}class="min-h-screen" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'{% endblock %}
   >
     {% block body %}{% endblock %}
     <script src="{% static 'vendor/htmx/htmx.min.js' %}" defer></script>
     <script src="{% static 'vendor/alpine/alpine.min.js' %}" defer></script>
-    <script src="{% static 'vendor/chart.js/chart.umd.min.js' %}" defer></script>
     {% block extra_scripts %}{% endblock %}
   </body>
 </html>

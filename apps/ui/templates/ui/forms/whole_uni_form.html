@@ -1,0 +1,9 @@
+{% if form_tag %}<form {{ flat_attrs|safe }} novalidate>{% endif %}
+{% if form_method|lower == "post" and not disable_csrf %}
+  {% csrf_token %}
+{% endif %}
+{% if include_media %}{{ form.media }}{% endif %}
+<div class="crispy-form space-y-4">
+  {{ form.form_html }}
+</div>
+{% if form_tag %}</form>{% endif %}
