@@ -103,7 +103,7 @@ class PortalPageView(
             page_title=self.title,
             content=body,
         )
-        return HttpResponse(str(shell), **response_kwargs)
+        return HttpResponse(shell.render(request=self.request), **response_kwargs)
 
 
 class DashboardPage(PortalPageView):

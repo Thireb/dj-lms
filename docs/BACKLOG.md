@@ -15,7 +15,7 @@ Status: `[ ]` open, `[x]` done. Priority: **High** = fix before merge or before 
 
 | # | Item | Source | Priority | Status |
 |---|---|---|---|---|
-| B1 | CSRF for HTMX. **Reopened:** `app_shell.html` overrides `{% block body_attrs %}` and drops `hx-headers`, so every real portal page has no CSRF header (verified on the rendered gallery). Fix: put `hx-headers` on the `<body>` tag in `base.html` outside the overridable block (or use `{{ block.super }}` in the shell). Test must assert the **rendered** body tag has `hx-headers`, not just that the test client can send the header. | PR #4 | High | [x] on main |
+| B1 | CSRF for HTMX. **Fixed (0.4c):** `PortalPageView.render_to_response` now passes `request` into shell `Component.render()` so `{{ csrf_token }}` in `base.html` is populated on portal pages. Tests in `tests/ui/test_portal_csrf.py` assert rendered `DemoTeacherDashboard` / `DemoAdminPeopleList` meta and body `hx-headers` match; HTMX POST with token passes, without header → 403. | PR #4 / 0.4c | High | [x] |
 | B2 | Chart.js loads only with `ChartCard`. Done. Follow-up: the script tag repeats per card; load once per page. | PR #4 | Low | [x] (follow-up open) |
 | B3 | `VENDOR_VERSIONS.md` notes Font Awesome icons are CC BY 4.0. | PR #3 | Low | [x] |
 | B4 | `*.md` excluded from `ruff format`. | PR #3 | Low | [x] |
