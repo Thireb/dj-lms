@@ -14,7 +14,7 @@ Plain-language docs for building a multi-institute LMS in Django.
 | `AGENTS.md` | Rules for AI coding agents (put in repo root) |
 | `ROADMAP.md` | Build order, phase by phase |
 | `BACKLOG.md` | Review follow-ups, each attached to the PR or phase that fixes it |
-| `DEPLOYMENT.md` | Render setup and checklist |
+| `DEPLOYMENT.md` | Pethost (Docker) setup and checklist |
 
 ## How to use
 

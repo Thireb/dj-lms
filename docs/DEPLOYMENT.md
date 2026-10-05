@@ -1,28 +1,40 @@
-# DEPLOYMENT (Render)
+# DEPLOYMENT (Pethost)
 
-Check Render's current docs and pricing before you start. Details change.
+Check Pethost's current docs and pricing before you start. Details change.
+Docker is for deployment only. Local dev and CI use Postgres through `DATABASE_URL`, no Docker.
+
+> **Ask Pethost first**
+> - Is PostgreSQL offered as a managed service?
+> - Is Redis offered as a managed service?
+> - How are persistent volumes handled, and do they survive redeploys?
+> - How are backups handled, and how often?
+>
+> If PostgreSQL or Redis is not offered, run it as a container in our compose file with a persistent volume.
 
 ## 1. Services we need
 
-- **Web service:** Django app run by Gunicorn.
-- **Background worker:** Celery worker.
-- **Scheduler:** Celery Beat (as its own worker) or Render cron jobs.
-- **PostgreSQL:** main database.
-- **Key Value (Redis-compatible):** Celery broker and cache.
-- **Object storage:** Cloudflare R2 or S3 for uploads, PDFs, recordings. Render's local disk is not permanent unless you attach a disk.
+All run as Docker containers.
 
-## 2. Render config
+- **web:** Django app run by Gunicorn.
+- **worker:** Celery worker.
+- **beat:** Celery Beat scheduler (one instance only).
+- **PostgreSQL:** main database (Pethost service or our container).
+- **Redis:** Celery broker and cache (Pethost service or our container).
+- **Object storage:** Cloudflare R2 or S3 for uploads, PDFs, recordings. Do not rely on container disk.
 
-- Keep a `render.yaml` blueprint in the repo root that defines all services.
-- Build command: install dependencies, collect static files.
+## 2. Docker config
+
+- One `Dockerfile` for the app image, shared by web, worker and beat.
+- One production compose file in the repo root that defines all services.
+- Image build: install dependencies, build Tailwind CSS, collect static files.
 - Start command (web): `gunicorn config.wsgi`.
 - Start command (worker): `celery -A config worker -l info`.
 - Start command (beat): `celery -A config beat -l info`.
-- Run migrations as a pre-deploy command, not on every web start.
+- Run migrations as a one-off step before the new web container starts, not on every web start.
 
 ## 3. Environment variables
 
-Listed in `.env.example`. Set real values in Render, never in git.
+Listed in `.env.example`. Set real values in Pethost, never in git.
 
 - `DJANGO_SETTINGS_MODULE=config.settings.prod`
 - `SECRET_KEY`
@@ -35,6 +47,7 @@ Listed in `.env.example`. Set real values in Render, never in git.
 
 ## 4. Before first deploy
 
+- [ ] Answers to "Ask Pethost first" recorded in this file.
 - [ ] `DEBUG=False`, `ALLOWED_HOSTS` set, `CSRF_TRUSTED_ORIGINS` set.
 - [ ] HTTPS-only cookies and HSTS enabled.
 - [ ] WhiteNoise serving static files.
@@ -42,21 +55,12 @@ Listed in `.env.example`. Set real values in Render, never in git.
 - [ ] Seed command creates the first Super Admin.
 - [ ] Backups on for the database.
 
-## 5. Free vs paid tiers
+## 5. Plans and pricing
 
-- Free services may sleep when idle. Fine for a demo, not for scheduled jobs or real institutes.
-- Real use needs at least paid web, worker, and database.
-- Check Render's pricing page for current numbers.
+- Real use needs web, worker, beat, database and Redis running all the time.
+- Check Pethost's pricing page for current numbers.
 
-## 6. Using Render's MCP server
-
-- Render offers an MCP server so an AI agent can inspect and manage services.
-- Set it up from Render's own docs and add it to Cursor's MCP settings.
-- Use a Render API key with the smallest access that works. Never commit it.
-- Good first uses for the agent: read logs, check deploy status, list env vars (names only), trigger a deploy.
-- Do not let the agent delete services or databases without your approval.
-
-## 7. After deploy
+## 6. After deploy
 
 - [ ] Log in as Super Admin and create a test institute.
 - [ ] Check that a Celery task runs (recurring lecture generation).
