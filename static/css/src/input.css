@@ -1,0 +1,88 @@
+@import "tailwindcss";
+
+@source "../../../../templates/**/*.html";
+@source "../../../../apps/**/templates/**/*.html";
+@source inline("bg-primary");
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-heading: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --color-success: #059669;
+  --color-success-light: #10b981;
+  --color-warning: #d97706;
+  --color-danger: #e11d48;
+  --color-danger-light: #ef4444;
+  --color-info: #2563eb;
+  --color-violet: #7c3aed;
+
+  --color-muted: #5d6e73;
+  --color-border: #e2e8ea;
+  --color-surface: #ffffff;
+}
+
+/* Portal tokens: inline theme so utilities reference var(--portal-*) at runtime. */
+@theme inline {
+  --color-primary: var(--portal-primary);
+  --color-primary-dark: var(--portal-primary-dark);
+  --color-accent: var(--portal-accent);
+  --color-nav-dark: var(--portal-nav-dark);
+  --color-sidebar-dark: var(--portal-sidebar-dark);
+  --color-page: var(--portal-page-bg);
+  --color-text: var(--portal-text);
+}
+
+/* Shared portal tokens (defaults = admin) */
+:root,
+[data-portal="admin"] {
+  --portal-primary: #005e78;
+  --portal-primary-dark: #00475b;
+  --portal-accent: #0b7f9c;
+  --portal-nav-dark: #00303d;
+  --portal-sidebar-dark: #002530;
+  --portal-page-bg: #f0f3f5;
+  --portal-text: #0c1b1f;
+}
+
+[data-portal="teacher"] {
+  --portal-primary: #005e78;
+  --portal-primary-dark: #00475b;
+  --portal-accent: #00a2cf;
+  --portal-nav-dark: #00303d;
+  --portal-sidebar-dark: #00303d;
+  --portal-page-bg: #f3f7f9;
+  --portal-text: #0f172a;
+}
+
+[data-portal="student"] {
+  --portal-primary: #0d9488;
+  --portal-primary-dark: #0f766e;
+  --portal-accent: #34d399;
+  --portal-nav-dark: #115e59;
+  --portal-sidebar-dark: #115e59;
+  --portal-page-bg: #f0fdfa;
+  --portal-text: #0f172a;
+}
+
+[data-portal="guardian"] {
+  --portal-primary: #0ea5e9;
+  --portal-primary-dark: #0284c7;
+  --portal-accent: #6366f1;
+  --portal-nav-dark: #0f172a;
+  --portal-sidebar-dark: #0f172a;
+  --portal-page-bg: #f0f4f8;
+  --portal-text: #0f172a;
+}
+
+@layer base {
+  body {
+    @apply bg-page font-sans text-sm text-text antialiased;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-heading;
+  }
+}

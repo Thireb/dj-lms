@@ -3,8 +3,8 @@ __pycache__/
 *.py[codz]
 *$py.class
 
-#Other
-src/
+# Other (repo-root src only; keep static/css/src)
+/src/
 
 # C extensions
 *.so
@@ -58,6 +58,10 @@ cover/
 # Translations
 *.mo
 *.pot
+
+# Built Tailwind output (build with scripts/build-app-css.sh)
+static/css/app.css
+scripts/tailwindcss
 
 # Django stuff:
 *.log
