@@ -1,0 +1,45 @@
+---
+description: Core rules for the multi-institute LMS (Django). Always apply.
+alwaysApply: true
+---
+
+# Read first
+- Before any task read: docs/FEATURES.md, docs/ARCHITECTURE.md, docs/COMPONENTS.md, docs/UI-GUIDELINES.md, docs/SPEC-DETAILS.md.
+- If a request conflicts with these docs, stop and ask. If the docs lack something, propose the doc change first.
+- List the files you plan to change before editing. List what changed after.
+
+# Product
+- Multi-institute LMS in Django. Roles: super_admin, institute_admin, sub_admin, teacher, student, guardian. One user = one role.
+- Copy features only. Never copy the reference product's name, logo, text, images, theme files, Feature Book, or User Manual.
+- No integrations in v1: no Zoom, Google, WhatsApp, payment gateways. Use manual meeting links.
+
+# Stack
+- Django 5.x, Python 3.12+, PostgreSQL, Celery + Redis, WeasyPrint.
+- Django templates + Python component classes + django-crispy-forms + Tailwind + HTMX + Alpine.js + Chart.js + Font Awesome Free.
+- No React/Vue. No new dependency without asking.
+
+# Code
+- One app per module in ARCHITECTURE.md. No new apps without asking.
+- Business logic in services.py. Views are thin.
+- Every tenant model inherits TenantModel and exposes for_user(user). Never use an unscoped manager in a view.
+- Every view declares allowed_roles. Admin views also declare menu_key and use MenuRequiredMixin (sub_admin allowed_menus).
+- No Django Group/Permission or DB permission tables. Do not use is_staff/is_superuser for product roles.
+- Money is Decimal. Datetimes are UTC and timezone aware.
+- No secrets in code. Update .env.example. Format and lint with ruff.
+
+# UI
+- Build UI with component classes in apps/ui (COMPONENTS.md). Reuse by subclassing. Never paste component HTML or Tailwind into page templates.
+- Forms inherit BaseForm / TenantModelForm. Layout goes in get_layout(). Templates only use {% crispy form %}.
+- Pages inherit DashboardPage, ListPage, DetailPage, or FormPage.
+- Admin uses TopNavShell, other portals use SidebarShell. Colors come from per-portal CSS variables.
+- Sentence case. Buttons say what they do. Every page works at 360px.
+
+# Tests
+- New model: creation + tenant isolation test.
+- New view: allowed role passes, every other role 403, other institute 404. Admin views: sub_admin passes only with the menu key.
+- Money, payroll, challan, attendance logic: unit tests with real numbers from SPEC-DETAILS.md.
+- Run pytest and ruff check before saying done.
+
+# Workflow
+- One roadmap item at a time (ROADMAP.md). Small commits: feat(app): text.
+- Do not refactor unrelated code. Ask one clear question instead of guessing.
