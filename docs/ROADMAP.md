@@ -6,7 +6,7 @@ Build order. Finish each phase before the next. Tick boxes as you go.
 
 - [ ] 0.1 Repo, Django project, settings split, `.env.example`, ruff, pytest.
 - [ ] 0.2 `core` app: `TenantModel`, tenant manager, tenant middleware, time zone middleware.
-- [ ] 0.2b Hardening of 0.2: fail-closed tenant manager, `unscoped` manager, `tenant_context()`, reject users without a valid institute, `on_delete=PROTECT`, `config/settings/test.py`, one institute lookup per request, roles in `apps/core/roles.py`, `ruff format --check` clean.
+- [x] 0.2b Hardening of 0.2: fail-closed tenant manager, `unscoped` manager, `tenant_context()`, reject users without a valid institute, `on_delete=PROTECT`, `config/settings/test.py`, one institute lookup per request, roles in `apps/core/roles.py`, `ruff format --check` clean.
 - [ ] 0.3 Tailwind, HTMX, Alpine, Lucide set up. `base.html` and `app_shell.html`.
 - [ ] 0.4 `apps/ui`: `Component` base class, all component classes from `COMPONENTS.md`, `/dev/components/` demo page.
 - [ ] 0.4b crispy-forms setup: `BaseForm`, `TenantModelForm`, `HtmxModalForm`, layout objects `Section`, `Row`, `FormActions`.
@@ -15,8 +15,9 @@ Build order. Finish each phase before the next. Tick boxes as you go.
 
 ## Phase 1: Accounts and institutes
 
+- [ ] 1.0 Tenancy follow-ups from the PR #2 review: test that PROTECT blocks deleting an institute with data; test an anonymous user with an institute id still gets nothing from `for_user`; let authenticated users without an institute reach logout; `createsuperuser` creates `role=super_admin`; a base `TenantAdmin` that uses `unscoped` (the default manager is fail-closed, so Django admin shows nothing for tenant models otherwise); rename `_is_super_admin` and `_user_institute_id` to public names.
 - [ ] 1.1 `accounts`: User with one `role` field, `is_*` properties, email login, password reset, profile.
-- [ ] 1.2 `institutes`: Institute, Plan, feature flags, campus profile.
+- [ ] 1.2 `institutes`: Institute (with `is_active`), Plan, feature flags, campus profile. `TenantMiddleware` must also reject users of an inactive institute (403).
 - [ ] 1.3 `superadmin`: create institutes, set plans, activate/deactivate.
 - [ ] 1.4 `RoleRequiredMixin`, `MenuRequiredMixin` (admin menu keys), `for_user` scoped managers, portal URL prefixes, 403 and data-scope tests for every role.
 
