@@ -65,3 +65,28 @@ Use the same pattern: "Read AGENTS.md and docs/SPEC-DETAILS.md sections X. Do ro
 - One session = one phase. Don't let the agent "continue ahead".
 - Ask for a diff review at the end: "Review this diff against AGENTS.md and list violations."
 - When a doc is unclear, change the doc first, then the code.
+
+## Session 1b: harden tenancy (do this before Session 2)
+```
+Read AGENTS.md and docs/ARCHITECTURE.md section 3. Do roadmap item 0.2b only.
+List files first and wait for my OK.
+Changes:
+1. Tenant manager fails closed: no current institute => queryset.none().
+   Add a second manager `unscoped` that sees all institutes. for_user(user)
+   must start from the unscoped base and filter by the user's institute
+   (super admin sees all). Anonymous => none.
+2. Add tenant_context(institute) context manager in apps/core/tenancy.py
+   for Celery tasks and commands.
+3. TenantMiddleware: if an authenticated non-super-admin user has no valid
+   institute, return 403 instead of continuing unscoped.
+4. TenantModel.institute on_delete=PROTECT.
+5. Move tests.testapp out of dev settings into config/settings/test.py and
+   point pytest at it.
+6. Load the institute once per request: TenantMiddleware stores it on the
+   request; TimezoneMiddleware reuses it. No second query.
+7. Move role constants to apps/core/roles.py as the single source.
+8. Replace test_manager_without_context_returns_unfiltered with tests that
+   prove: no context returns nothing, anonymous returns nothing, a user whose
+   institute row is missing gets 403, tenant_context works, unscoped sees all.
+9. Run ruff format, then ruff check and pytest. All must pass.
+```

@@ -25,7 +25,7 @@ lms/
   manage.py
   config/            # settings (base, dev, prod), urls, celery, wsgi
   apps/
-    core/            # base models, tenant manager, time zone utils, mixins
+    core/            # TenantModel, tenant manager (fail closed), tenant_context(), time zone utils, mixins, roles
     ui/              # component classes, base forms, base page views, templates (see COMPONENTS.md)
     accounts/        # User, roles, login, profile
     institutes/      # Institute, Plan, feature flags, campus profile
@@ -58,12 +58,16 @@ lms/
 
 ## 3. Multi-tenancy (one DB, many institutes)
 
-- Every institute-owned model inherits `TenantModel` from `core` (has `institute` foreign key).
-- `TenantManager` filters by the current institute automatically.
-- Middleware sets the current institute from the logged-in user.
-- Super Admin is the only role that sees across institutes.
-- Never query a tenant model without the manager. Tests must prove isolation.
+- Every institute-owned model inherits `TenantModel` from `core` (has an `institute` foreign key, `on_delete=PROTECT`).
+- **Fail closed.** `Model.objects` (the tenant manager) returns **nothing** unless a current institute is set. It never returns all rows by accident.
+- Middleware sets the current institute from the logged-in user. If a logged-in non-super-admin user has no valid, active institute, the request is rejected (403), never run unscoped.
+- Anonymous requests have no institute, so tenant models return nothing for them.
+- Super Admin is the only role that sees across institutes, through `Model.objects.for_user(user)` or the explicit `Model.unscoped`.
+- `Model.unscoped` is a second manager that sees all institutes. Only use it in: Super Admin screens, migrations, management commands, and tests. Every use needs a one-line comment saying why.
+- Background jobs (Celery) and shell scripts must run inside `with tenant_context(institute):` or use `unscoped` on purpose. A task that forgets gets empty results, not other institutes' data.
+- Never query a tenant model through a plain `Model._default_manager` or raw SQL in a view.
 - Unique fields (like student ID) are unique per institute, not globally.
+- Tests must prove: no context returns nothing, anonymous returns nothing, institute A cannot see B, a missing institute is rejected.
 
 ## 4. Users, roles, and permissions
 

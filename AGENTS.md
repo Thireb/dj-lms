@@ -57,6 +57,7 @@ Cursor users: also copy the key rules (sections 2 to 6) into `.cursor/rules/` so
 ## 6. Data and safety
 
 - Never write code that reads another institute's data.
+- The tenant manager fails closed: no current institute means no rows. Use `Model.unscoped` only for Super Admin, migrations, commands, and tests, with a comment saying why. Background tasks use `with tenant_context(institute):`.
 - Never log passwords, tokens, or personal data.
 - Use fake data only in seeds and tests. Never real student names or numbers.
 - Migrations: one logical change per migration, never edit an applied migration.
@@ -65,7 +66,7 @@ Cursor users: also copy the key rules (sections 2 to 6) into `.cursor/rules/` so
 
 ## 7. Tests (required)
 
-- New model: test creation and tenant isolation.
+- New model: test creation and tenant isolation, including: no context returns nothing, anonymous returns nothing.
 - New admin view: test `institute_admin` passes, `sub_admin` passes only with the menu key, and without it gets 403.
 - New view: test allowed role passes, every other role gets 403, other institute gets 404.
 - New `for_user` scope: test that a user cannot see another user's records (teacher vs teacher, guardian vs unlinked student).
@@ -79,6 +80,7 @@ Cursor users: also copy the key rules (sections 2 to 6) into `.cursor/rules/` so
 - Commit messages: `feat(app): short text`, `fix(app): short text`, `docs: short text`.
 - Before editing, list the files you plan to change. After editing, list what changed.
 - If a task is bigger than about 10 files, split it and ask which part to do first.
+- Test-only apps and models go in `config/settings/test.py`, never in dev or prod settings.
 - Do not refactor unrelated code.
 - When unsure, ask one clear question instead of guessing.
 
