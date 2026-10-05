@@ -28,7 +28,7 @@ lms/
     core/            # TenantModel, tenant manager (fail closed), tenant_context(), time zone utils, mixins, roles
     ui/              # component classes, base forms, base page views, templates (see COMPONENTS.md)
     accounts/        # User, roles, login, profile
-    institutes/      # Institute, Plan, feature flags, campus profile
+    institutes/      # Institute, Plan, feature flags, campus profile, institute settings
     superadmin/      # institute management, contact requests
     people/          # Student, Teacher, Guardian profiles + links
     academics/       # ClassLabel, Batch, Subject, StudentBatchSubject, TeacherBatchSubject

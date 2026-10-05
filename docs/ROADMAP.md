@@ -19,7 +19,7 @@ Build order. Finish each phase before the next. Tick boxes as you go.
 
 - [ ] 1.0 Tenancy follow-ups from the PR #2 review: test that PROTECT blocks deleting an institute with data; test an anonymous user with an institute id still gets nothing from `for_user`; let authenticated users without an institute reach logout; `createsuperuser` creates `role=super_admin`; a base `TenantAdmin` that uses `unscoped` (the default manager is fail-closed, so Django admin shows nothing for tenant models otherwise); rename `_is_super_admin` and `_user_institute_id` to public names.
 - [ ] 1.1 `accounts`: User with one `role` field, `is_*` properties, email login, password reset, profile.
-- [ ] 1.2 `institutes`: Institute (with `is_active`), Plan, feature flags, campus profile. `TenantMiddleware` must also reject users of an inactive institute (403).
+- [ ] 1.2 `institutes`: Institute (with `is_active`), Plan, feature flags, campus profile (Institute group), institute settings (rules and currency, admin only). `TenantMiddleware` must also reject users of an inactive institute (403).
 - [ ] 1.3 `superadmin`: create institutes, set plans, activate/deactivate.
 - [ ] 1.4 `RoleRequiredMixin`, `MenuRequiredMixin` (admin menu keys), `for_user` scoped managers, portal URL prefixes, 403 and data-scope tests for every role.
 
