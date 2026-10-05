@@ -1,5 +1,7 @@
 # ROADMAP
 
+Open review follow-ups are tracked in `BACKLOG.md`. Fix each one in the first PR that touches its area.
+
 Build order. Finish each phase before the next. Tick boxes as you go.
 
 ## Phase 0: Foundation
