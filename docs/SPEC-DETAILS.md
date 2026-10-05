@@ -20,11 +20,24 @@ Notation: `*` required. `(S)` = select. Money is in the institute currency. Date
   - Receipt submission `RCP-0001`
 - All times stored in UTC, shown in the viewer's time zone.
 
-## 1. Institute settings (Admin > Campus and Account Settings)
+## 1. Campus profile and institute settings
+
+Two pages, two access levels. The split exists because institute settings change how the institute behaves (for example turning off defaulter blocking or changing attendance thresholds). A helper who manages classes and batches must not be able to do that.
+
+### 1a. Campus profile (Admin > Institute > Campus)
+
+Menu key `institute`: `institute_admin`, and a `sub_admin` granted Institute.
 
 | Setting | Type | Default |
 |---|---|---|
 | Institute name*, address, phone, email, logo | text/file | blank |
+
+### 1b. Institute settings (profile menu > Institute settings, admin only)
+
+`institute_admin` only. Not grantable to `sub_admin`. Sits in the profile menu next to Manage Users, Manage Permissions, Appearance and Select Currency.
+
+| Setting | Type | Default |
+|---|---|---|
 | Time zone | (S) | Asia/Karachi |
 | Currency symbol and code | (S) | Rs / PKR |
 | Join window (minutes before start students can join) | number | 10 |

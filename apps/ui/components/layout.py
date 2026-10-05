@@ -31,12 +31,26 @@ class Sidebar(Component):
 class TopNavShell(Component):
     template_name = "ui/components/top_nav_shell.html"
 
-    def __init__(self, portal, user, active=None, groups=None, **props):
+    def __init__(
+        self,
+        portal,
+        user,
+        active=None,
+        groups=None,
+        institute=None,
+        **props,
+    ):
+        if groups is None:
+            from apps.ui.menus.registry import build_menu_groups
+
+            inst = institute or getattr(user, "institute", None)
+            groups = build_menu_groups(portal, user, inst)
         super().__init__(
             portal=portal,
             user=user,
             active=active,
-            groups=groups or [],
+            groups=groups,
+            institute=institute,
             **props,
         )
 
@@ -60,12 +74,26 @@ class TopNavShell(Component):
 class SidebarShell(Component):
     template_name = "ui/components/sidebar_shell.html"
 
-    def __init__(self, portal, user, active=None, groups=None, **props):
+    def __init__(
+        self,
+        portal,
+        user,
+        active=None,
+        groups=None,
+        institute=None,
+        **props,
+    ):
+        if groups is None:
+            from apps.ui.menus.registry import build_menu_groups
+
+            inst = institute or getattr(user, "institute", None)
+            groups = build_menu_groups(portal, user, inst)
         super().__init__(
             portal=portal,
             user=user,
             active=active,
-            groups=groups or [],
+            groups=groups,
+            institute=institute,
             **props,
         )
 

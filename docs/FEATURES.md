@@ -138,12 +138,12 @@ Setup order the reference teaches: Campus, Classes, Batches, Subjects, Fee Plans
 - [ ] Same portal as Admin, but only the menu groups the admin ticks (for example Finance yes, Salary no).
 - [ ] Tickable groups: Dashboards, Institute, People, Online Lectures, Finance, Teacher Salary, Academic, Messages.
 - [ ] Admin screens: Manage Users (email + password for helpers) and Manage Permissions (tick the groups).
-- [ ] Manage Users, Manage Permissions, Campus settings and currency stay admin-only.
+- [ ] Manage Users, Manage Permissions, Institute settings (rules and currency) and Select Currency stay admin-only. The Campus profile page is in the Institute group and a sub-admin granted Institute can open it.
 
 ## 13. Dashboards and menus per role
 
 **Admin (top horizontal menus):** Dashboards (Main, Salary, Lectures, Challan) | Institute (Campus, Classes, Batches, Subjects, Fee Plans) | People (All Students, Enrol Student, Bulk Upload, Student Attendance History, Portal Access, All Teachers, Add Teacher, Teacher Lecture History) | Online Lectures (All Lectures, Add Lecture, Recurring Schedules, Master Meeting) | Finance (Generate Challan, Challan Records, Process Payment, Receipt Inbox, Daily, Monthly, Yearly Reports, Fee Defaulters) | Teacher Salary (Salary Plans, Plan Assignments, Payroll, Payment Status, Payment History, Advance Salary, Salary Reports) | Academic (Course Documents, Homework Approval, Lesson Plan Approval, Quizzes & Exams, Reports Received, Student Leave Approval, Teacher Leave Approval) | Messages (Inbox, Send Message, Message Monitor).
-Profile menu: Account Settings, Toolbar Settings, Default Portal, Manage Users, Manage Permissions, Select Currency, Appearance, Sign Out. "Master Meeting", Zoom and Google Drive items are integrations (later).
+Profile menu: Account Settings, Toolbar Settings, Default Portal, Institute Settings, Manage Users, Manage Permissions, Select Currency, Appearance, Sign Out. "Master Meeting", Zoom and Google Drive items are integrations (later).
 Main dashboard: campus hero, clock, 4 stat cards (students, teachers, batches, lectures today), quick actions (Enrol Student, New Lecture, Generate Challan, Live Lecture Monitor), students and teachers sections with active/inactive counts and a ring chart.
 
 **Teacher (left sidebar):** Dashboard | Academics (My Lectures, Create Lecture, Schedule Recurring, Schedule, Lecture History, Documents) | Planning (Lesson Plans, Homework, Submit Report) | Assignments | Quizzes & Exams | Messages | People (My Students) | Leave (Apply Leave) | Finance (My Salary) | Account (My Profile, Account Settings, Sign Out).

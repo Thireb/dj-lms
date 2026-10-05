@@ -21,6 +21,7 @@ class FakeUser:
     institute: Institute | None = None
     timezone: str | None = None
     is_authenticated: bool = True
+    allowed_menus: list[str] | None = None
 
     @property
     def is_super_admin(self) -> bool:
@@ -69,6 +70,15 @@ def super_admin_user() -> FakeUser:
 @pytest.fixture
 def teacher_a(institute_a: Institute) -> FakeUser:
     return FakeUser(role=Role.TEACHER, institute=institute_a)
+
+
+@pytest.fixture
+def sub_admin_a(institute_a: Institute) -> FakeUser:
+    return FakeUser(
+        role=Role.SUB_ADMIN,
+        institute=institute_a,
+        allowed_menus=["people", "dashboards"],
+    )
 
 
 @pytest.fixture

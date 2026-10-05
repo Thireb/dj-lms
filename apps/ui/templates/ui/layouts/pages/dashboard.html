@@ -1,0 +1,14 @@
+{{ header }}
+<div class="space-y-6">
+  {% if stat_cards %}
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {% for card in stat_cards %}{{ card }}{% endfor %}
+    </div>
+  {% endif %}
+  {% if quick_actions %}
+    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      {% for action in quick_actions %}{{ action }}{% endfor %}
+    </div>
+  {% endif %}
+  {% for section in sections %}{{ section }}{% endfor %}
+</div>

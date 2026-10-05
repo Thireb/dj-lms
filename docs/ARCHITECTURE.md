@@ -88,7 +88,8 @@ Three layers of access, always in this order:
 - **Sub-admin (helper), decided:** role `sub_admin` sees the admin portal, limited to the menus the admin ticks.
   - `SubAdminProfile.allowed_menus`: a list of fixed menu keys defined in code (`core/menus.py`).
   - Grantable keys (group level, same as the admin top menu): `dashboards`, `institute`, `people`, `online_lectures`, `finance`, `teacher_salary`, `academic`, `messages`.
-  - Not grantable (admin only): Manage Users, Manage Permissions, Campus settings, Select Currency.
+  - Not grantable (admin only): Manage Users, Manage Permissions, Institute settings (rules and currency), Select Currency.
+  - The Campus page (Institute group: name, address, phone, email, logo) is under the `institute` key, so a sub-admin granted Institute can open it. Institute settings change how the institute behaves (for example defaulter blocking or attendance thresholds), so they stay admin only and live in the profile menu, not the Institute group. Field split: `SPEC-DETAILS.md` section 1.
   - `MenuRequiredMixin` with `menu_key = "finance"` on every admin view: `institute_admin` always passes, `sub_admin` passes only if the key is in `allowed_menus`, everyone else gets 403.
   - The same list drives the top menu, so hidden menus never render.
   - Data scope for a sub-admin is the same as admin (own institute).

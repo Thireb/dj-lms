@@ -7,6 +7,7 @@ from django.core.paginator import Paginator
 from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import render
 
+from apps.core.menus import ADMIN_MENU_KEYS
 from apps.core.roles import Role
 from apps.ui.components.actions import Button, ConfirmDialog, QuickAction, Toast
 from apps.ui.components.data import (
@@ -31,30 +32,30 @@ from apps.ui.components.layout import (
 from apps.ui.components.lectures import CountdownCard, LectureRow, ScheduleList
 from apps.ui.components.nav import FilterBar, NotificationBell, Pagination
 from apps.ui.components.pdf import PdfHeader
-from apps.ui.menu_items import MenuItem
 
 
-def _demo_user(role: str = Role.TEACHER) -> SimpleNamespace:
+def _demo_institute() -> SimpleNamespace:
     return SimpleNamespace(
-        role=role,
-        display_name="Demo user",
-        allowed_menus=["students", "dashboard"],
+        name="Demo institute",
+        timezone="Asia/Karachi",
+        features=["fees", "payroll", "messaging", "homework", "lesson_plans", "leave"],
     )
 
 
-def _stub_menu_groups() -> list[SimpleNamespace]:
-    item = MenuItem(
-        label="Dashboard",
-        url_name="dev_components",
-        icon="gauge",
-        menu_key="dashboard",
+def _admin_user() -> SimpleNamespace:
+    return SimpleNamespace(
+        role=Role.INSTITUTE_ADMIN,
+        display_name="Demo admin",
+        allowed_menus=list(ADMIN_MENU_KEYS),
     )
-    return [
-        SimpleNamespace(
-            label="Main",
-            items=[item],
-        )
-    ]
+
+
+def _teacher_user() -> SimpleNamespace:
+    return SimpleNamespace(
+        role=Role.TEACHER,
+        display_name="Demo teacher",
+        allowed_menus=[],
+    )
 
 
 def _fake_lectures() -> list[SimpleNamespace]:
@@ -80,12 +81,12 @@ def dev_components(request: HttpRequest) -> HttpResponse:
     if not settings.DEBUG:
         raise Http404()
 
-    user = _demo_user()
-    groups = _stub_menu_groups()
+    admin_user = _admin_user()
+    teacher_user = _teacher_user()
     lectures = _fake_lectures()
     viewer = SimpleNamespace(timezone_label="PKT")
 
-    institute = SimpleNamespace(name="Demo institute", timezone="Asia/Karachi")
+    institute = _demo_institute()
 
     table = DataTable(
         rows=[
@@ -113,15 +114,15 @@ def dev_components(request: HttpRequest) -> HttpResponse:
     components = {
         "top_nav_shell": TopNavShell(
             portal="admin",
-            user=user,
-            active="dashboard",
-            groups=groups,
+            user=admin_user,
+            active="dashboards",
+            institute=institute,
         ),
         "sidebar_shell": SidebarShell(
             portal="teacher",
-            user=user,
+            user=teacher_user,
             active="dashboard",
-            groups=groups,
+            institute=institute,
         ),
         "hero_banner": HeroBanner(
             title="Welcome back",
@@ -178,7 +179,7 @@ def dev_components(request: HttpRequest) -> HttpResponse:
         "countdown_card": CountdownCard(lectures[0], viewer),
         "lecture_row": LectureRow(lectures[0], viewer),
         "schedule_list": ScheduleList(lectures, viewer),
-        "notification_bell": NotificationBell(user, unread_count=3),
+        "notification_bell": NotificationBell(teacher_user, unread_count=3),
         "filter_bar": FilterBar(
             filters=[
                 SimpleNamespace(name="q", label="Search", placeholder="Name or ID"),

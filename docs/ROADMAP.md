@@ -12,7 +12,7 @@ Build order. Finish each phase before the next. Tick boxes as you go.
 - [x] 0.3 Tailwind, HTMX, Alpine, Font Awesome Free set up (self-hosted, no CDN). `base.html` and `app_shell.html`.
 - [x] 0.4 `apps/ui`: `Component` base class, all component classes from `COMPONENTS.md`, `/dev/components/` demo page.
 - [x] 0.4b crispy-forms setup: `BaseForm`, `TenantModelForm`, `HtmxModalForm`, layout objects `Section`, `Row`, `FormActions`.
-- [ ] 0.4c Base page classes: `PortalPageView`, `DashboardPage`, `ListPage`, `DetailPage`, `FormPage`; menu classes per portal.
+- [x] 0.4c Base page classes: `PortalPageView`, `DashboardPage`, `ListPage`, `DetailPage`, `FormPage`; menu classes per portal.
 - [ ] 0.5 Docker or local run script. CI that runs tests and lint.
 
 ## Phase 1: Accounts and institutes
