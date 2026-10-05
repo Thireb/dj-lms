@@ -21,3 +21,5 @@ def test_app_shell_sets_portal_data_attribute() -> None:
     )
     assert 'data-portal="teacher"' in html
     assert "<main" in html
+    assert "X-CSRFToken" in html
+    assert "hx-headers" in html

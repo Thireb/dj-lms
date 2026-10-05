@@ -45,10 +45,11 @@ def test_progress_bar_renders() -> None:
     assert "Done" in html
 
 
-def test_chart_card_includes_chart_js() -> None:
+def test_chart_card_renders_canvas_without_global_script() -> None:
     html = str(ChartCard("Trend", "chart-1", "/data/"))
     assert "chart-card" in html
-    assert "chart.umd.min.js" in html
+    assert "chart-1" in html
+    assert "chart.umd.min.js" not in html
 
 
 def test_empty_state_renders() -> None:

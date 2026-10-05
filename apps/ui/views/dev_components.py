@@ -136,10 +136,7 @@ def dev_components(request: HttpRequest) -> HttpResponse:
         ),
         "section_card": SectionCard(
             title="Recent activity",
-            body=(
-                '<p class="text-sm text-muted">'
-                "Sample card body (escaped HTML as text).</p>"
-            ),
+            body=Badge("Sample card body text", tone="neutral"),
             link_url="#",
         ),
         "tabs": Tabs(

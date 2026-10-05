@@ -2,8 +2,7 @@
 
 {% block title %}{{ page_title|default:"LMS" }}{% endblock %}
 
-{% block body_attrs %}
-  class="min-h-screen"
+{% block body_extra_attrs %}
   data-portal="{{ portal|default:'admin' }}"
   x-data="{}"
 {% endblock %}

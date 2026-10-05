@@ -21,6 +21,10 @@ Status: `[ ]` open, `[x]` done. Priority: **High** = fix before merge or before 
 | B4 | Exclude `*.md` from `ruff format` so the docs code blocks do not fail `format --check`. | PR #3 | Low | [x] |
 | B5 | Escaping tests: text props (`Badge`, `DataTable` cells) are escaped; no `\|safe` or `mark_safe` outside `Component.render`. | PR B plan | High | [x] |
 | B6 | `/dev/components/` returns 404 under prod settings and uses fake data only. | PR B plan | High | [x] |
+| B7 | `TenantModelForm` sets `instance.institute` on create and limits tenant FK choices to that institute; tests for save and cross-institute rejection. | PR #4 review | High | [x] |
+| B8 | Chart.js loads via page `{% block extra_scripts %}` (e.g. dev gallery), not inside `chart_card.html`. | PR #4 review | Low | [x] |
+| B9 | `/dev/components/` `SectionCard` demo passes a component for `body`, not a raw HTML string. | PR #4 review | Low | [x] |
+| B10 | Lecture components (`CountdownCard`, `LectureRow`, `ScheduleList`) use real lecture models (lectures app phase). | PR #4 review | Low | [ ] |
 
 ## Fix in PR C (pages and menus)
 

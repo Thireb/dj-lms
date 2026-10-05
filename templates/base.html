@@ -11,7 +11,9 @@
     {% block extra_head %}{% endblock %}
   </head>
   <body
-    {% block body_attrs %}class="min-h-screen" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'{% endblock %}
+    class="min-h-screen"
+    hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+    {% block body_extra_attrs %}{% endblock %}
   >
     {% block body %}{% endblock %}
     <script src="{% static 'vendor/htmx/htmx.min.js' %}" defer></script>

@@ -18,3 +18,8 @@
     {% endfor %}
   </div>
 {% endblock %}
+
+{% block extra_scripts %}
+  {% load static %}
+  <script src="{% static 'vendor/chart.js/chart.umd.min.js' %}" defer></script>
+{% endblock %}
