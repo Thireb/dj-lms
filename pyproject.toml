@@ -1,19 +1,40 @@
 [project]
 name = "dj-lms"
 version = "0.1.0"
-description = "Add your description here"
+description = "Multi-institute learning management system"
 readme = "README.md"
 authors = [
-    { name = "Thireb", email = "muhammadahmadashiq@gmail.com" }
+    { name = "Thireb", email = "muhammadahmadashiq@gmail.com" },
 ]
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 dependencies = [
-    "django>=6.1.1",
+    "django>=5.1,<6",
+    "psycopg[binary]>=3.2",
 ]
 
-[project.scripts]
-dj-lms = "dj_lms:main"
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-django>=4.9",
+    "ruff>=0.8",
+]
 
-[build-system]
-requires = ["uv_build>=0.12.21,<0.13.0"]
-build-backend = "uv_build"
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+src = ["apps", "config", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.lint.per-file-ignores]
+"**/migrations/*.py" = ["E501"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.dev"
+pythonpath = ["."]
+python_files = ["test_*.py"]
+testpaths = ["tests"]
