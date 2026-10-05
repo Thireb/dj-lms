@@ -4,8 +4,8 @@ Build order. Finish each phase before the next. Tick boxes as you go.
 
 ## Phase 0: Foundation
 
-- [ ] 0.1 Repo, Django project, settings split, `.env.example`, ruff, pytest.
-- [ ] 0.2 `core` app: `TenantModel`, tenant manager, tenant middleware, time zone middleware.
+- [x] 0.1 Repo, Django project, settings split, `.env.example`, ruff, pytest.
+- [x] 0.2 `core` app: `TenantModel`, tenant manager, tenant middleware, time zone middleware.
 - [ ] 0.3 Tailwind, HTMX, Alpine, Lucide set up. `base.html` and `app_shell.html`.
 - [ ] 0.4 `apps/ui`: `Component` base class, all component classes from `COMPONENTS.md`, `/dev/components/` demo page.
 - [ ] 0.4b crispy-forms setup: `BaseForm`, `TenantModelForm`, `HtmxModalForm`, layout objects `Section`, `Row`, `FormActions`.
