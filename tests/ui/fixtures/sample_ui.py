@@ -2,14 +2,15 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from apps.ui.menu_items import MenuItem
+from apps.ui.menu_items import MenuGroup, MenuItem
+from apps.ui.menus.registry import resolve_menu_groups
 
 
 def demo_user(**overrides):
     base = SimpleNamespace(
         role="teacher",
         display_name="Demo user",
-        allowed_menus=["dashboard"],
+        allowed_menus=["dashboards", "people"],
     )
     for key, value in overrides.items():
         setattr(base, key, value)
@@ -23,7 +24,8 @@ def stub_menu_groups():
         icon="gauge",
         menu_key="dashboard",
     )
-    return [SimpleNamespace(label="Main", items=[item])]
+    group = MenuGroup(label="Main", items=(item,))
+    return resolve_menu_groups((group,), user=demo_user(), institute=None)
 
 
 def fake_lectures():
@@ -38,5 +40,12 @@ def fake_lectures():
     ]
 
 
-def fake_institute():
-    return SimpleNamespace(name="Demo institute", timezone="Asia/Karachi")
+def fake_institute(**overrides):
+    base = SimpleNamespace(
+        name="Demo institute",
+        timezone="Asia/Karachi",
+        features=["fees", "payroll", "messaging", "homework", "lesson_plans", "leave"],
+    )
+    for key, value in overrides.items():
+        setattr(base, key, value)
+    return base
