@@ -48,7 +48,6 @@ Rule: other apps import from `apps.ui`. `apps.ui` never imports from other apps.
 from django.template.loader import render_to_string
 from django.utils.safestring import mark_safe
 
-
 class Component:
     template_name: str = ""
 
@@ -61,7 +60,7 @@ class Component:
     def render(self) -> str:
         return mark_safe(render_to_string(self.template_name, self.get_context()))
 
-    def __html__(self) -> str:  # lets templates write {{ component }}
+    def __html__(self) -> str:   # lets templates write {{ component }}
         return self.render()
 
     __str__ = __html__
@@ -74,30 +73,23 @@ In a template: `{{ page.header }}` or `{{ stat }}`. No custom tag needed.
 ```python
 class Badge(Component):
     template_name = "ui/components/badge.html"
-    tone = "neutral"  # success, warning, danger, info, neutral
+    tone = "neutral"                      # success, warning, danger, info, neutral
 
     def __init__(self, text, tone=None):
         super().__init__(text=text, tone=tone or self.tone)
 
 
 class ChallanStatusBadge(Badge):
-    TONES = {
-        "paid": "success",
-        "partial": "warning",
-        "pending": "warning",
-        "overdue": "danger",
-    }
+    TONES = {"paid": "success", "partial": "warning", "pending": "warning", "overdue": "danger"}
 
     def __init__(self, challan):
-        super().__init__(
-            text=challan.get_status_display(), tone=self.TONES[challan.status]
-        )
+        super().__init__(text=challan.get_status_display(), tone=self.TONES[challan.status])
 ```
 
 ```python
 class DataTable(Component):
     template_name = "ui/components/data_table.html"
-    columns: list = []  # list of Column(...)
+    columns: list = []                    # list of Column(...)
     empty_title = "Nothing here yet."
     row_actions: list = []
 
@@ -106,9 +98,7 @@ class DataTable(Component):
 
     def get_context(self):
         ctx = super().get_context()
-        ctx["cells"] = [
-            [col.cell(row) for col in self.columns] for row in self.props["rows"]
-        ]
+        ctx["cells"] = [[col.cell(row) for col in self.columns] for row in self.props["rows"]]
         return ctx
 
 
@@ -116,13 +106,7 @@ class StudentTable(DataTable):
     columns = [
         Column("student_id", "ID"),
         Column("full_name", "Name"),
-        Column(
-            "status",
-            "Status",
-            render=lambda s: Badge(
-                s.get_status_display(), "success" if s.is_active else "danger"
-            ),
-        ),
+        Column("status", "Status", render=lambda s: Badge(s.get_status_display(), "success" if s.is_active else "danger")),
     ]
     empty_title = "No students yet."
 ```
@@ -136,16 +120,14 @@ Pages are class-based views that assemble components.
 ```python
 class PortalPageView(RoleRequiredMixin, TenantRequiredMixin, TemplateView):
     template_name = "ui/layouts/app_shell.html"
-    portal = None  # "admin", "teacher", "student", "guardian"
-    menu_key = None  # admin views only: one of the keys in core/menus.py
-    allowed_roles = []  # required, e.g. [User.Role.TEACHER]; empty list = 403 for everyone
+    portal = None            # "admin", "teacher", "student", "guardian"
+    menu_key = None          # admin views only: one of the keys in core/menus.py
+    allowed_roles = []       # required, e.g. [User.Role.TEACHER]; empty list = 403 for everyone
     title = ""
     breadcrumb = []
 
     def get_header(self):
-        return PageHeader(
-            title=self.title, breadcrumb=self.breadcrumb, actions=self.get_actions()
-        )
+        return PageHeader(title=self.title, breadcrumb=self.breadcrumb, actions=self.get_actions())
 
     def get_actions(self):
         return []
@@ -155,9 +137,7 @@ class PortalPageView(RoleRequiredMixin, TenantRequiredMixin, TemplateView):
 
     def get_context_data(self, **kw):
         ctx = super().get_context_data(**kw)
-        ctx["shell"] = self.shell_class(
-            portal=self.portal, user=self.request.user, active=self.menu_key
-        )  # TopNavShell for admin, SidebarShell for others
+        ctx["shell"] = self.shell_class(portal=self.portal, user=self.request.user, active=self.menu_key)   # TopNavShell for admin, SidebarShell for others
         ctx["header"] = self.get_header()
         ctx.update(self.get_components())
         return ctx
@@ -166,13 +146,9 @@ class PortalPageView(RoleRequiredMixin, TenantRequiredMixin, TemplateView):
 class ListPage(PortalPageView):
     table_class = None
     filter_class = None
-
     def get_queryset(self): ...
     def get_components(self):
-        return {
-            "filters": self.filter_class(self.request),
-            "table": self.table_class(self.get_queryset()),
-        }
+        return {"filters": self.filter_class(self.request), "table": self.table_class(self.get_queryset())}
 
 
 class StudentListPage(ListPage):
@@ -182,16 +158,10 @@ class StudentListPage(ListPage):
     table_class = StudentTable
     filter_class = StudentFilterBar
     allowed_roles = [User.Role.INSTITUTE_ADMIN]
-
     def get_queryset(self):
-        return StudentProfile.objects.for_user(
-            self.request.user
-        )  # scoped by role and institute
-
+        return StudentProfile.objects.for_user(self.request.user)   # scoped by role and institute
     def get_actions(self):
-        return [
-            Button("Enrol student", url=reverse("admin:student_create"), icon="plus")
-        ]
+        return [Button("Enrol student", url=reverse("admin:student_create"), icon="plus")]
 ```
 
 Base page types: `DashboardPage`, `ListPage`, `DetailPage`, `FormPage`. They match the page patterns in `UI-GUIDELINES.md`.
@@ -216,9 +186,7 @@ class BaseForm(forms.Form):
         self.helper.layout = self.get_layout()
 
     def get_layout(self):
-        return Layout(
-            *self.fields.keys(), FormActions(self.save_label, self.cancel_url)
-        )
+        return Layout(*self.fields.keys(), FormActions(self.save_label, self.cancel_url))
 
 
 class TenantModelForm(BaseForm, forms.ModelForm):
@@ -236,11 +204,7 @@ class StudentForm(TenantModelForm):
 
     def get_layout(self):
         return Layout(
-            Section(
-                "Student details",
-                Row("first_name", "last_name"),
-                Row("date_of_birth", "phone"),
-            ),
+            Section("Student details", Row("first_name", "last_name"), Row("date_of_birth", "phone")),
             Section("Class", "batch"),
             FormActions(self.save_label, self.cancel_url),
         )
