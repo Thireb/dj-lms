@@ -42,6 +42,13 @@ Status: `[ ]` open, `[x]` done. Priority: **High** = fix before merge or before 
 | C2 | Menu and mixin filtering use plain attributes (`user.allowed_menus`, `institute.features`) until `SubAdminProfile` and `Plan` exist. | PR B/C plan | High | [x] |
 | C3 | `MenuRequiredMixin` fail-closed: `sub_admin` on a view with no `menu_key` gets 403; admin portal pages without `menu_key` raise `ImproperlyConfigured` for institute admin paths. | PR #7 | High | [x] |
 | C4 | Page and mixin access tests: each demo page allows only its roles; every other role plus anonymous gets 403; mutation-sensitive coverage for empty `allowed_roles` and missing tenant institute. | PR #7 / AGENTS.md §7 | High | [x] |
+| C5 | Non-admin pages use `menu_key` for active-item highlighting (teacher `"dashboard"`, not a `core/menus.py` key). `COMPONENTS.md` says `menu_key` is admin only. Use a separate `active_item` attribute, or document it. | PR #7 | Low | [ ] |
+| C6 | Dead templates: `ui/layouts/pages/default.html` is never rendered (`build_page_body` falls back to `ListPageBody`), and `ui/layouts/portal_page.html` is a placeholder comment. Remove or use them. | PR #7 | Low | [ ] |
+| C7 | `FormPage` has no POST handling (POST returns 405) and builds `form_class()` without `institute`, so a `TenantModelForm` cannot save. Fix before the first real form page (roadmap 1.x). | PR #7 | High | [ ] |
+| C8 | Sign out menu items are plain links to `accounts:logout`. Django 5 `LogoutView` is POST-only, so the link will return 405 once the URL exists. Render Sign out as a POST form button with CSRF. Do with Phase 1 login. | PR #7 | Low | [ ] |
+| C9 | Anonymous users get 403 from page classes instead of a redirect to login. Redirect once the login URL exists (Phase 1). | PR #7 | Low | [ ] |
+| C10 | Access test gaps after the C3/C4 fix (PR #7, `04ed6fa`): no test covers a page that never sets `allowed_roles` (changing the default to all roles leaves all 132 tests passing; the empty-list test sets `[]` explicitly). `ImproperlyConfigured` for an admin page without `menu_key` only fires at request time; add a test that walks every `PortalPageView` subclass with `portal = "admin"` and asserts `menu_key` is a key in `core/menus.py`. The two `test_mutation_sensitive_*` tests duplicate the tests above them. | PR #7 | Low | [ ] |
+| C11 | Admin profile menu (Account settings, Toolbar settings, Default portal, Institute settings, Manage users, Manage permissions, Select currency, Appearance, Sign out) is not in the menu config. Admin-only items (Institute settings, Manage users, Manage permissions, Select currency) must render and route only for `institute_admin`, never for `sub_admin`. Do with roadmap 1.2 (campus profile and settings). | PR #7 | High | [ ] |
 
 ## Fix in roadmap 0.5 (tooling, Docker, CI)
 
@@ -60,7 +67,7 @@ Status: `[ ]` open, `[x]` done. Priority: **High** = fix before merge or before 
 | P2 | `createsuperuser` creates `role=super_admin`; otherwise the developer account gets a 403. | PR #2 | High | [ ] |
 | P3 | Authenticated users with no institute can still reach logout. | PR #2 | Low | [ ] |
 | P4 | `Institute.is_active`; `TenantMiddleware` returns 403 for an inactive institute. | PR #2 | High | [ ] |
-| P5 | Rename `_is_super_admin` and `_user_institute_id` to public names. | PR #2 | Low | [ ] |
+| P5 | Rename `_is_super_admin` and `_user_institute_id` to public names. **PR #7:** `apps/core/mixins/access.py` now also imports `_is_super_admin` and `_user_role`; rename those too. | PR #2 | Low | [ ] |
 | P6 | PROTECT blocks deleting an institute with data (test). | PR #2 | High | [x] in PR #3 |
 | P7 | Anonymous user with an institute id gets nothing from `for_user` (test). | PR #2 | High | [x] in PR #3 |
 
