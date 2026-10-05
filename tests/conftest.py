@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import pytest
-from apps.core.managers import Role
+from apps.core.roles import Role
 from apps.institutes.models import Institute
 
 from tests.testapp.models import TenantProbe

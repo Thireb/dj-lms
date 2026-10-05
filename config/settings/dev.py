@@ -14,8 +14,6 @@ SECRET_KEY = os.environ.get(
     "django-insecure-dev-only-not-for-production",
 )
 
-INSTALLED_APPS = [*INSTALLED_APPS, "tests.testapp"]  # noqa: F405
-
 _database_url = os.environ.get("DATABASE_URL")
 if _database_url:
     parsed = urlparse(_database_url)

@@ -21,5 +21,6 @@ uv run ruff check .
 
 ## Settings
 
-- Development: `config.settings.dev` (default for `manage.py` and pytest)
+- Development: `config.settings.dev` (default for `manage.py`)
+- Tests: `config.settings.test` (default for pytest via `pyproject.toml`)
 - Production: `config.settings.prod` (`DJANGO_SETTINGS_MODULE=config.settings.prod`)

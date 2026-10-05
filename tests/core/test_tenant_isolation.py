@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from apps.core.tenancy import clear_current_institute, set_current_institute
+from apps.core.tenancy import clear_current_institute, tenant_context
 from apps.institutes.models import Institute
 
 from tests.conftest import FakeUser
@@ -41,28 +41,58 @@ def test_user_without_institute_sees_nothing(probe_a: TenantProbe) -> None:
 
 
 @pytest.mark.django_db
+def test_anonymous_user_sees_nothing(
+    probe_a: TenantProbe,
+    anonymous_user: FakeUser,
+) -> None:
+    assert list(TenantProbe.objects.for_user(anonymous_user)) == []
+
+
+@pytest.mark.django_db
+def test_manager_without_context_returns_nothing(
+    probe_a: TenantProbe,
+    probe_b: TenantProbe,
+) -> None:
+    clear_current_institute()
+    visible = set(TenantProbe.objects.all())
+    assert visible == set()
+
+
+@pytest.mark.django_db
+def test_unscoped_sees_all_institutes(
+    probe_a: TenantProbe,
+    probe_b: TenantProbe,
+) -> None:
+    clear_current_institute()
+    visible = set(TenantProbe.unscoped.all())
+    assert visible == {probe_a, probe_b}
+
+
+@pytest.mark.django_db
 def test_manager_filters_by_tenant_context(
     institute_a: Institute,
     institute_b: Institute,
     probe_a: TenantProbe,
     probe_b: TenantProbe,
 ) -> None:
-    clear_current_institute()
-    set_current_institute(institute_a)
-    try:
+    with tenant_context(institute_a):
         visible = set(TenantProbe.objects.all())
-    finally:
-        clear_current_institute()
 
     assert visible == {probe_a}
     assert probe_b not in visible
 
 
 @pytest.mark.django_db
-def test_manager_without_context_returns_unfiltered(
+def test_tenant_context_scopes_queries(
+    institute_a: Institute,
+    institute_b: Institute,
     probe_a: TenantProbe,
     probe_b: TenantProbe,
 ) -> None:
     clear_current_institute()
-    visible = set(TenantProbe.objects.all())
-    assert visible == {probe_a, probe_b}
+    assert list(TenantProbe.objects.all()) == []
+
+    with tenant_context(institute_a):
+        assert set(TenantProbe.objects.all()) == {probe_a}
+
+    assert list(TenantProbe.objects.all()) == []
