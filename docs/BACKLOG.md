@@ -25,6 +25,7 @@ Status: `[ ]` open, `[x]` done. Priority: **High** = fix before merge or before 
 | B8 | `ProgressBar`: coerce `value` to a number clamped 0 to 100 (it is interpolated into `style="width: ...%"`). | PR #4 | Low | [ ] |
 | B9 | URL props (`Button`, `QuickAction`, `Tabs` `hx-get`, `SectionCard` link): reject `javascript:` and other unsafe schemes with a small `safe_url()` helper. | PR #4 | Low | [ ] |
 | B10 | `CountdownCard` puts a value inside an Alpine expression string (`countdownCard('...')`), and `countdownCard` is not defined anywhere, so Alpine logs an error wherever the card renders. Use a `data-` attribute read by a defined Alpine component. Build it with roadmap 3.4 at the latest. | PR #4 | Medium | [ ] |
+| B11 | `CountdownCard` must not use `\|safe` on `lecture.title`. Pass `title` as a normal prop; template auto-escapes. Test: title contains `<script>`, assert escaped in render. | PR #4 | High | [x] |
 
 ## Fix in PR C (pages and menus)
 

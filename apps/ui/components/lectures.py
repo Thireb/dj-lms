@@ -5,7 +5,14 @@ class CountdownCard(Component):
     template_name = "ui/components/countdown_card.html"
 
     def __init__(self, lecture, viewer, **props):
-        super().__init__(lecture=lecture, viewer=viewer, **props)
+        super().__init__(
+            lecture=lecture,
+            viewer=viewer,
+            title=getattr(lecture, "title", ""),
+            scheduled_at=getattr(lecture, "scheduled_at", ""),
+            meeting_link=getattr(lecture, "meeting_link", ""),
+            **props,
+        )
 
 
 class LectureRow(Component):
