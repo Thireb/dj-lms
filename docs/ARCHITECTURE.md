@@ -77,7 +77,7 @@ lms/
 Decision: one user = one role. A person who needs two roles gets two separate accounts.
 
 - One `User` model (email login) with a single `role` field (`TextChoices`): `super_admin`, `institute_admin`, `sub_admin`, `teacher`, `student`, `guardian`.
-- Flag-style properties on `User`: `is_super_admin`, `is_institute_admin`, `is_teacher`, `is_student`, `is_guardian`. They only compare `role`. There are no separate boolean columns.
+- Flag-style properties on `User`: `is_super_admin`, `is_institute_admin`, `is_sub_admin`, `is_teacher`, `is_student`, `is_guardian`. They only compare `role`. There are no separate boolean columns.
 - Django's `is_staff` / `is_superuser` are for `/django-admin/` (developers) only. Never use them for product roles.
 - No database permission tables. No Django `Group` or `Permission` for product logic.
 - Profile models in `people`: `StudentProfile`, `TeacherProfile`, `GuardianProfile` (one-to-one with User).

@@ -71,6 +71,17 @@ Status: `[ ]` open, `[x]` done. Priority: **High** = fix before merge or before 
 | P6 | PROTECT blocks deleting an institute with data (test). | PR #2 | High | [x] in PR #3 |
 | P7 | Anonymous user with an institute id gets nothing from `for_user` (test). | PR #2 | High | [x] in PR #3 |
 
+## Main audit 2026-10-06 (fixed in PR #14, follow-ups from its review)
+
+| # | Item | Source | Priority | Status |
+|---|---|---|---|---|
+| M1 | `TenantModelForm` let a form with `institute` in `Meta.fields` list every institute and move an existing row to another institute. Fixed: field stripped, `clean()` rejects another institute's instance, `save()` forces `self.institute`. | main audit | High | [x] in PR #14 |
+| M2 | Users of an inactive or missing institute got 403 on logout. Fixed: logout is checked before the institute checks. | main audit | Low | [x] in PR #14 |
+| M3 | `TenantAdmin` showed every institute's rows to any `is_staff` user. Fixed for module, view and change. | main audit | Medium | [x] in PR #14 |
+| M4 | `TenantAdmin` still allows add and delete for a non-super-admin: `has_add_permission` and `has_delete_permission` fall back to Django perms, so an `is_superuser` user with `role=institute_admin` gets `True` for both (verified). Override both to require `user_is_super_admin`. Test both. Do with 1.1, since `createsuperuser` and real users arrive there. | PR #14 | High | [ ] |
+| M5 | `test_tenant_admin_changelist_forbidden_for_staff_non_super_admin` passes without the fix: the 403 comes from `TenantMiddleware` (a plain `auth.User` has no institute), not from `TenantAdmin`. Rewrite it with a user that passes the middleware once the 1.1 `User` model exists. | PR #14 | Low | [ ] |
+| M6 | Plan flags only hide menu items (`apps/ui/menus/registry.py`). Views do not enforce them, so a premium URL still opens when the flag is off. Add `requires_feature` / a `feature_key` mixin as in `ARCHITECTURE.md` (access layer 3); test the flag on and off. Do with 1.2 (Plan and feature flags) at the latest. | main audit | High | [ ] |
+
 ## Later (deployment hardening, Phase 12)
 
 | # | Item | Priority | Status |
