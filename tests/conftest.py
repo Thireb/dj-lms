@@ -8,7 +8,7 @@ from typing import Any
 import pytest
 from apps.accounts.models import User
 from apps.core.roles import Role
-from apps.institutes.models import Institute
+from apps.institutes.models import Institute, Plan
 
 from tests.testapp.models import TenantProbe
 
@@ -232,13 +232,26 @@ class FakeUser:
 
 
 @pytest.fixture
-def institute_a(db: Any) -> Institute:
-    return Institute.objects.create(name="Institute A", timezone="Asia/Karachi")
+def basic_plan(db: Any) -> Plan:
+    return Plan.default_basic()
 
 
 @pytest.fixture
-def institute_b(db: Any) -> Institute:
-    return Institute.objects.create(name="Institute B", timezone="Europe/London")
+def institute_a(db: Any, basic_plan: Plan) -> Institute:
+    return Institute.objects.create(
+        name="Institute A",
+        timezone="Asia/Karachi",
+        plan=basic_plan,
+    )
+
+
+@pytest.fixture
+def institute_b(db: Any, basic_plan: Plan) -> Institute:
+    return Institute.objects.create(
+        name="Institute B",
+        timezone="Europe/London",
+        plan=basic_plan,
+    )
 
 
 @pytest.fixture

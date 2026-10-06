@@ -1,0 +1,44 @@
+<div class="profile-menu relative" x-data="{ open: false }">
+  <button
+    type="button"
+    class="rounded-lg px-3 py-2 text-sm text-surface hover:bg-primary/20"
+    @click="open = !open"
+    aria-haspopup="true"
+    :aria-expanded="open"
+  >
+    <i class="fa-solid fa-user mr-1" aria-hidden="true"></i>
+    Profile
+  </button>
+  <ul
+    x-show="open"
+    @click.outside="open = false"
+    class="absolute right-0 z-20 mt-1 min-w-[12rem] rounded-lg border border-border bg-surface py-1 text-text shadow-lg"
+    x-cloak
+  >
+    {% for item in items %}
+      <li>
+        {% if item.post_only and not item.disabled %}
+          <form method="post" action="{{ item.url }}" class="block">
+            {% csrf_token %}
+            <button
+              type="submit"
+              class="block w-full px-3 py-2 text-left text-sm hover:bg-page"
+            >
+              <i class="fa-solid fa-{{ item.icon }} mr-2 w-4" aria-hidden="true"></i
+              >{{ item.label }}
+            </button>
+          </form>
+        {% else %}
+          <a
+            href="{{ item.url }}"
+            class="block px-3 py-2 text-sm {% if item.disabled %}pointer-events-none opacity-50{% else %}hover:bg-page{% endif %}"
+            {% if item.disabled %}aria-disabled="true"{% endif %}
+          >
+            <i class="fa-solid fa-{{ item.icon }} mr-2 w-4" aria-hidden="true"></i
+            >{{ item.label }}
+          </a>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+</div>

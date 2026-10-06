@@ -71,7 +71,10 @@ class SetPasswordForm(BaseForm):
         if password and confirm and password != confirm:
             raise ValidationError("Passwords do not match.")
         if password:
-            validate_password(password)
+            try:
+                validate_password(password)
+            except ValidationError as exc:
+                self.add_error("password", exc)
         return cleaned
 
     def get_layout(self):
@@ -144,7 +147,10 @@ class ChangePasswordForm(BaseForm):
             self.add_error("confirm_password", "New passwords do not match.")
             return cleaned
         if new_password:
-            validate_password(new_password, user=self.user)
+            try:
+                validate_password(new_password, user=self.user)
+            except ValidationError as exc:
+                self.add_error("new_password", exc)
         return cleaned
 
     def get_layout(self):

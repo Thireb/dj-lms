@@ -13,16 +13,17 @@ Plan: **B** = Basic, **P** = Premium. Plan split is from the reference pricing p
 
 ## 1. Platform
 
-- [ ] Many institutes on one install, each with isolated data. (B)
-- [ ] Super Admin panel: create institutes, set plan, activate/deactivate, read contact requests.
-- [ ] Five logins per institute: Admin, Sub-admin (helper), Teacher, Student, Guardian.
-- [ ] One campus per institute.
-- [ ] Per-institute plan flags switch modules on or off.
+- [x] Many institutes on one install, each with isolated data. (B) (verify)
+- [x] Super Admin panel: create institutes, set plan, activate/deactivate. (verify)
+- [ ] Super Admin: read contact requests (roadmap 11.2).
+- [x] Five logins per institute: Admin, Sub-admin (helper), Teacher, Student, Guardian. (verify)
+- [x] One campus per institute. (verify)
+- [x] Per-institute plan flags switch modules on or off. (verify)
 - [ ] Installable web app (PWA). (B)
 - [ ] In-app notification bell on every screen; fee and class alerts can be switched off per user.
 - [ ] Badge counts on menus (messages, approvals, receipts).
 - [ ] Dark / light / auto appearance setting.
-- [ ] Currency setting per institute (symbol shown on all amounts).
+- [x] Currency setting per institute (symbol shown on all amounts). (verify)
 - [ ] Per-user time zone; lectures show in the viewer's zone.
 - [ ] "Default portal" and "Toolbar settings" in the profile menu. (verify what they do)
 - [ ] Public site: Home, Features, Portals, Pricing, Contact, Privacy, Terms, Sign in.
@@ -36,7 +37,7 @@ Plan: **B** = Basic, **P** = Premium. Plan split is from the reference pricing p
 
 Setup order the reference teaches: Campus, Classes, Batches, Subjects, Fee Plans, Teachers, Students, then a test lecture and test challan.
 
-- [ ] Campus profile: name, address, contact, logo.
+- [x] Campus profile: name, address, contact (logo deferred to roadmap 12.2). (verify)
 - [ ] Classes: name-only list (an optional label on a student, e.g. "Grade 9").
 - [ ] Batches: name-only list (a running group, e.g. "Morning", "Weekend").
 - [ ] Subjects: name-only list.

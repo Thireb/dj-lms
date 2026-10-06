@@ -380,6 +380,8 @@ Landscape. Institute logo, "Certificate of Completion", student name, batch and 
 
 ## 10. Seed / demo data
 
+Built by management command: `uv run python manage.py seed_demo` (Phase 1 stack: plans, Demo Institute, settings row, one user per role). Full volume below is roadmap 2.8, not Phase 1.
+
 - 1 institute "Demo Institute" on Premium plan, Asia/Karachi, currency Rs.
 - 3 class labels, 4 batches, 6 subjects, 3 fee plans.
 - 52 students (30 active, 22 inactive), 5 teachers, 1 admin, 1 sub-admin (Finance and People only).

@@ -63,9 +63,14 @@ def test_institute_feature_filter_hides_premium_items() -> None:
 
 @pytest.mark.django_db
 def test_all_portal_shells_render_with_real_menus(institute_a) -> None:
+    from apps.core.features import PREMIUM_PLAN_FEATURES
+    from apps.institutes.models import Plan
     from apps.ui.components.layout import TopNavShell
 
-    institute_a.features = ["fees", "payroll", "messaging"]
+    premium = Plan.objects.get(code="premium")
+    institute_a.plan = premium
+    institute_a.save()
+    assert PREMIUM_PLAN_FEATURES <= institute_a.features
     user = FakeUser(role=Role.INSTITUTE_ADMIN, institute=institute_a)
     admin_html = str(TopNavShell(portal="admin", user=user, institute=institute_a))
     assert "top-nav-shell" in admin_html

@@ -48,7 +48,7 @@ Status: `[ ]` open, `[x]` done. Priority: **High** = fix before merge or before 
 | C8 | Sign out menu items are plain links to `accounts:logout`. Django 5 `LogoutView` is POST-only, so the link will return 405 once the URL exists. Render Sign out as a POST form button with CSRF. Do with Phase 1 login. | PR #7 | Low | [x] |
 | C9 | Anonymous users get 403 from page classes instead of a redirect to login. Redirect once the login URL exists (Phase 1). | PR #7 | Low | [x] |
 | C10 | Access test gaps after the C3/C4 fix (PR #7, `04ed6fa`): no test covers a page that never sets `allowed_roles` (changing the default to all roles leaves all 132 tests passing; the empty-list test sets `[]` explicitly). `ImproperlyConfigured` for an admin page without `menu_key` only fires at request time; add a test that walks every `PortalPageView` subclass with `portal = "admin"` and asserts `menu_key` is a key in `core/menus.py`. The two `test_mutation_sensitive_*` tests duplicate the tests above them. | PR #7 | Low | [x] |
-| C11 | Admin profile menu (Account settings, Toolbar settings, Default portal, Institute settings, Manage users, Manage permissions, Select currency, Appearance, Sign out) is not in the menu config. Admin-only items (Institute settings, Manage users, Manage permissions, Select currency) must render and route only for `institute_admin`, never for `sub_admin`. Do with roadmap 1.2 (campus profile and settings). | PR #7 | High | [ ] |
+| C11 | Admin profile menu (Account settings, Toolbar settings, Default portal, Institute settings, Manage users, Manage permissions, Select currency, Appearance, Sign out) is not in the menu config. Admin-only items (Institute settings, Manage users, Manage permissions, Select currency) must render and route only for `institute_admin`, never for `sub_admin`. Do with roadmap 1.2 (campus profile and settings). | PR #7 | High | [x] |
 
 ## Fix in roadmap 0.5 (tooling, CI)
 
@@ -79,7 +79,21 @@ Status: `[ ]` open, `[x]` done. Priority: **High** = fix before merge or before 
 | N2 | `LogoutView.get` returns `HttpResponseNotAllowed(["POST"])`; test 405 and `Allow: POST`. | main audit | Low | [x] |
 | N3 | Remove obsolete "Fix before roadmap 1.1c" backlog table (items already done). | main audit | Low | [x] |
 | N4 | ROADMAP sub-item 1.1c; track N1–N4 and B17 in this table. | main audit | Low | [x] |
+| N5 | Product admin portal uses URL namespace `admin` (`/admin/`); Django developer admin uses a separate `AdminSite` at `/django-admin/` so `reverse("admin:…")` resolves to portal routes. | main audit | Low | [x] |
 | B17 | `scheduled_at_to_iso` catches `OverflowError` for year-1 datetimes with positive offset. | main audit / PR #6 | Low | [x] |
+
+## Review 1.1c (PR #19 follow-ups)
+
+| # | Item | Source | Priority | Status |
+|---|---|---|---|---|
+| F1 | Profile and change-password pages use `self_service=True` (no admin menu key); sub_admin without grantable menus still reaches them. | PR #19 | High | [x] |
+| F2 | `admin_only=True` for institute-only admin pages; `ImproperlyConfigured` when misconfigured. | PR #19 | High | [x] |
+| F3 | Change-password validation uses a non-dictionary password; failed validation leaves the old password unchanged. | PR #19 | Medium | [x] |
+| F4 | Profile POST CSRF: GET exposes token; POST with checks succeeds, POST without → 403. | PR #19 | Medium | [x] |
+| F5 | Profile save persists all four editable fields. | PR #19 | Medium | [x] |
+| F6 | Invalid profile POST shows DB name, not tampered POST value. | PR #19 | Medium | [x] |
+| F7 | Super admin profile uses the super portal shell (`data-portal="super"`). | PR #19 | Low | [x] |
+| F8 | Test passwords are plain literals in `tests/conftest.py`; GitGuardian ignore narrowed to that file only. | PR #19 | Low | [x] |
 
 ## Main audit 2026-10-06 (fixed in PR #14, follow-ups from its review)
 
@@ -90,7 +104,7 @@ Status: `[ ]` open, `[x]` done. Priority: **High** = fix before merge or before 
 | M3 | `TenantAdmin` showed every institute's rows to any `is_staff` user. Fixed for module, view and change. | main audit | Medium | [x] in PR #14 |
 | M4 | `TenantAdmin` still allows add and delete for a non-super-admin: `has_add_permission` and `has_delete_permission` fall back to Django perms, so an `is_superuser` user with `role=institute_admin` gets `True` for both (verified). Override both to require `user_is_super_admin`. Test both. Do with 1.1, since `createsuperuser` and real users arrive there. | PR #14 | High | [x] |
 | M5 | `test_tenant_admin_changelist_forbidden_for_staff_non_super_admin` passes without the fix: the 403 comes from `TenantMiddleware` (a plain `auth.User` has no institute), not from `TenantAdmin`. Rewrite it with a user that passes the middleware once the 1.1 `User` model exists. | PR #14 | Low | [x] |
-| M6 | Plan flags only hide menu items (`apps/ui/menus/registry.py`). Views do not enforce them, so a premium URL still opens when the flag is off. Add `requires_feature` / a `feature_key` mixin as in `ARCHITECTURE.md` (access layer 3); test the flag on and off. Do with 1.2 (Plan and feature flags) at the latest. | main audit | High | [ ] |
+| M6 | Plan flags only hide menu items (`apps/ui/menus/registry.py`). Views do not enforce them, so a premium URL still opens when the flag is off. Add `requires_feature` / a `feature_key` mixin as in `ARCHITECTURE.md` (access layer 3); test the flag on and off. Do with 1.2 (Plan and feature flags) at the latest. | main audit | High | [x] |
 
 ## Review of 1.1a/1.1b (PR #15, PR #16)
 

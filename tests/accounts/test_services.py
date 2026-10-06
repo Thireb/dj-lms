@@ -42,7 +42,7 @@ def test_post_login_skips_post_only_menu_items(institute_a) -> None:
         institute=institute_a,
     )
     url = post_login_redirect_url(user)
-    assert url == reverse("accounts:teacher_home")
+    assert url == reverse("teacher:home")
 
 
 @pytest.mark.django_db

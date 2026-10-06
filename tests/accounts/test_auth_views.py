@@ -215,7 +215,7 @@ def test_admin_top_nav_sign_out_is_post_form(client: Client, institute_a) -> Non
         institute=institute_a,
     )
     client.force_login(user)
-    response = client.get(reverse("accounts:admin_home"))
+    response = client.get(reverse("admin:home"))
     assert response.status_code == 200
     html = response.content.decode()
     assert "top-nav" in html
@@ -229,11 +229,11 @@ def test_admin_top_nav_sign_out_is_post_form(client: Client, institute_a) -> Non
 @pytest.mark.parametrize(
     ("role", "email", "home_name"),
     [
-        (Role.INSTITUTE_ADMIN, "ia@example.com", "accounts:admin_home"),
-        (Role.SUB_ADMIN, "sa@example.com", "accounts:admin_home"),
-        (Role.TEACHER, "t@example.com", "accounts:teacher_home"),
-        (Role.STUDENT, "s@example.com", "accounts:student_home"),
-        (Role.GUARDIAN, "g@example.com", "accounts:guardian_home"),
+        (Role.INSTITUTE_ADMIN, "ia@example.com", "admin:home"),
+        (Role.SUB_ADMIN, "sa@example.com", "admin:home"),
+        (Role.TEACHER, "t@example.com", "teacher:home"),
+        (Role.STUDENT, "s@example.com", "student:home"),
+        (Role.GUARDIAN, "g@example.com", "guardian:home"),
     ],
 )
 @pytest.mark.django_db
@@ -325,4 +325,4 @@ def test_super_admin_login_csrf_flow(client: Client) -> None:
         follow=True,
     )
     assert response.status_code == 200
-    assert response.request["PATH_INFO"] == reverse("accounts:super_admin_home")
+    assert response.request["PATH_INFO"] == reverse("super:institute_list")

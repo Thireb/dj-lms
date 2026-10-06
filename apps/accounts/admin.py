@@ -1,10 +1,9 @@
-from django.contrib import admin
+from config.developer_admin_site import developer_admin_site
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 
 from apps.accounts.models import User
 
 
-@admin.register(User)
 class UserAdmin(DjangoUserAdmin):
     ordering = ("email",)
     list_display = ("email", "role", "institute", "is_staff", "is_active")
@@ -47,3 +46,6 @@ class UserAdmin(DjangoUserAdmin):
         ),
     )
     filter_horizontal = ("groups", "user_permissions")
+
+
+developer_admin_site.register(User, UserAdmin)

@@ -65,13 +65,8 @@ class GuardianPortalHomePage(PortalHomePage):
 
 
 class SuperAdminPortalHomePage(PortalHomePage):
-    portal = "admin"
+    portal = "super"
     title = "Super admin home"
     allowed_roles = [Role.SUPER_ADMIN]
-    menu_key = "dashboards"
-    home_message = "Super admin signed in. Use Django admin for institute management."
-
-    def get_shell_class(self):
-        from apps.ui.components.layout import TopNavShell
-
-        return TopNavShell
+    active_item = "institutes"
+    home_message = "Super admin signed in. Manage institutes from the menu."

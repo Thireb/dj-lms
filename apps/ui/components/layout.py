@@ -69,6 +69,14 @@ class TopNavShell(Component):
             user=self.props["user"],
             unread_count=self.props.get("unread_count", 0),
         )
+        from apps.ui.components.profile_menu import ProfileMenu
+        from apps.ui.menus.registry import build_profile_menu_items
+
+        inst = self.props.get("institute") or getattr(
+            self.props["user"], "institute", None
+        )
+        profile_items = build_profile_menu_items(self.props["user"], inst)
+        ctx["profile_menu"] = ProfileMenu(items=profile_items)
         return ctx
 
     def render(self, request=None):
@@ -76,6 +84,7 @@ class TopNavShell(Component):
         if request is not None:
             ctx["top_nav"] = ctx["top_nav"].render(request=request)
             ctx["notification_bell"] = ctx["notification_bell"].render(request=request)
+            ctx["profile_menu"] = ctx["profile_menu"].render(request=request)
             content = ctx.get("content")
             if content is not None and hasattr(content, "render"):
                 ctx["content"] = content.render(request=request)

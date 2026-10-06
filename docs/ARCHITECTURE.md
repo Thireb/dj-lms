@@ -94,6 +94,9 @@ Three layers of access, always in this order:
   - Not grantable (admin only): Manage Users, Manage Permissions, Institute settings (rules and currency), Select Currency.
   - The Campus page (Institute group: name, address, phone, email, logo) is under the `institute` key, so a sub-admin granted Institute can open it. Institute settings change how the institute behaves (for example defaulter blocking or attendance thresholds), so they stay admin only and live in the profile menu, not the Institute group. Field split: `SPEC-DETAILS.md` section 1.
   - `MenuRequiredMixin` with `menu_key = "finance"` on every admin view: `institute_admin` always passes, `sub_admin` passes only if the key is in `allowed_menus`, everyone else gets 403.
+  - Admin views that are not tied to a top menu group declare exactly one alternate on `PortalPageView`:
+    - `self_service = True` — skip menu checks (role gate still applies). Use for profile, change password, and similar pages every signed-in admin user may open.
+    - `admin_only = True` — skip menu checks; `allowed_roles` must be exactly `[Role.INSTITUTE_ADMIN]`. Use for institute settings and other pages sub-admins must never reach. Raises `ImproperlyConfigured` if `allowed_roles` is wrong.
   - The same list drives the top menu, so hidden menus never render.
   - Data scope for a sub-admin is the same as admin (own institute).
   - Still no permission tables, no `Group`, no `Permission`.

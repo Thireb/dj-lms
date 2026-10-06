@@ -81,7 +81,8 @@ def test_mutation_sensitive_default_allowed_roles_not_allow_all(
     assert response.status_code == 403
 
 
-def test_every_admin_portal_page_view_has_valid_menu_key() -> None:
+def test_every_admin_portal_page_view_has_exactly_one_access_mode() -> None:
+    """C10: admin portal pages declare menu_key, self_service, or admin_only."""
     valid_keys = set(menu_keys.ADMIN_MENU_KEYS)
     offenders: list[str] = []
     for cls in sorted(_all_portal_page_view_subclasses(), key=lambda c: c.__name__):
@@ -89,7 +90,16 @@ def test_every_admin_portal_page_view_has_valid_menu_key() -> None:
             continue
         if getattr(cls, "portal", None) != "admin":
             continue
+        self_service = bool(getattr(cls, "self_service", False))
+        admin_only = bool(getattr(cls, "admin_only", False))
         key = getattr(cls, "menu_key", None)
-        if key not in valid_keys:
-            offenders.append(f"{cls.__module__}.{cls.__name__} menu_key={key!r}")
+        has_menu = key in valid_keys
+        mode_count = sum((self_service, admin_only, has_menu))
+        name = f"{cls.__module__}.{cls.__name__}"
+        if mode_count != 1:
+            offenders.append(
+                f"{name} must set exactly one of menu_key, self_service, admin_only "
+                f"(got menu_key={key!r}, self_service={self_service}, "
+                f"admin_only={admin_only})"
+            )
     assert offenders == []

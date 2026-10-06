@@ -7,6 +7,7 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.views.generic import TemplateView
 
 from apps.core.mixins.access import (
+    FeatureRequiredMixin,
     MenuRequiredMixin,
     RoleRequiredMixin,
     TenantRequiredMixin,
@@ -23,6 +24,7 @@ from apps.ui.forms.base import TenantModelForm
 
 
 class PortalPageView(
+    FeatureRequiredMixin,
     MenuRequiredMixin,
     RoleRequiredMixin,
     TenantRequiredMixin,
@@ -31,6 +33,9 @@ class PortalPageView(
     template_name = "base.html"
     portal: str | None = None
     menu_key: str | None = None
+    self_service: bool = False
+    admin_only: bool = False
+    feature_key: str | None = None
     active_item: str | None = None
     allowed_roles: list[str] = []
     title = ""
