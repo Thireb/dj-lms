@@ -1,4 +1,4 @@
-.PHONY: dev css migrate test lint format
+.PHONY: dev css migrate test lint format-check
 
 dev:
 	./scripts/dev.sh
