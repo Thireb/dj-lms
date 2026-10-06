@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from unittest import mock
+
 import pytest
 from apps.accounts.models import SetPasswordToken, User
 from apps.core.roles import Role
@@ -21,6 +23,22 @@ def test_create_institute_transaction(basic_plan) -> None:
     assert InstituteSettings.unscoped.filter(institute=result.institute).exists()
     assert User.objects.filter(email="tx-admin@example.com", role=Role.INSTITUTE_ADMIN)
     assert SetPasswordToken.objects.filter(user=result.admin_user).exists()
+
+
+@pytest.mark.django_db
+def test_create_institute_rolls_back_when_token_fails(basic_plan) -> None:
+    with mock.patch(
+        "apps.superadmin.services.create_set_password_token",
+        side_effect=RuntimeError("token store down"),
+    ):
+        with pytest.raises(RuntimeError):
+            create_institute(
+                name="Rollback Institute",
+                plan=basic_plan,
+                admin_email="rollback@example.com",
+            )
+    assert not Institute.objects.filter(name="Rollback Institute").exists()
+    assert not User.objects.filter(email="rollback@example.com").exists()
 
 
 @pytest.mark.django_db

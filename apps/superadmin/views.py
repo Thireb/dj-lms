@@ -3,99 +3,192 @@
 from __future__ import annotations
 
 from typing import Any
+from urllib.parse import urlencode
 
 from django.contrib import messages
+from django.core.paginator import Paginator
+from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
+from django.shortcuts import get_object_or_404
 from django.urls import reverse
+from django.utils import timezone
+from django.utils.dateformat import format as format_date
 
 from apps.core.roles import Role
 from apps.institutes.models import Institute
 from apps.superadmin.forms import CreateInstituteForm, EditInstituteForm
-from apps.superadmin.services import create_institute, list_institutes, update_institute
-from apps.ui.components.actions import Button
-from apps.ui.components.data import Column, DataTable
-from apps.ui.views.pages import FormPage, ListPage
+from apps.superadmin.services import (
+    create_institute,
+    list_institutes,
+    set_institute_active,
+    update_institute,
+)
+from apps.ui.components.actions import Button, ConfirmDialog, CopyField
+from apps.ui.components.block_stack import BlockStack
+from apps.ui.components.data import Badge, Column, DataTable
+from apps.ui.components.layout import SectionCard
+from apps.ui.components.nav import FilterBar, Pagination
+from apps.ui.views.pages import FormPage, ListPage, PortalPageView
+
+PAGE_SIZE = 25
 
 
-class InstituteListPage(ListPage):
+def _status_badge(institute: Institute) -> Badge:
+    if institute.is_active:
+        return Badge("Active", tone="success")
+    return Badge("Inactive", tone="neutral")
+
+
+def _edit_button(institute: Institute) -> Button:
+    return Button(
+        label="Edit",
+        url=reverse("super:institute_edit", kwargs={"pk": institute.pk}),
+        variant="secondary",
+    )
+
+
+class SuperAdminPageMixin:
     portal = "super"
-    title = "Institutes"
     allowed_roles = [Role.SUPER_ADMIN]
+
+
+class InstituteListPage(SuperAdminPageMixin, ListPage):
+    title = "Institutes"
     active_item = "institutes"
 
-    def get_queryset(self):
-        return list_institutes()
+    def get_search(self) -> str:
+        return self.request.GET.get("q", "").strip()
+
+    def get_actions(self) -> list[Any]:
+        return [Button("Create institute", url=reverse("super:institute_create"))]
 
     def get_components(self) -> dict[str, Any]:
-        rows = list(self.get_queryset())
-
-        def edit_link(institute: Institute) -> Button:
-            return Button(
-                label="Edit",
-                url=reverse("super:institute_edit", kwargs={"pk": institute.pk}),
-                variant="secondary",
-            )
-
+        search = self.get_search()
+        page = Paginator(list_institutes(search), PAGE_SIZE).get_page(
+            self.request.GET.get("page")
+        )
         columns = [
             Column("name", "Name"),
-            Column("plan", "Plan", lambda i: i.plan.name if i.plan_id else ""),
-            Column("active", "Active", lambda i: "Yes" if i.is_active else "No"),
-            Column("edit", "", edit_link),
+            Column("plan", "Plan", lambda i: i.plan.name),
+            Column("status", "Status", _status_badge),
+            Column("users", "Users", lambda i: i.user_count),
+            Column(
+                "created",
+                "Created",
+                lambda i: format_date(timezone.localtime(i.created_at), "j M Y"),
+            ),
+            Column("edit", "", _edit_button),
         ]
-        return {"table": DataTable(rows=rows, columns=columns)}
+        filter_field = {"name": "q", "label": "Search by name", "value": search}
+        return {
+            "filters": FilterBar(filters=[filter_field]),
+            "table": DataTable(
+                rows=list(page.object_list),
+                columns=columns,
+                empty_title="No institutes found.",
+            ),
+            "pagination": Pagination(
+                page, query=urlencode({"q": search}) if search else ""
+            ),
+        }
 
 
-class CreateInstitutePage(FormPage):
-    portal = "super"
+class CreateInstitutePage(SuperAdminPageMixin, FormPage):
     title = "Create institute"
-    allowed_roles = [Role.SUPER_ADMIN]
     form_class = CreateInstituteForm
     active_item = "institutes_create"
 
     def get_form_kwargs(self) -> dict[str, Any]:
         return {"cancel_url": reverse("super:institute_list")}
 
-    def get_success_url(self) -> str:
-        return reverse("super:institute_list")
-
-    def on_form_valid(self, form: CreateInstituteForm) -> None:
+    def form_valid(self, form: CreateInstituteForm) -> HttpResponse:
         result = create_institute(
             name=form.cleaned_data["name"],
             plan=form.cleaned_data["plan"],
             admin_email=form.cleaned_data["admin_email"],
+            admin_first_name=form.cleaned_data["admin_first_name"],
+            admin_last_name=form.cleaned_data["admin_last_name"],
             timezone=form.cleaned_data["timezone"],
+            currency_code=form.cleaned_data["currency_code"],
         )
-        messages.success(
-            self.request,
-            f"Institute created. Set-password link: {result.set_password_path}",
+        # The link is shown once in this response only; never in messages or logs.
+        link = self.request.build_absolute_uri(result.set_password_path)
+        context = self.get_context_data()
+        context["form"] = SectionCard(
+            title=f"{result.institute.name} created",
+            body=BlockStack(
+                blocks=[
+                    "Send this link to the admin so they can set a password. "
+                    "It is shown only once.",
+                    CopyField("Set-password link", link),
+                    Button(
+                        "Back to institutes",
+                        url=reverse("super:institute_list"),
+                        variant="secondary",
+                    ),
+                ]
+            ),
+        )
+        return self.render_to_response(context, status=200)
+
+
+class InstituteObjectMixin:
+    """Load the institute only after the access mixins have passed."""
+
+    institute: Institute
+
+    def get_object(self) -> Institute:
+        return get_object_or_404(
+            Institute.objects.select_related("plan"), pk=self.kwargs["pk"]
         )
 
 
-class EditInstitutePage(FormPage):
-    portal = "super"
+class EditInstitutePage(SuperAdminPageMixin, InstituteObjectMixin, FormPage):
     title = "Edit institute"
-    allowed_roles = [Role.SUPER_ADMIN]
     form_class = EditInstituteForm
     active_item = "institutes"
 
-    def dispatch(self, request, *args, **kwargs):
-        self.institute_pk = kwargs.get("pk")
-        # unscoped: Super Admin resolves institute by primary key across tenants.
-        # Global Institute rows are not tenant-scoped.
-        self.institute = Institute.objects.select_related("plan").get(
-            pk=self.institute_pk
-        )
-        return super().dispatch(request, *args, **kwargs)
+    def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        self.institute = self.get_object()
+        return super().get(request, *args, **kwargs)
+
+    def post(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        self.institute = self.get_object()
+        return super().post(request, *args, **kwargs)
 
     def get_form_kwargs(self) -> dict[str, Any]:
+        institute = self.institute
         return {
             "initial": {
-                "name": self.institute.name,
-                "plan": self.institute.plan_id,
-                "is_active": self.institute.is_active,
+                "name": institute.name,
+                "plan": institute.plan_id,
+                "timezone": institute.timezone,
+                "currency_code": institute.currency_code,
             },
-            "is_active": self.institute.is_active,
             "cancel_url": reverse("super:institute_list"),
         }
+
+    def get_actions(self) -> list[Any]:
+        institute = self.institute
+        url = reverse("super:institute_status", kwargs={"pk": institute.pk})
+        if institute.is_active:
+            return [
+                ConfirmDialog(
+                    f"Deactivate {institute.name}? Its users will not be able "
+                    "to sign in.",
+                    "Deactivate",
+                    url=url,
+                    fields=[("action", "deactivate")],
+                )
+            ]
+        return [
+            ConfirmDialog(
+                f"Activate {institute.name}? Its users can sign in again.",
+                "Activate",
+                url=url,
+                variant="primary",
+                fields=[("action", "activate")],
+            )
+        ]
 
     def get_success_url(self) -> str:
         return reverse("super:institute_edit", kwargs={"pk": self.institute.pk})
@@ -105,7 +198,25 @@ class EditInstitutePage(FormPage):
             self.institute,
             name=form.cleaned_data["name"],
             plan=form.cleaned_data["plan"],
-            is_active=form.cleaned_data["is_active"],
+            timezone=form.cleaned_data["timezone"],
+            currency_code=form.cleaned_data["currency_code"],
         )
-        action = "activated" if self.institute.is_active else "deactivated"
-        messages.success(self.request, f"Institute saved ({action} when toggled).")
+        messages.success(self.request, "Institute saved.")
+
+
+class InstituteStatusView(SuperAdminPageMixin, InstituteObjectMixin, PortalPageView):
+    """POST-only activate/deactivate, reached from the confirm dialog."""
+
+    http_method_names = ["post"]
+
+    def post(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        institute = self.get_object()
+        action = request.POST.get("action")
+        if action not in {"activate", "deactivate"}:
+            messages.error(request, "Unknown action.")
+        else:
+            set_institute_active(institute, is_active=action == "activate")
+            messages.success(request, f"{institute.name} {action}d.")
+        return HttpResponseRedirect(
+            reverse("super:institute_edit", kwargs={"pk": institute.pk})
+        )

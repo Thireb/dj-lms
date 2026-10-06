@@ -16,4 +16,9 @@ urlpatterns = [
         views.EditInstitutePage.as_view(),
         name="institute_edit",
     ),
+    path(
+        "institutes/<int:pk>/status/",
+        views.InstituteStatusView.as_view(),
+        name="institute_status",
+    ),
 ]
