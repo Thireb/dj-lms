@@ -6,6 +6,7 @@ import pytest
 from apps.accounts.models import User
 from apps.core.roles import Role
 from apps.institutes.models import Institute, InstituteSettings
+from django.contrib.messages import get_messages
 from django.test import Client
 from django.urls import reverse
 from tests.conftest import make_user
@@ -64,6 +65,8 @@ def test_set_password_token_never_stored_in_messages(
     assert token
     cookie_values = " ".join(c.value for c in super_client.cookies.values())
     assert token not in cookie_values
+    queued = [str(m) for m in get_messages(response.wsgi_request)]
+    assert not any(token in message for message in queued)
     follow_up = super_client.get(reverse("super:institute_list")).content.decode()
     assert token not in follow_up
 

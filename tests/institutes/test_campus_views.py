@@ -68,6 +68,7 @@ def test_campus_invalid_post_does_not_show_unsaved_name(
     html = response.content.decode()
     assert "Enter a valid email address" in html
     assert html.count("Unsaved Name") == 1  # only inside the form input
+    assert response.wsgi_request.institute.name == "Institute A"
     institute_a.refresh_from_db()
     assert institute_a.name == "Institute A"
 

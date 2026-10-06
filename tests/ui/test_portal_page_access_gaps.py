@@ -103,3 +103,18 @@ def test_every_admin_portal_page_view_has_exactly_one_access_mode() -> None:
                 f"admin_only={admin_only})"
             )
     assert offenders == []
+
+
+class _MisconfiguredAdminOnlyPage(PortalPageView):
+    portal = "admin"
+    admin_only = True
+    allowed_roles = [Role.INSTITUTE_ADMIN, Role.SUB_ADMIN]
+    title = "Misconfigured"
+
+
+def test_admin_only_with_extra_roles_is_improperly_configured() -> None:
+    from django.core.exceptions import ImproperlyConfigured
+
+    user = FakeUser(role=Role.INSTITUTE_ADMIN, institute_id=1)
+    with pytest.raises(ImproperlyConfigured, match="admin_only"):
+        _dispatch(_MisconfiguredAdminOnlyPage, user, object())
