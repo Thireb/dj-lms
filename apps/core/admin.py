@@ -30,3 +30,9 @@ class TenantAdmin(admin.ModelAdmin):
 
     def has_change_permission(self, request, obj=None):  # noqa: ANN001
         return user_is_super_admin(request.user)
+
+    def has_add_permission(self, request):  # noqa: ANN001
+        return user_is_super_admin(request.user)
+
+    def has_delete_permission(self, request, obj=None):  # noqa: ANN001
+        return user_is_super_admin(request.user)

@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import pytest
+from apps.accounts.models import User
 from apps.core.admin import TenantAdmin
 from apps.core.tenancy import clear_current_institute
 from apps.institutes.models import Institute
 from django.contrib import admin
 from django.contrib.admin.sites import AdminSite
-from django.contrib.auth.models import AnonymousUser, User
+from django.contrib.auth.models import AnonymousUser
 from django.test import Client
 
 from tests.conftest import FakeUser
@@ -56,9 +57,15 @@ def test_tenant_admin_changelist_forbidden_for_staff_non_super_admin(
     institute_a: Institute,
 ) -> None:
     TenantProbe.unscoped.create(institute=institute_a, label="a")
-    User.objects.create_user(username="staffdev", password="pass", is_staff=True)
+    User.objects.create_user(
+        email="staffdev@example.com",
+        password="pass",
+        role=User.Role.INSTITUTE_ADMIN,
+        institute=institute_a,
+        is_staff=True,
+    )
     client = Client()
-    assert client.login(username="staffdev", password="pass")
+    assert client.login(username="staffdev@example.com", password="pass")
 
     response = client.get("/django-admin/testapp/tenantprobe/")
 
@@ -77,3 +84,33 @@ def test_tenant_admin_has_view_permission_only_for_super_admin() -> None:
         type("Req", (), {"user": staff_teacher})()
     )
     assert model_admin.has_view_permission(type("Req", (), {"user": super_admin})())
+
+
+@pytest.mark.django_db
+def test_tenant_admin_has_add_permission_only_for_super_admin() -> None:
+    site = AdminSite()
+    model_admin = TenantAdmin(TenantProbe, site)
+    institute_admin = FakeUser(role="institute_admin", institute_id=1)
+    institute_admin.is_staff = True  # noqa: SLF001
+    institute_admin.is_superuser = True  # noqa: SLF001
+    super_admin = FakeUser(role="super_admin", institute_id=None)
+
+    assert not model_admin.has_add_permission(
+        type("Req", (), {"user": institute_admin})()
+    )
+    assert model_admin.has_add_permission(type("Req", (), {"user": super_admin})())
+
+
+@pytest.mark.django_db
+def test_tenant_admin_has_delete_permission_only_for_super_admin() -> None:
+    site = AdminSite()
+    model_admin = TenantAdmin(TenantProbe, site)
+    institute_admin = FakeUser(role="institute_admin", institute_id=1)
+    institute_admin.is_staff = True  # noqa: SLF001
+    institute_admin.is_superuser = True  # noqa: SLF001
+    super_admin = FakeUser(role="super_admin", institute_id=None)
+
+    assert not model_admin.has_delete_permission(
+        type("Req", (), {"user": institute_admin})()
+    )
+    assert model_admin.has_delete_permission(type("Req", (), {"user": super_admin})())
