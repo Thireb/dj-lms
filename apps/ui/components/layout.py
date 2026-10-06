@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from apps.ui.components.base import Component
 from apps.ui.components.nav import NotificationBell
+from apps.ui.safe_url import safe_url
 
 
 class TopNav(Component):
@@ -160,7 +161,7 @@ class SectionCard(Component):
         super().__init__(
             title=title,
             body=body,
-            link_url=link_url,
+            link_url=safe_url(link_url) if link_url is not None else None,
             link_label=link_label,
             **props,
         )
@@ -170,7 +171,16 @@ class Tabs(Component):
     template_name = "ui/components/tabs.html"
 
     def __init__(self, tabs, active=None, **props):
-        super().__init__(tabs=tabs, active=active, **props)
+        safe_tabs = []
+        for tab in tabs:
+            if isinstance(tab, dict):
+                item = dict(tab)
+            else:
+                item = dict(vars(tab))
+            if "url" in item:
+                item["url"] = safe_url(item["url"])
+            safe_tabs.append(item)
+        super().__init__(tabs=safe_tabs, active=active, **props)
 
 
 class Modal(Component):

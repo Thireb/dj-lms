@@ -51,8 +51,10 @@ class FormActions(LayoutObject):
     template = "ui/forms/layout/form_actions.html"
 
     def __init__(self, save_label="Save changes", cancel_url=None, css_class=None):
+        from apps.ui.safe_url import safe_url
+
         self.save_label = save_label
-        self.cancel_url = cancel_url
+        self.cancel_url = safe_url(cancel_url) if cancel_url is not None else None
         self.css_class = css_class or ""
 
     def render(self, form, context, template_pack=None, **kwargs):

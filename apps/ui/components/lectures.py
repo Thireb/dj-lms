@@ -6,6 +6,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
 from apps.ui.components.base import Component
+from apps.ui.safe_url import safe_url
 
 
 def _utc_iso(dt: datetime) -> str:
@@ -41,7 +42,7 @@ class CountdownCard(Component):
             viewer=viewer,
             title=getattr(lecture, "title", ""),
             scheduled_at_iso=scheduled_at_to_iso(scheduled_raw),
-            meeting_link=getattr(lecture, "meeting_link", ""),
+            meeting_link=safe_url(getattr(lecture, "meeting_link", "")),
             **props,
         )
 
