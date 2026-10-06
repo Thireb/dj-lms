@@ -38,6 +38,12 @@ class TenantProbeForm(TenantModelForm):
         fields = ["label", "related"]
 
 
+class TenantProbeWithInstituteFieldForm(TenantModelForm):
+    class Meta:
+        model = TenantProbe
+        fields = ["label", "institute"]
+
+
 def test_base_form_crispy_render() -> None:
     template = Template("{% load crispy_forms_tags %}{% crispy form %}")
     html = template.render(Context({"form": SampleForm()}))
@@ -93,6 +99,42 @@ def test_tenant_model_form_rejects_cross_institute_related(
         )
         assert not form.is_valid()
         assert "related" in form.errors
+
+
+def test_tenant_model_form_strips_institute_field(db, institute_a, institute_b) -> None:
+    form = TenantProbeWithInstituteFieldForm(institute=institute_a)
+    assert "institute" not in form.fields
+
+
+def test_tenant_model_form_cannot_move_record_to_other_institute_via_post(
+    db,
+    institute_a,
+    institute_b,
+    probe_a,
+) -> None:
+    with tenant_context(institute_a):
+        form = TenantProbeWithInstituteFieldForm(
+            data={"label": "moved", "institute": institute_b.pk},
+            instance=probe_a,
+            institute=institute_a,
+        )
+        assert form.is_valid(), form.errors
+        saved = form.save()
+        assert saved.institute_id == institute_a.pk
+
+
+def test_tenant_model_form_rejects_cross_institute_edit(
+    db,
+    institute_a,
+    probe_b,
+) -> None:
+    form = TenantProbeForm(
+        data={"label": probe_b.label},
+        instance=probe_b,
+        institute=institute_a,
+    )
+    assert not form.is_valid()
+    assert form.non_field_errors()
 
 
 def test_widgets_render_expected_types() -> None:

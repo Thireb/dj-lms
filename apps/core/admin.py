@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from django.contrib import admin
 
+from apps.core.roles import user_is_super_admin
+
 
 class TenantAdmin(admin.ModelAdmin):
     """ModelAdmin for :class:`~apps.core.models.TenantModel` subclasses.
@@ -19,3 +21,12 @@ class TenantAdmin(admin.ModelAdmin):
         if ordering:
             qs = qs.order_by(*ordering)
         return qs
+
+    def has_module_permission(self, request):  # noqa: ANN001
+        return user_is_super_admin(request.user)
+
+    def has_view_permission(self, request, obj=None):  # noqa: ANN001
+        return user_is_super_admin(request.user)
+
+    def has_change_permission(self, request, obj=None):  # noqa: ANN001
+        return user_is_super_admin(request.user)
