@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from apps.ui.components.base import Component
+from apps.ui.components.base import Component, render_component_template
 from apps.ui.components.nav import NotificationBell
 from apps.ui.safe_url import safe_url
 
@@ -71,6 +71,16 @@ class TopNavShell(Component):
         )
         return ctx
 
+    def render(self, request=None):
+        ctx = self.get_context()
+        if request is not None:
+            ctx["top_nav"] = ctx["top_nav"].render(request=request)
+            ctx["notification_bell"] = ctx["notification_bell"].render(request=request)
+            content = ctx.get("content")
+            if content is not None and hasattr(content, "render"):
+                ctx["content"] = content.render(request=request)
+        return render_component_template(self, ctx, request=request)
+
 
 class SidebarShell(Component):
     template_name = "ui/components/sidebar_shell.html"
@@ -113,6 +123,16 @@ class SidebarShell(Component):
             unread_count=self.props.get("unread_count", 0),
         )
         return ctx
+
+    def render(self, request=None):
+        ctx = self.get_context()
+        if request is not None:
+            ctx["sidebar"] = ctx["sidebar"].render(request=request)
+            ctx["notification_bell"] = ctx["notification_bell"].render(request=request)
+            content = ctx.get("content")
+            if content is not None and hasattr(content, "render"):
+                ctx["content"] = content.render(request=request)
+        return render_component_template(self, ctx, request=request)
 
 
 class HeroBanner(Component):
@@ -188,3 +208,26 @@ class Modal(Component):
 
     def __init__(self, id, title, body, **props):
         super().__init__(id=id, title=title, body=body, **props)
+
+
+class PublicFormShell(Component):
+    """Minimal centered layout for sign-in and other public forms."""
+
+    template_name = "ui/layouts/public.html"
+
+    def __init__(self, page_title="", header=None, content=None, **props):
+        super().__init__(
+            page_title=page_title,
+            header=header,
+            content=content,
+            **props,
+        )
+
+    def render(self, request=None):
+        ctx = self.get_context()
+        if request is not None:
+            for key in ("header", "content"):
+                val = ctx.get(key)
+                if val is not None and hasattr(val, "render"):
+                    ctx[key] = val.render(request=request)
+        return render_component_template(self, ctx, request=request)

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from django.contrib.auth.views import redirect_to_login
 from django.core.exceptions import ImproperlyConfigured
 from django.http import HttpRequest, HttpResponse, HttpResponseForbidden
 
@@ -20,7 +21,7 @@ class RoleRequiredMixin:
             return HttpResponseForbidden("Forbidden.")
         user = request.user
         if not getattr(user, "is_authenticated", False):
-            return HttpResponseForbidden("Forbidden.")
+            return redirect_to_login(request.get_full_path())
         role = user_role(user)
         if role not in self.allowed_roles:
             return HttpResponseForbidden("Forbidden.")

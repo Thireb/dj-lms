@@ -59,7 +59,7 @@ def _user_for_role(role: str | None, institute: Any) -> FakeUser:
         (Role.SUB_ADMIN, 403),
         (Role.STUDENT, 403),
         (Role.GUARDIAN, 403),
-        (None, 403),
+        (None, 302),
     ],
     ids=[
         "teacher",
@@ -81,6 +81,8 @@ def test_teacher_dashboard_access_by_role(
     assert response.status_code == expected_status
     if expected_status == 200:
         assert b"Teacher dashboard" in response.content
+    if role is None:
+        assert "/accounts/login/" in response.url
 
 
 @pytest.mark.django_db
@@ -102,7 +104,11 @@ def test_admin_dashboard_forbidden_for_non_admin_roles(
     response = _dispatch(
         DemoAdminDashboard, user, institute_a, "/test/pages/admin-dashboard/"
     )
-    assert response.status_code == 403
+    if role is None:
+        assert response.status_code == 302
+        assert "/accounts/login/" in response.url
+    else:
+        assert response.status_code == 403
 
 
 @pytest.mark.django_db
@@ -155,7 +161,11 @@ def test_admin_people_forbidden_for_non_admin_roles(
     response = _dispatch(
         DemoAdminPeopleList, user, institute_a, "/test/pages/admin-people/"
     )
-    assert response.status_code == 403
+    if role is None:
+        assert response.status_code == 302
+        assert "/accounts/login/" in response.url
+    else:
+        assert response.status_code == 403
 
 
 @pytest.mark.django_db
