@@ -30,6 +30,7 @@ Plan: **B** = Basic, **P** = Premium. Plan split is from the reference pricing p
 - [x] Sign in with email + password, show-password toggle, remember me.
 - [x] No self-service password reset: "Forgot password" tells the user to contact the admin.
 - [x] First-time "set your password" screen (password + confirm) reached from a link.
+- [x] Account profile: edit name, phone, and time zone; change password (current, new, confirm).
 
 ## 2. Institute setup (Admin) (B)
 

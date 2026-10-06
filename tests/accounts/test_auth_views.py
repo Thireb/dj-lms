@@ -12,7 +12,12 @@ from django.test import Client
 from django.urls import reverse
 from django.utils import timezone
 
-from tests.conftest import make_user
+from tests.conftest import (
+    TEST_INITIAL_USER_PASSWORD,
+    TEST_LOGIN_PASSWORD,
+    TEST_NEW_PASSWORD,
+    make_user,
+)
 
 
 @pytest.fixture
@@ -40,13 +45,12 @@ def test_login_success_redirects_teacher(client: Client, institute_a) -> None:
         email="teacher@example.com",
         role=Role.TEACHER,
         institute=institute_a,
-        password="password123",
     )
     response = client.post(
         reverse("accounts:login"),
         {
             "email": "teacher@example.com",
-            "password": "password123",
+            "password": TEST_LOGIN_PASSWORD,
             "remember_me": True,
         },
     )
@@ -80,10 +84,11 @@ def test_logout_post_only(client: Client, institute_a) -> None:
         email="teacher@example.com",
         role=Role.TEACHER,
         institute=institute_a,
-        password="password123",
     )
     client.force_login(user)
-    assert client.get(reverse("accounts:logout")).status_code == 405
+    get_response = client.get(reverse("accounts:logout"))
+    assert get_response.status_code == 405
+    assert get_response.headers.get("Allow") == "POST"
     response = client.post(reverse("accounts:logout"))
     assert response.status_code == 302
     assert response.url == reverse("accounts:login")
@@ -114,17 +119,17 @@ def test_set_password_happy_path(client: Client, institute_a) -> None:
         email="student@example.com",
         role=Role.STUDENT,
         institute=institute_a,
-        password="unset",
+        password=TEST_INITIAL_USER_PASSWORD,
     )
     issued = create_set_password_token(user)
     url = reverse("accounts:set_password", kwargs={"token": issued.key})
     response = client.post(
         url,
-        {"password": "newpass123", "confirm_password": "newpass123"},
+        {"password": TEST_NEW_PASSWORD, "confirm_password": TEST_NEW_PASSWORD},
     )
     assert response.status_code == 302
     user.refresh_from_db()
-    assert user.check_password("newpass123")
+    assert user.check_password(TEST_NEW_PASSWORD)
     issued.token.refresh_from_db()
     assert issued.token.used_at is not None
 
@@ -243,7 +248,6 @@ def test_role_login_csrf_flow_reaches_portal_home(
         email=email,
         role=role,
         institute=institute_a,
-        password="password123",
     )
     csrf_client = Client(enforce_csrf_checks=True)
     csrf_client.get(reverse("accounts:login"))
@@ -252,7 +256,7 @@ def test_role_login_csrf_flow_reaches_portal_home(
         reverse("accounts:login"),
         {
             "email": email,
-            "password": "password123",
+            "password": TEST_LOGIN_PASSWORD,
             "csrfmiddlewaretoken": csrf,
         },
         follow=True,
@@ -269,13 +273,12 @@ def test_login_rejects_inactive_institute(client: Client, institute_a) -> None:
         email="teacher@example.com",
         role=Role.TEACHER,
         institute=institute_a,
-        password="password123",
     )
     response = client.post(
         reverse("accounts:login"),
         {
             "email": "teacher@example.com",
-            "password": "password123",
+            "password": TEST_LOGIN_PASSWORD,
         },
     )
     assert response.status_code == 200
@@ -289,13 +292,12 @@ def test_login_active_institute_still_works(client: Client, institute_a) -> None
         email="teacher@example.com",
         role=Role.TEACHER,
         institute=institute_a,
-        password="password123",
     )
     response = client.post(
         reverse("accounts:login"),
         {
             "email": "teacher@example.com",
-            "password": "password123",
+            "password": TEST_LOGIN_PASSWORD,
         },
     )
     assert response.status_code == 302
@@ -308,7 +310,7 @@ def test_super_admin_login_csrf_flow(client: Client) -> None:
 
     User.objects.create_superuser(
         email="super@example.com",
-        password="password123",
+        password=TEST_LOGIN_PASSWORD,
     )
     csrf_client = Client(enforce_csrf_checks=True)
     csrf_client.get(reverse("accounts:login"))
@@ -317,7 +319,7 @@ def test_super_admin_login_csrf_flow(client: Client) -> None:
         reverse("accounts:login"),
         {
             "email": "super@example.com",
-            "password": "password123",
+            "password": TEST_LOGIN_PASSWORD,
             "csrfmiddlewaretoken": csrf,
         },
         follow=True,

@@ -10,9 +10,12 @@ from apps.ui.safe_url import safe_url
 
 
 def _utc_iso(dt: datetime) -> str:
-    if timezone.is_naive(dt):
-        dt = timezone.make_aware(dt, UTC)
-    return dt.astimezone(UTC).isoformat()
+    try:
+        if timezone.is_naive(dt):
+            dt = timezone.make_aware(dt, UTC)
+        return dt.astimezone(UTC).isoformat()
+    except OverflowError:
+        return ""
 
 
 def scheduled_at_to_iso(value: object) -> str:

@@ -7,7 +7,7 @@ from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from django.conf import settings
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login, update_session_auth_hash
 from django.http import HttpRequest
 from django.urls import NoReverseMatch, reverse
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -118,6 +118,35 @@ def create_set_password_token(
     return CreatedSetPasswordToken(key=plaintext_key, token=token)
 
 
+def update_profile(
+    user: User,
+    *,
+    first_name: str,
+    last_name: str,
+    phone: str,
+    timezone: str,
+) -> User:
+    user.first_name = first_name
+    user.last_name = last_name
+    user.phone = phone
+    user.timezone = timezone
+    user.save(
+        update_fields=["first_name", "last_name", "phone", "timezone"],
+    )
+    return user
+
+
+def change_password(
+    request: HttpRequest,
+    user: User,
+    *,
+    new_password: str,
+) -> None:
+    user.set_password(new_password)
+    user.save(update_fields=["password"])
+    update_session_auth_hash(request, user)
+
+
 _PORTAL_HOME_URL_NAMES = {
     "admin": "accounts:admin_home",
     "teacher": "accounts:teacher_home",
@@ -174,8 +203,11 @@ def post_login_redirect_url(user: User, next_url: str | None = None) -> str:
 
     portal = portal_for_user(user)
     if portal:
-        url = _first_menu_url(portal, user)
-        if url:
-            return url
+        try:
+            return portal_home_url(user)
+        except ValueError:
+            url = _first_menu_url(portal, user)
+            if url:
+                return url
 
     return portal_home_url(user)

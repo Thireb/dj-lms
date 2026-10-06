@@ -71,7 +71,7 @@ class StudentMenu:
             MenuGroup(
                 label="Account",
                 items=(
-                    MenuItem("My profile", "student:profile", "user"),
+                    MenuItem("My profile", "accounts:profile", "user"),
                     MenuItem("Settings", "student:settings", "gear"),
                     MenuItem("Sign out", "accounts:logout", "right-from-bracket"),
                 ),

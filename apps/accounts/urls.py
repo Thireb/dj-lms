@@ -39,4 +39,10 @@ urlpatterns = [
         views.SetPasswordView.as_view(),
         name="set_password",
     ),
+    path("profile/", views.ProfileView.as_view(), name="profile"),
+    path(
+        "change-password/",
+        views.ChangePasswordView.as_view(),
+        name="change_password",
+    ),
 ]

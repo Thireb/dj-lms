@@ -67,3 +67,14 @@ class FormPageBody(Component):
 
     def __init__(self, header, form=None, **props):
         super().__init__(header=header, form=form, **props)
+
+    def render(self, request=None):
+        ctx = self.get_context()
+        if request is not None:
+            header = ctx.get("header")
+            if header is not None and hasattr(header, "render"):
+                ctx["header"] = header.render(request=request)
+            form = ctx.get("form")
+            if form is not None and hasattr(form, "render"):
+                ctx["form"] = form.render(request=request)
+        return render_component_template(self, ctx, request=request)

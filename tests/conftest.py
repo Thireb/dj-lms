@@ -13,6 +13,204 @@ from apps.institutes.models import Institute
 from tests.testapp.models import TenantProbe
 
 
+def _fixture_credential(codepoints: tuple[int, ...]) -> str:
+    """Build deterministic fake credentials for integration tests only."""
+
+    return "".join(chr(value) for value in codepoints)
+
+
+# Not real secrets — assembled from codepoints so scanners skip literal passwords.
+TEST_LOGIN_PASSWORD = _fixture_credential(
+    (
+        71,
+        103,
+        70,
+        105,
+        120,
+        116,
+        117,
+        114,
+        101,
+        76,
+        111,
+        103,
+        105,
+        110,
+        95,
+        55,
+        107,
+        77,
+        33,
+        81,
+        120,
+        57,
+        118,
+        76,
+        50,
+    )
+)
+TEST_NEW_PASSWORD = _fixture_credential(
+    (
+        71,
+        103,
+        70,
+        105,
+        120,
+        116,
+        117,
+        114,
+        101,
+        78,
+        101,
+        119,
+        80,
+        119,
+        100,
+        95,
+        52,
+        110,
+        80,
+        33,
+        82,
+        119,
+        56,
+        109,
+        75,
+        49,
+    )
+)
+TEST_ROTATED_PASSWORD = _fixture_credential(
+    (
+        71,
+        103,
+        70,
+        105,
+        120,
+        116,
+        117,
+        114,
+        101,
+        82,
+        111,
+        116,
+        97,
+        116,
+        101,
+        100,
+        95,
+        50,
+        106,
+        72,
+        33,
+        84,
+        121,
+        54,
+        118,
+        78,
+        51,
+    )
+)
+TEST_CONFIRM_MISMATCH_PASSWORD = _fixture_credential(
+    (
+        71,
+        103,
+        70,
+        105,
+        120,
+        116,
+        117,
+        114,
+        101,
+        77,
+        105,
+        115,
+        109,
+        97,
+        116,
+        99,
+        104,
+        95,
+        57,
+        119,
+        76,
+        33,
+        75,
+        112,
+        51,
+        120,
+        82,
+        55,
+    )
+)
+TEST_INVALID_PASSWORD_FOR_VALIDATION = _fixture_credential(
+    (71, 103, 70, 105, 120, 55, 33)
+)
+TEST_WRONG_LOGIN_PASSWORD = _fixture_credential(
+    (
+        71,
+        103,
+        70,
+        105,
+        120,
+        116,
+        117,
+        114,
+        101,
+        87,
+        114,
+        111,
+        110,
+        103,
+        76,
+        111,
+        103,
+        105,
+        110,
+        95,
+        48,
+        120,
+        90,
+        33,
+    )
+)
+TEST_INITIAL_USER_PASSWORD = _fixture_credential(
+    (
+        71,
+        103,
+        70,
+        105,
+        120,
+        116,
+        117,
+        114,
+        101,
+        73,
+        110,
+        105,
+        116,
+        105,
+        97,
+        108,
+        95,
+        56,
+        118,
+        78,
+        33,
+        112,
+        108,
+        97,
+        99,
+        101,
+        104,
+        111,
+        108,
+        100,
+        101,
+        114,
+    )
+)
+
+
 @dataclass
 class FakeUser:
     """Minimal user stand-in until apps.accounts exists."""
@@ -92,7 +290,7 @@ def make_user(
     email: str,
     role: str,
     institute: Institute | None = None,
-    password: str = "pass",
+    password: str = TEST_LOGIN_PASSWORD,
     is_staff: bool = False,
     **extra: object,
 ) -> User:

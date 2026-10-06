@@ -22,5 +22,5 @@ class SubAdminTestMenuMiddleware:
             and getattr(user, "role", None) == Role.SUB_ADMIN
             and not getattr(user, "allowed_menus", None)
         ):
-            user.allowed_menus = ["dashboards"]
+            user.allowed_menus = ["dashboards", "account"]
         return self.get_response(request)
