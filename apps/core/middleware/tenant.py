@@ -28,10 +28,10 @@ class TenantMiddleware:
             if user is not None and getattr(user, "is_authenticated", False):
                 if user_is_super_admin(user):
                     return self.get_response(request)
+                if self._url_name_allowed_without_institute(request):
+                    return self.get_response(request)
                 institute_id = user_institute_id(user)
                 if institute_id is None:
-                    if self._url_name_allowed_without_institute(request):
-                        return self.get_response(request)
                     return HttpResponseForbidden("No institute assigned.")
                 try:
                     institute = Institute.objects.get(pk=institute_id)

@@ -1,6 +1,7 @@
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout
 from django import forms
+from django.core.exceptions import ValidationError
 
 from apps.core.models import TenantModel
 from apps.core.tenancy import tenant_context
@@ -38,6 +39,7 @@ class TenantModelForm(BaseForm, forms.ModelForm):
     def __init__(self, *args, institute, **kwargs):
         self.institute = institute
         super().__init__(*args, **kwargs)
+        self.fields.pop("institute", None)
         self._limit_tenant_related_fields()
 
     def _limit_tenant_related_fields(self) -> None:
@@ -48,10 +50,18 @@ class TenantModelForm(BaseForm, forms.ModelForm):
             if issubclass(model, TenantModel):
                 field.queryset = model.unscoped.filter(institute=self.institute)
 
+    def clean(self):
+        cleaned_data = super().clean()
+        if (
+            self.instance.pk is not None
+            and self.instance.institute_id != self.institute.pk
+        ):
+            raise ValidationError("This record belongs to another institute.")
+        return cleaned_data
+
     def save(self, commit=True):
         instance = super().save(commit=False)
-        if instance.pk is None and hasattr(instance, "institute_id"):
-            instance.institute = self.institute
+        instance.institute = self.institute
         if not commit:
             return instance
         with tenant_context(self.institute):

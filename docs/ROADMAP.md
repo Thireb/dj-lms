@@ -6,8 +6,8 @@ Build order. Finish each phase before the next. Tick boxes as you go.
 
 ## Phase 0: Foundation
 
-- [ ] 0.1 Repo, Django project, settings split, `.env.example`, ruff, pytest.
-- [ ] 0.2 `core` app: `TenantModel`, tenant manager, tenant middleware, time zone middleware.
+- [x] 0.1 Repo, Django project, settings split, `.env.example`, ruff, pytest.
+- [x] 0.2 `core` app: `TenantModel`, tenant manager, tenant middleware, time zone middleware.
 - [x] 0.2b Hardening of 0.2: fail-closed tenant manager, `unscoped` manager, `tenant_context()`, reject users without a valid institute, `on_delete=PROTECT`, `config/settings/test.py`, one institute lookup per request, roles in `apps/core/roles.py`, `ruff format --check` clean.
 - [x] 0.3 Tailwind, HTMX, Alpine, Font Awesome Free set up (self-hosted, no CDN). `base.html` and `app_shell.html`.
 - [x] 0.4 `apps/ui`: `Component` base class, all component classes from `COMPONENTS.md`, `/dev/components/` demo page.

@@ -86,6 +86,48 @@ def test_middleware_allows_logout_without_institute_id() -> None:
 
 
 @pytest.mark.django_db
+def test_middleware_allows_logout_when_institute_inactive(
+    institute_a: Institute,
+) -> None:
+    institute_a.is_active = False
+    institute_a.save(update_fields=["is_active"])
+    reached: list[bool] = []
+
+    def get_response(request):  # noqa: ANN001
+        reached.append(True)
+        from django.http import HttpResponse
+
+        return HttpResponse("ok")
+
+    request = RequestFactory().get("/accounts/logout/")
+    request.user = FakeUser(role="teacher", institute=institute_a)
+
+    response = TenantMiddleware(get_response)(request)
+
+    assert response.status_code == 200
+    assert reached == [True]
+
+
+@pytest.mark.django_db
+def test_middleware_allows_logout_when_institute_missing() -> None:
+    reached: list[bool] = []
+
+    def get_response(request):  # noqa: ANN001
+        reached.append(True)
+        from django.http import HttpResponse
+
+        return HttpResponse("ok")
+
+    request = RequestFactory().get("/accounts/logout/")
+    request.user = FakeUser(role="teacher", institute_id=999_999)
+
+    response = TenantMiddleware(get_response)(request)
+
+    assert response.status_code == 200
+    assert reached == [True]
+
+
+@pytest.mark.django_db
 def test_middleware_inactive_institute_forbidden(institute_a: Institute) -> None:
     institute_a.is_active = False
     institute_a.save(update_fields=["is_active"])
