@@ -13,7 +13,7 @@ Build order. Finish each phase before the next. Tick boxes as you go.
 - [x] 0.4 `apps/ui`: `Component` base class, all component classes from `COMPONENTS.md`, `/dev/components/` demo page.
 - [x] 0.4b crispy-forms setup: `BaseForm`, `TenantModelForm`, `HtmxModalForm`, layout objects `Section`, `Row`, `FormActions`.
 - [x] 0.4c Base page classes: `PortalPageView`, `DashboardPage`, `ListPage`, `DetailPage`, `FormPage`; menu classes per portal.
-- [ ] 0.5 Local run script and CI that builds Tailwind and runs tests and lint. Docker moves to Phase 12.
+- [x] 0.5 Local run script and CI; Docker moves to Phase 12.
 
 ## Phase 1: Accounts and institutes
 

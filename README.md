@@ -2,39 +2,12 @@
 
 Multi-institute learning management system (Django).
 
-## Local setup
+## Local run
 
 ```bash
-cp .env.example .env
-uv sync --group dev
-uv run python manage.py migrate
+cp .env.example .env && uv sync --group dev
+./scripts/dev.sh   # Tailwind, migrate, runserver (loads .env via uv)
+make test && make lint && make format-check
 ```
 
-Without `DATABASE_URL`, development uses SQLite (`db.sqlite3`).
-
-## Frontend CSS (Tailwind standalone)
-
-Tailwind is built with the **standalone CLI** (no Node.js). Version is pinned in `static/css/TAILWIND_VERSION` (currently 4.1.4).
-
-```bash
-chmod +x scripts/build-app-css.sh
-./scripts/build-app-css.sh
-```
-
-This writes `static/css/app.css` from `static/css/src/input.css`. The compiled file is gitignored; run the script after clone or when CSS sources change.
-
-HTMX, Alpine.js, Chart.js, and Font Awesome Free are vendored under `static/vendor/` (see `static/vendor/VENDOR_VERSIONS.md`).
-
-## Quality checks
-
-```bash
-uv run pytest
-uv run ruff check .
-uv run ruff format --check .
-```
-
-## Settings
-
-- Development: `config.settings.dev` (default for `manage.py`)
-- Tests: `config.settings.test` (default for pytest via `pyproject.toml`)
-- Production: `config.settings.prod` (`DJANGO_SETTINGS_MODULE=config.settings.prod`)
+Requires PostgreSQL matching `DATABASE_URL` in `.env` (`lms` user/db in example). Pytest defaults to database `lms_test` (`config.settings.test`). Production: `DJANGO_SETTINGS_MODULE=config.settings.prod`.
