@@ -26,6 +26,12 @@ INSTALLED_APPS = [
 
 AUTH_USER_MODEL = "accounts.User"
 
+LOGIN_URL = "accounts:login"
+LOGOUT_REDIRECT_URL = "accounts:login"
+
+SESSION_COOKIE_AGE = 60 * 60 * 24 * 14
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+
 CRISPY_ALLOWED_TEMPLATE_PACKS = ("ui/forms",)
 CRISPY_TEMPLATE_PACK = "ui/forms"
 

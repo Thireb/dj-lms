@@ -15,7 +15,14 @@ from apps.institutes.models import Institute
 class TenantMiddleware:
     """Attach institute context; reject users without a valid active institute."""
 
-    url_names_without_institute: frozenset[str] = frozenset({"accounts:logout"})
+    url_names_without_institute: frozenset[str] = frozenset(
+        {
+            "accounts:logout",
+            "accounts:login",
+            "accounts:forgot_password",
+            "accounts:set_password",
+        }
+    )
 
     def __init__(self, get_response: Callable[[HttpRequest], HttpResponse]) -> None:
         self.get_response = get_response

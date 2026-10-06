@@ -1,0 +1,9 @@
+<div class="space-y-4">
+  {% for block in blocks %}
+    {% if block.template_name|default_if_none:"" %}
+      {{ block }}
+    {% else %}
+      <p class="text-sm text-text">{{ block }}</p>
+    {% endif %}
+  {% endfor %}
+</div>

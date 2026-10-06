@@ -71,6 +71,7 @@ def resolve_menu_groups(
                 continue
             url = safe_reverse(item.url_name)
             disabled = url is None
+            post_only = item.post_only or item.url_name == "accounts:logout"
             items.append(
                 ResolvedMenuItem(
                     label=item.label,
@@ -79,6 +80,7 @@ def resolve_menu_groups(
                     menu_key=item.menu_key,
                     disabled=disabled,
                     url_name=item.url_name,
+                    post_only=post_only,
                 )
             )
         if items:

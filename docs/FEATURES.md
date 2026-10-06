@@ -27,9 +27,9 @@ Plan: **B** = Basic, **P** = Premium. Plan split is from the reference pricing p
 - [ ] "Default portal" and "Toolbar settings" in the profile menu. (verify what they do)
 - [ ] Public site: Home, Features, Portals, Pricing, Contact, Privacy, Terms, Sign in.
 - [ ] Contact / demo-request form that lands in Super Admin.
-- [ ] Sign in with email + password, show-password toggle, remember me.
-- [ ] No self-service password reset: "Forgot password" tells the user to contact the admin.
-- [ ] First-time "set your password" screen (password + confirm) reached from a link.
+- [x] Sign in with email + password, show-password toggle, remember me.
+- [x] No self-service password reset: "Forgot password" tells the user to contact the admin.
+- [x] First-time "set your password" screen (password + confirm) reached from a link.
 
 ## 2. Institute setup (Admin) (B)
 

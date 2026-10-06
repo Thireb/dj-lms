@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import secrets
+from datetime import timedelta
+
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils import timezone
 
 from apps.core.roles import Role as RoleConstants
 
@@ -134,3 +138,41 @@ class User(AbstractUser):
     @property
     def is_guardian(self) -> bool:
         return self.role == self.Role.GUARDIAN
+
+
+class SetPasswordToken(models.Model):
+    """One-time link for first-time password setup (not tenant-scoped)."""
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="set_password_tokens",
+    )
+    key = models.CharField(max_length=64, unique=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    used_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    @classmethod
+    def generate_key(cls) -> str:
+        return secrets.token_urlsafe(32)
+
+    @classmethod
+    def create_for_user(cls, user: User, *, ttl_hours: int = 72) -> SetPasswordToken:
+        return cls.objects.create(
+            user=user,
+            key=cls.generate_key(),
+            expires_at=timezone.now() + timedelta(hours=ttl_hours),
+        )
+
+    def is_valid(self) -> bool:
+        if self.used_at is not None:
+            return False
+        return timezone.now() <= self.expires_at
+
+    def mark_used(self) -> None:
+        self.used_at = timezone.now()
+        self.save(update_fields=["used_at"])

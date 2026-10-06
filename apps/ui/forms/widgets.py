@@ -33,6 +33,22 @@ class TimePicker(forms.TimeInput):
         super().__init__(attrs=default_attrs)
 
 
+class PasswordInput(forms.PasswordInput):
+    template_name = "ui/forms/widgets/password_input.html"
+
+    def __init__(self, attrs=None):
+        default_attrs = {
+            "class": (
+                "mt-1 block w-full rounded-lg border border-border "
+                "px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-primary"
+            ),
+            "autocomplete": "current-password",
+        }
+        if attrs:
+            default_attrs.update(attrs)
+        super().__init__(attrs=default_attrs)
+
+
 class MoneyInput(forms.NumberInput):
     template_name = "ui/forms/widgets/money_input.html"
 

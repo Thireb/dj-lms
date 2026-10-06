@@ -1,6 +1,6 @@
 <div class="form-actions flex flex-wrap items-center justify-end gap-3 pt-2 {{ css_class }}">
   {% if cancel_url %}
-    <a href="{{ cancel_url }}" class="rounded-lg border border-border px-4 py-2 text-sm text-text">Cancel</a>
+    <a href="{{ cancel_url }}" class="rounded-lg border border-border px-4 py-2 text-sm text-text">{{ cancel_label }}</a>
   {% endif %}
   <button type="submit" class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-surface">
     {{ save_label }}

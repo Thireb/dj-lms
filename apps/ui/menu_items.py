@@ -10,6 +10,7 @@ class MenuItem:
     icon: str
     menu_key: str | None = None
     feature: str | None = None
+    post_only: bool = False
 
 
 @dataclass(frozen=True)
@@ -27,6 +28,7 @@ class ResolvedMenuItem:
     menu_key: str | None
     disabled: bool
     url_name: str
+    post_only: bool = False
 
 
 @dataclass(frozen=True)
