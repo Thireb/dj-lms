@@ -1,4 +1,4 @@
-from apps.ui.components.base import Component
+from apps.ui.components.base import Component, render_component_template
 from apps.ui.safe_url import safe_url
 
 
@@ -46,3 +46,15 @@ class Toast(Component):
 
     def __init__(self, message, tone=None, **props):
         super().__init__(message=message, tone=tone or self.tone, **props)
+
+
+class SignOutForm(Component):
+    """POST sign out with CSRF (Django 5 logout is POST-only)."""
+
+    template_name = "ui/components/sign_out_form.html"
+
+    def __init__(self, logout_url, **props):
+        super().__init__(logout_url=safe_url(logout_url), **props)
+
+    def render(self, request=None):
+        return render_component_template(self, self.get_context(), request=request)

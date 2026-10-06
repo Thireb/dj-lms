@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from apps.ui.components.base import Component
+from apps.ui.components.base import Component, render_component_template
 
 
 class DashboardPageBody(Component):
@@ -21,6 +21,20 @@ class DashboardPageBody(Component):
             sections=sections or [],
             **props,
         )
+
+    def render(self, request=None):
+        ctx = self.get_context()
+        if request is not None:
+            header = ctx.get("header")
+            if header is not None and hasattr(header, "render"):
+                ctx["header"] = header.render(request=request)
+            for key in ("stat_cards", "quick_actions", "sections"):
+                items = ctx.get(key) or []
+                ctx[key] = [
+                    item.render(request=request) if hasattr(item, "render") else item
+                    for item in items
+                ]
+        return render_component_template(self, ctx, request=request)
 
 
 class ListPageBody(Component):

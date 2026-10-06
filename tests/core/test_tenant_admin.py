@@ -57,15 +57,15 @@ def test_tenant_admin_changelist_forbidden_for_staff_non_super_admin(
     institute_a: Institute,
 ) -> None:
     TenantProbe.unscoped.create(institute=institute_a, label="a")
-    User.objects.create_user(
+    user = User.objects.create_user(
         email="staffdev@example.com",
         password="pass",
-        role=User.Role.INSTITUTE_ADMIN,
+        role=User.Role.TEACHER,
         institute=institute_a,
-        is_staff=True,
     )
+    User.objects.filter(pk=user.pk).update(is_staff=True)
     client = Client()
-    assert client.login(username="staffdev@example.com", password="pass")
+    client.force_login(user)
 
     response = client.get("/django-admin/testapp/tenantprobe/")
 

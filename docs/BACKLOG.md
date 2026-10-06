@@ -71,6 +71,18 @@ Status: `[ ]` open, `[x]` done. Priority: **High** = fix before merge or before 
 | P6 | PROTECT blocks deleting an institute with data (test). | PR #2 | High | [x] in PR #3 |
 | P7 | Anonymous user with an institute id gets nothing from `for_user` (test). | PR #2 | High | [x] in PR #3 |
 
+## Fix before roadmap 1.1c (PR #15 review / auth hardening)
+
+| # | Item | Source | Priority | Status |
+|---|---|---|---|---|
+| R1 | Section/Row: pass rendered field parts as a list (loop in template); legend only when set; public forms use their own POST form + CSRF (`PublicPostForm`); nested components receive `request`. | 1.1b review | High | [x] |
+| R2 | `_first_menu_url` skips `post_only` items; authenticated users never redirected to login; portal home pages as fallback targets. | 1.1b review | High | [x] |
+| R3 | Password widget keeps static `type="password"` plus Alpine show/hide toggle. | 1.1b review | High | [x] |
+| R4 | Gate `/django-admin/` to `user_is_super_admin`; `User.clean()` rejects `is_staff`/`is_superuser` for product roles. | 1.1b review | High | [x] |
+| R5 | Document 1.1b components in `COMPONENTS.md`; verify sign-in flows in browser before ticking `FEATURES.md`. | 1.1b review | High | [x] |
+| R6 | Zero pytest warnings; tests for `validate_password`, top-nav POST Sign out; set-password fields use `autocomplete="new-password"`. | 1.1b review | High | [x] |
+| R9 | Same as R6 (pytest warning budget). | 1.1b review | High | [x] |
+
 ## Main audit 2026-10-06 (fixed in PR #14, follow-ups from its review)
 
 | # | Item | Source | Priority | Status |

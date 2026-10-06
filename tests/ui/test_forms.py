@@ -51,6 +51,19 @@ def test_base_form_crispy_render() -> None:
     assert "Save changes" in html
 
 
+def test_section_layout_omits_empty_legend() -> None:
+    class NoLegendForm(BaseForm):
+        name = forms.CharField()
+
+        def get_layout(self):
+            return Layout(Section(None, "name"), FormActions(self.save_label))
+
+    template = Template("{% load crispy_forms_tags %}{% crispy form %}")
+    html = template.render(Context({"form": NoLegendForm()}))
+    assert "<legend" not in html
+    assert "name" in html
+
+
 def test_htmx_modal_form_helper_class() -> None:
     form = SampleModalForm()
     assert form.helper.form_class == "htmx-modal-form"

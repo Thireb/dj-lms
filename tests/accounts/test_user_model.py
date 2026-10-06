@@ -99,6 +99,27 @@ def test_non_super_admin_with_institute_saves(
     assert user.institute_id == institute_a.pk
 
 
+@pytest.mark.parametrize(
+    "role",
+    [
+        Role.INSTITUTE_ADMIN,
+        Role.TEACHER,
+    ],
+)
+@pytest.mark.django_db
+def test_non_super_admin_rejects_django_admin_flags(
+    role: str, institute_a: Institute
+) -> None:
+    user = User(
+        email=f"staff-{role}@example.com",
+        role=role,
+        institute=institute_a,
+        is_staff=True,
+    )
+    with pytest.raises(ValidationError):
+        user.full_clean()
+
+
 @pytest.mark.django_db
 def test_super_admin_without_institute_saves() -> None:
     user = User.objects.create_user(

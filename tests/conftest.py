@@ -113,5 +113,4 @@ def institute_admin_user(institute_a: Institute) -> User:
         email="admin-a@example.com",
         role=Role.INSTITUTE_ADMIN,
         institute=institute_a,
-        is_staff=True,
     )

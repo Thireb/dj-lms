@@ -1,4 +1,6 @@
 <fieldset class="section rounded-lg border border-border bg-surface p-5 {{ css_class }}">
-  <legend class="mb-4 text-lg font-semibold text-text">{{ legend }}</legend>
-  {{ fields_html }}
+  {% if legend %}
+    <legend class="mb-4 text-lg font-semibold text-text">{{ legend }}</legend>
+  {% endif %}
+  {% for part in field_parts %}{{ part }}{% endfor %}
 </fieldset>

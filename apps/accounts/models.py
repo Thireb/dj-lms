@@ -108,8 +108,13 @@ class User(AbstractUser):
                 raise ValidationError(
                     {"institute": "Super admin must not belong to an institute."}
                 )
-        elif self.institute_id is None:
-            raise ValidationError({"institute": "This role requires an institute."})
+        else:
+            if self.is_staff or self.is_superuser:
+                raise ValidationError(
+                    "Only super admin accounts may use Django admin flags."
+                )
+            if self.institute_id is None:
+                raise ValidationError({"institute": "This role requires an institute."})
 
     def save(self, *args: object, **kwargs: object) -> None:
         self.full_clean()
