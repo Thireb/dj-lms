@@ -85,6 +85,7 @@ class PortalPageView(
                 header=header,
                 filters=context.get("filters"),
                 table=context.get("table"),
+                pagination=context.get("pagination"),
             )
         if layout == "detail":
             return DetailPageBody(

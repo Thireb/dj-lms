@@ -5,7 +5,13 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-from apps.ui.components.actions import Button, ConfirmDialog, QuickAction, Toast
+from apps.ui.components.actions import (
+    Button,
+    ConfirmDialog,
+    CopyField,
+    QuickAction,
+    Toast,
+)
 from apps.ui.components.data import (
     Avatar,
     Badge,
@@ -82,10 +88,12 @@ def _lecture(**overrides):
         (
             lambda: FilterBar(
                 filters=[
-                    SimpleNamespace(name="q", label=XSS, placeholder=XSS),
+                    SimpleNamespace(name="q", label=XSS, placeholder=XSS, value=XSS),
                 ],
             ),
         ),
+        (lambda: CopyField(XSS, XSS),),
+        (lambda: ConfirmDialog(XSS, XSS, url="#", fields=[("action", XSS)]),),
     ],
     ids=[
         "badge",
@@ -108,6 +116,8 @@ def _lecture(**overrides):
         "lecture_row",
         "schedule_list",
         "filter_bar",
+        "copy_field",
+        "confirm_dialog_fields",
     ],
 )
 def test_component_text_props_are_escaped(component_factory) -> None:

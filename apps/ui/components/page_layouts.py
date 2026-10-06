@@ -40,8 +40,14 @@ class DashboardPageBody(Component):
 class ListPageBody(Component):
     template_name = "ui/layouts/pages/list.html"
 
-    def __init__(self, header, filters=None, table=None, **props):
-        super().__init__(header=header, filters=filters, table=table, **props)
+    def __init__(self, header, filters=None, table=None, pagination=None, **props):
+        super().__init__(
+            header=header,
+            filters=filters,
+            table=table,
+            pagination=pagination,
+            **props,
+        )
 
 
 class DetailPageBody(Component):
