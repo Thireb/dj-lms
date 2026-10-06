@@ -1,1 +1,12 @@
-<div class="confirm-dialog rounded-lg border border-border bg-surface p-4" data-confirm-url="{{ url }}"><p class="text-sm text-text">{{ message }}</p><button type="button" class="mt-3 rounded-lg bg-danger px-3 py-1.5 text-sm text-surface">{{ confirm_label }}</button></div>
+<div class="confirm-dialog" x-data="{ open: false }" data-confirm-url="{{ url }}">
+  <button type="button" @click="open = true" class="{% if variant == 'primary' %}bg-primary{% else %}bg-danger{% endif %} rounded-lg px-3 py-1.5 text-sm text-surface">{{ trigger_label|default:confirm_label }}</button>
+  <div x-show="open" x-cloak role="alertdialog" class="mt-3 rounded-lg border border-border bg-surface p-4">
+    <p class="text-sm text-text">{{ message }}</p>
+    <form method="post" action="{{ url }}" class="mt-3 flex flex-wrap gap-2">
+      {% if csrf_token %}{% csrf_token %}{% endif %}
+      {% for name, value in fields %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
+      <button type="submit" class="{% if variant == 'primary' %}bg-primary{% else %}bg-danger{% endif %} rounded-lg px-3 py-1.5 text-sm text-surface">{{ confirm_label }}</button>
+      <button type="button" @click="open = false" class="rounded-lg border border-border px-3 py-1.5 text-sm text-text">Cancel</button>
+    </form>
+  </div>
+</div>

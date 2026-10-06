@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 import pytest
 from apps.accounts.forms import ProfileForm
 from apps.accounts.models import User
@@ -191,7 +193,7 @@ def test_change_password_validate_password(client: Client, institute_a) -> None:
         },
     )
     assert response.status_code == 200
-    assert response.context is None or b"password" in response.content.lower()
+    assert "This password is too common." in response.content.decode()
     user.refresh_from_db()
     assert user.check_password(TEST_LOGIN_PASSWORD)
 
@@ -231,8 +233,17 @@ def test_profile_post_csrf_enforced(client: Client, institute_a) -> None:
     csrf_client = Client(enforce_csrf_checks=True)
     _login(csrf_client, user)
     get_response = csrf_client.get(reverse("accounts:profile"))
-    assert "csrfmiddlewaretoken" in get_response.content.decode()
-    token = csrf_client.cookies["csrftoken"].value
+    profile_form = re.search(
+        r'<form method="post" action="/accounts/profile/".*?</form>',
+        get_response.content.decode(),
+        re.DOTALL,
+    )
+    assert profile_form, "profile POST form not rendered"
+    token_input = re.search(
+        r'name="csrfmiddlewaretoken" value="([^"]+)"', profile_form.group(0)
+    )
+    assert token_input, "profile form has no CSRF token"
+    token = token_input.group(1)
     bad_response = csrf_client.post(
         reverse("accounts:profile"),
         {"first_name": "A", "last_name": "B", "phone": "", "timezone": ""},
@@ -303,6 +314,7 @@ def test_profile_invalid_post_shows_db_name_not_tampered_value(
     html = response.content.decode()
     assert "Stored" in html
     assert "Tampered" not in html
+    assert response.wsgi_request.user.first_name == "Stored"
     user.refresh_from_db()
     assert user.first_name == "Stored"
 

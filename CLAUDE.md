@@ -30,7 +30,7 @@ When asked to review a PR (use `gh pr view <n>` and `gh pr diff <n>`, or check o
 
 1. Check scope: did the PR stay within the roadmap items and backlog ids it names? List anything extra.
 2. Run pytest, ruff check and ruff format --check. Report exact results.
-3. Mutation-test every fix: undo it, confirm a test fails, then restore it. A fix with no failing test is a gap.
+3. Mutation-test every fix: undo it, confirm a test fails, then restore it. A fix with no failing test is a gap. Run `uv run python scripts/mutation_check.py` (commit first; it restores files with `git checkout`); every entry must print CAUGHT. Add an entry for each new fix.
 4. Probe real output, not only unit tests: render pages, check HTML, run the failing case by hand.
 5. Security pass, in this order:
    - Tenant isolation: the manager must fail closed; no unscoped queries in views; `unscoped` only where `AGENTS.md` allows it.

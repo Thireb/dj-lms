@@ -16,14 +16,15 @@ Plan: **B** = Basic, **P** = Premium. Plan split is from the reference pricing p
 - [x] Many institutes on one install, each with isolated data. (B) (verify)
 - [x] Super Admin panel: create institutes, set plan, activate/deactivate. (verify)
 - [ ] Super Admin: read contact requests (roadmap 11.2).
-- [x] Five logins per institute: Admin, Sub-admin (helper), Teacher, Student, Guardian. (verify)
+- [ ] Five logins per institute: Admin, Sub-admin (helper), Teacher, Student, Guardian. (Sub-admin menus wait for roadmap 9.3c.)
 - [x] One campus per institute. (verify)
 - [x] Per-institute plan flags switch modules on or off. (verify)
 - [ ] Installable web app (PWA). (B)
 - [ ] In-app notification bell on every screen; fee and class alerts can be switched off per user.
 - [ ] Badge counts on menus (messages, approvals, receipts).
 - [ ] Dark / light / auto appearance setting.
-- [x] Currency setting per institute (symbol shown on all amounts). (verify)
+- [x] Currency setting per institute. (verify)
+- [ ] Currency symbol shown on all amounts (with fees, Phase 7).
 - [ ] Per-user time zone; lectures show in the viewer's zone.
 - [ ] "Default portal" and "Toolbar settings" in the profile menu. (verify what they do)
 - [ ] Public site: Home, Features, Portals, Pricing, Contact, Privacy, Terms, Sign in.

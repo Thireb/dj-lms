@@ -110,6 +110,7 @@ Three layers of access, always in this order:
 - `Institute.plan` decides what shows in menus and which URLs work.
 - Use `@requires_feature("fees")` on views and `{% if feature.fees %}` in templates.
 - Feature keys: `fees`, `payroll`, `whiteboard`, `leave`, `homework`, `lesson_plans`, `messaging`, `time_zone_lectures`.
+- Basic plan: `messaging`, `time_zone_lectures`. Premium plan: every key. Split follows the B/P marks in `FEATURES.md` (verify against the reference pricing page).
 
 ## 6. Key models (short)
 

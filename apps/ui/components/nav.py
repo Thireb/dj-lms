@@ -18,5 +18,5 @@ class FilterBar(Component):
 class Pagination(Component):
     template_name = "ui/components/pagination.html"
 
-    def __init__(self, page_obj, **props):
-        super().__init__(page_obj=page_obj, **props)
+    def __init__(self, page_obj, query="", **props):
+        super().__init__(page_obj=page_obj, query=query, **props)

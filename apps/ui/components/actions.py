@@ -31,13 +31,34 @@ class QuickAction(Component):
 class ConfirmDialog(Component):
     template_name = "ui/components/confirm_dialog.html"
 
-    def __init__(self, message, confirm_label, url, **props):
+    def __init__(
+        self,
+        message,
+        confirm_label,
+        url,
+        trigger_label="",
+        variant="danger",
+        fields=None,
+        **props,
+    ):
         super().__init__(
             message=message,
             confirm_label=confirm_label,
             url=safe_url(url),
+            trigger_label=trigger_label,
+            variant=variant,
+            fields=list(fields or []),
             **props,
         )
+
+
+class CopyField(Component):
+    """Read-only value with a copy button (for one-time links)."""
+
+    template_name = "ui/components/copy_field.html"
+
+    def __init__(self, label, value, **props):
+        super().__init__(label=label, value=value, **props)
 
 
 class Toast(Component):

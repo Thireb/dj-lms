@@ -79,7 +79,8 @@ Status: `[ ]` open, `[x]` done. Priority: **High** = fix before merge or before 
 | N2 | `LogoutView.get` returns `HttpResponseNotAllowed(["POST"])`; test 405 and `Allow: POST`. | main audit | Low | [x] |
 | N3 | Remove obsolete "Fix before roadmap 1.1c" backlog table (items already done). | main audit | Low | [x] |
 | N4 | ROADMAP sub-item 1.1c; track N1–N4 and B17 in this table. | main audit | Low | [x] |
-| N5 | Product admin portal uses URL namespace `admin` (`/admin/`); Django developer admin uses a separate `AdminSite` at `/django-admin/` so `reverse("admin:…")` resolves to portal routes. | main audit | Low | [x] |
+| N5 | No roadmap item built the seed data in `SPEC-DETAILS.md` section 10, so a demo had no data. Added `seed_demo` (Phase 1 part) and roadmap 2.8. | main audit | Low | [x] |
+| N6 | Product admin portal uses URL namespace `admin` (`/admin/`); Django developer admin uses a separate `AdminSite` at `/django-admin/` so `reverse("admin:…")` resolves to portal routes. | main audit | Low | [x] |
 | B17 | `scheduled_at_to_iso` catches `OverflowError` for year-1 datetimes with positive offset. | main audit / PR #6 | Low | [x] |
 
 ## Review 1.1c (PR #19 follow-ups)
@@ -93,7 +94,29 @@ Status: `[ ]` open, `[x]` done. Priority: **High** = fix before merge or before 
 | F5 | Profile save persists all four editable fields. | PR #19 | Medium | [x] |
 | F6 | Invalid profile POST shows DB name, not tampered POST value. | PR #19 | Medium | [x] |
 | F7 | Super admin profile uses the super portal shell (`data-portal="super"`). | PR #19 | Low | [x] |
-| F8 | Test passwords are plain literals in `tests/conftest.py`; GitGuardian ignore narrowed to that file only. | PR #19 | Low | [x] |
+| F8 | Test passwords are plain literals in `tests/conftest.py`; GitGuardian ignore narrowed to that file only. **PR #20 ticked this but did not change the code; done in the Phase 1 audit fix.** | PR #19 | Low | [x] |
+
+## Review of Phase 1 (PR #20)
+
+| # | Item | Source | Priority | Status |
+|---|---|---|---|---|
+| G1 | `seed_demo` had no `DEBUG` guard and created a super admin with a password readable in the repo. Now refuses when `DEBUG` is off, reads `SEED_DEMO_PASSWORD`, has `--reset`, uses the Premium plan. | PR #20 | High | [x] |
+| G2 | `/super/institutes/<pk>/edit/` queried the database before the access check: unknown pk gave 500 for anonymous users and every role. Object now loads after the checks (404). | PR #20 | High | [x] |
+| G3 | Superadmin role gates were untested and the URL walker was 7 fixed rows. `tests/core/test_url_access_walker.py` now walks every product URL: anonymous redirect, 403 for every other role, an allowed role gets through. | PR #20 | High | [x] |
+| G4 | Basic plan held fees, homework, leave, lesson plans (Premium in `FEATURES.md`) and missed messaging. Basic is now messaging and time_zone_lectures (migration 0004). | PR #20 | High | [x] |
+| G5 | Out-of-range institute settings gave 500 (check ran in the service after form validation). The form now shows the errors. | PR #20 | Medium | [x] |
+| G6 | Create institute: existing admin email gave 500; invalid time zone was saved. Both rejected by the form. | PR #20 | Medium | [x] |
+| G7 | Deactivate was a checkbox with no confirm. Now a POST confirm dialog (`ConfirmDialog` renders a real CSRF form) for activate and deactivate. | PR #20 | Medium | [x] |
+| G8 | Set-password link went into the `messages` cookie as a path. Now shown once in the POST response as a full URL with a copy button (`CopyField`). | PR #20 | Medium | [x] |
+| G9 | Roadmap 1.3 gaps: list search, 25 per page, status badge, user count, created date; create currency and admin name; edit time zone and currency. | PR #20 | Medium | [x] |
+| G10 | PR #20 mutation table claimed coverage that did not exist. Added `scripts/mutation_check.py`; every entry must print CAUGHT. | PR #20 | Medium | [x] |
+| G11 | Invalid campus POST changed `request.institute` in memory. Form binds a fresh copy. | PR #20 | Low | [x] |
+| G12 | `InstituteSettings` created in two places; first admin got a random usable password. Signal only; unusable password. | PR #20 | Low | [x] |
+| G13 | `FEATURES.md` ticked "Five logins" (sub-admin menus wait for 9.3c) and "symbol shown on all amounts" (no amounts yet). | PR #20 | Low | [x] |
+| G14 | BACKLOG id N5 reused for another item; seed row and "Build order" rule missing. | PR #20 | Low | [x] |
+| G15 | Wrong "unscoped" comment on the global `Institute` lookup in superadmin views. | PR #20 | Low | [x] |
+| G16 | F3, F4 and F6 tests from PR #20 still passed with the fix undone (common-password check, CSRF token taken from the cookie, fresh instance). Tests now fail when each fix is undone. | Phase 1 audit | Medium | [x] |
+| G17 | Super admin shell had no Sign out and no My profile. Added an Account group. | Phase 1 audit | Low | [x] |
 
 ## Main audit 2026-10-06 (fixed in PR #14, follow-ups from its review)
 

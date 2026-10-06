@@ -18,4 +18,11 @@ class SuperMenu:
                     MenuItem("Create institute", "super:institute_create", "plus"),
                 ),
             ),
+            MenuGroup(
+                label="Account",
+                items=(
+                    MenuItem("My profile", "accounts:profile", "user"),
+                    MenuItem("Sign out", "accounts:logout", "right-from-bracket"),
+                ),
+            ),
         )

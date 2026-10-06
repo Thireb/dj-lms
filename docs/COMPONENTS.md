@@ -26,7 +26,7 @@ apps/ui/
     block_stack.py # BlockStack
     data.py        # StatCard, DataTable, Column, Badge, StatusBadge, Avatar,
                    # ProgressBar, ChartCard, EmptyState
-    actions.py     # Button, QuickAction, ConfirmDialog, Toast
+    actions.py     # Button, QuickAction, ConfirmDialog, CopyField, Toast
     lectures.py    # CountdownCard, LectureRow, ScheduleList
     nav.py         # NotificationBell, FilterBar, Pagination
     pdf.py         # PdfHeader
@@ -248,14 +248,15 @@ Every item here is a class. Names are fixed.
 | `EmptyState` | data | message + one action | `title`, `text`, `action` |
 | `Button` | actions | primary, secondary, danger, ghost | `label`, `variant`, `url`, `icon` |
 | `QuickAction` | actions | dashboard tile | `label`, `icon`, `url` |
-| `ConfirmDialog` | actions | confirm destructive actions | `message`, `confirm_label`, `url` |
+| `ConfirmDialog` | actions | confirm destructive actions; renders a POST form with CSRF (when rendered with `request`) and a cancel button | `message`, `confirm_label`, `url`, `trigger_label`, `variant` (`danger`/`primary`), `fields` (hidden name/value pairs) |
+| `CopyField` | actions | read-only value with a copy button (one-time links) | `label`, `value` |
 | `Toast` | actions | success/error message | `message`, `tone` |
 | `CountdownCard` | lectures | "Up next" with live timer + Join | `lecture`, `viewer`; `scheduled_at` is validated to a UTC ISO string in `data-scheduled-at`, read by `countdownCard` in `static/js/app.js` |
 | `LectureRow` | lectures | one lecture in a list | `lecture`, `viewer` |
 | `ScheduleList` | lectures | lectures grouped by day | `lectures`, `viewer` |
 | `NotificationBell` | nav | bell + unread count | `user` |
-| `FilterBar` | nav | search + selects | `filters` |
-| `Pagination` | nav | page links | `page_obj` |
+| `FilterBar` | nav | search + selects; each filter has `name`, `label`, optional `value`, `placeholder` | `filters` |
+| `Pagination` | nav | page links; `query` keeps the current filters | `page_obj`, `query` |
 | `PdfHeader` | pdf | institute header for PDFs | `institute` |
 
 Form layout objects: `Section`, `Row`, `FormActions`.
