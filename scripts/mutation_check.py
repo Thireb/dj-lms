@@ -142,6 +142,13 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "        institute = self.get_institute()\n",
     ),
     (
+        "super shell sign out",
+        "apps/ui/menus/super.py",
+        '                    MenuItem("Sign out", "accounts:logout", '
+        '"right-from-bracket"),\n',
+        "",
+    ),
+    (
         "F3 validate_password",
         "apps/accounts/forms.py",
         "            validate_password(new_password, user=self.user)\n",

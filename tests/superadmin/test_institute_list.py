@@ -72,3 +72,10 @@ def test_institute_list_forbidden_for_institute_admin(
     )
     client.force_login(user)
     assert client.get(reverse("super:institute_list")).status_code == 403
+
+
+@pytest.mark.django_db
+def test_super_shell_has_post_sign_out(super_client: Client) -> None:
+    html = super_client.get(reverse("super:institute_list")).content.decode()
+    assert f'action="{reverse("accounts:logout")}"' in html
+    assert 'href="/accounts/logout/"' not in html
