@@ -11,9 +11,7 @@ SECRET_KEY = "test-secret-key-not-for-production"
 
 INSTALLED_APPS = [*INSTALLED_APPS, "tests.testapp"]  # noqa: F405
 
-_default_test_database_url = (
-    "postgres://lms:lms_dev_password@localhost:5432/lms_test"
-)
+_default_test_database_url = "postgres://lms:lms_dev_password@localhost:5432/lms_test"
 _database_url = os.environ.get("DATABASE_URL", _default_test_database_url)
 
 _db = database_config_from_url(_database_url)
