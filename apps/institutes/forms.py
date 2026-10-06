@@ -10,6 +10,7 @@ from django.core.exceptions import ValidationError
 
 from apps.institutes.constants import CURRENCY_CHOICES
 from apps.institutes.models import Institute, InstituteSettings
+from apps.institutes.services import validate_settings_ranges
 from apps.ui.forms.base import BaseForm, TenantModelForm
 from apps.ui.forms.layout import FormActions, Section
 
@@ -68,6 +69,20 @@ class InstituteSettingsForm(TenantModelForm, forms.ModelForm):
         if timezone_value and timezone_value not in available_timezones():
             raise ValidationError("Select a valid time zone.")
         return timezone_value
+
+    def clean(self):
+        cleaned = super().clean()
+        if any(field not in cleaned for field in self.Meta.fields):
+            return cleaned
+        candidate = InstituteSettings(
+            **{field: cleaned[field] for field in self.Meta.fields}
+        )
+        try:
+            validate_settings_ranges(candidate)
+        except ValidationError as exc:
+            for field, field_errors in exc.message_dict.items():
+                self.add_error(field, field_errors)
+        return cleaned
 
     def get_layout(self):
         return Layout(

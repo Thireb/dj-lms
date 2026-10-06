@@ -24,7 +24,8 @@ class CampusProfilePage(FormPage):
     active_item = menu_keys.INSTITUTE
 
     def get_form_kwargs(self) -> dict[str, Any]:
-        institute: Institute = self.get_institute()
+        # Fresh copy: an invalid POST must not change request.institute in memory.
+        institute = Institute.objects.get(pk=self.get_institute().pk)
         return {"instance": institute}
 
     def get_success_url(self) -> str:

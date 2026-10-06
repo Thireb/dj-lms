@@ -22,15 +22,8 @@ ALL_FEATURE_KEYS: tuple[str, ...] = (
     TIME_ZONE_LECTURES,
 )
 
-BASIC_PLAN_FEATURES: frozenset[str] = frozenset(
-    {
-        FEES,
-        LEAVE,
-        HOMEWORK,
-        LESSON_PLANS,
-        TIME_ZONE_LECTURES,
-    }
-)
+# FEATURES.md marks fees, payroll, planning and leave as Premium (verify split).
+BASIC_PLAN_FEATURES: frozenset[str] = frozenset({MESSAGING, TIME_ZONE_LECTURES})
 
 PREMIUM_PLAN_FEATURES: frozenset[str] = frozenset(ALL_FEATURE_KEYS)
 
