@@ -104,8 +104,8 @@ Status: `[ ]` open, `[x]` done. Priority: **High** = fix before merge or before 
 | R4 | `/django-admin/` is open to any `is_staff` user whatever their role. A teacher with `is_staff` and `is_superuser` gets 200 on `/django-admin/accounts/user/` and sees every institute's users (verified). Gate `AdminSite.has_permission` (or `UserAdmin` permissions) to `user_is_super_admin`, and make `User.clean()` reject `is_staff` / `is_superuser` for every other role (`ARCHITECTURE.md`: these flags are for developers only). | PR #15 | High | [x] fixed in PR #17 |
 | R5 | Docs: the `FEATURES.md` section 1 sign-in boxes are ticked, but sign-in does not work (R1, R2). Untick them until fixed. `CrispyForm`, `BlockStack`, `PublicFormShell` and `PasswordInput` are missing from `COMPONENTS.md` (AGENTS.md section 5 requires the table row). | PR #16 | Medium | [x] fixed in PR #17 |
 | R6 | 4 new pytest warnings: `{% csrf_token %} was used in a template, but the context did not provide the value` (`tests/ui/test_dev_components.py`). Same root cause as R1(d). AGENTS.md section 9: no new warnings. | PR #16 | Low | [x] fixed in PR #17 |
-| R7 | `SetPasswordToken.key` is stored in plain text, so anyone who reads the database can take over every account with an unused token. Store a SHA-256 hash and look up by hash. | PR #16 | Medium | [x] |
-| R8 | Users of an inactive institute can sign in, then get 403 on every page. Reject them at login with a clear message. | PR #16 | Low | [x] |
+| R7 | `SetPasswordToken.key` is stored in plain text, so anyone who reads the database can take over every account with an unused token. Store a SHA-256 hash and look up by hash. | PR #16 | Medium | [x] fixed in PR #18 |
+| R8 | Users of an inactive institute can sign in, then get 403 on every page. Reject them at login with a clear message. | PR #16 | Low | [x] fixed in PR #18 |
 | R9 | Test gaps (mutation): removing `validate_password` from `SetPasswordForm` passes all tests; reverting the top-nav POST Sign out (C8) passes all tests. The set-password field should use `autocomplete="new-password"`. | PR #16 | Low | [x] fixed in PR #17 |
 
 ## Later (deployment hardening, Phase 12)
