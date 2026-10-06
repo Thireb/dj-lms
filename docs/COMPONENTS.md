@@ -236,6 +236,7 @@ Every item here is a class. Names are fixed.
 | `CrispyForm` | forms | crispy form body (`form_tag=False` inside a parent form) | `form` |
 | `PublicPostForm` | forms | `<form method="post">` + CSRF wrapper for public pages | `action`, `body` |
 | `PortalPostForm` | forms | Portal `FormPage` POST wrapper (CSRF, multipart, crispy body) | `action`, `body` |
+| `ProfileMenu` | layout | Admin top-bar profile dropdown (C11 items, admin_only hiding) | `items` |
 | `BlockStack` | block_stack | vertical stack of text or nested components | `blocks` |
 | `SignOutForm` | actions | POST sign out with CSRF | `logout_url` |
 | `StatCard` | data | number + label + note | `value`, `label`, `note`, `icon`, `tone` |

@@ -23,12 +23,14 @@ Build order. Finish each phase before the next. Tick boxes as you go.
   - [x] 1.1a Custom `User` model (`AUTH_USER_MODEL`), role properties, institute validation, `createsuperuser` → `super_admin`, TenantAdmin add/delete (M4/M5). Login UI deferred.
   - [x] 1.1b Auth flows: login (email, show password, remember me), POST logout, set-password token link, forgot-password admin message; C8/C9.
   - [x] 1.1c Profile and change password (name, phone, time zone; SPEC 4.22 subset).
-- [ ] 1.2 `institutes`: Plan, feature flags, campus profile (Institute group), institute settings (rules and currency, admin only).
-- [ ] 1.3 `superadmin`: create institutes, set plans, activate/deactivate.
-- [ ] 1.4 `RoleRequiredMixin`, `MenuRequiredMixin` (admin menu keys), `for_user` scoped managers, portal URL prefixes, 403 and data-scope tests for every role.
+- [x] 1.2 `institutes`: Plan, feature flags, campus profile (Institute group), institute settings (rules and currency, admin only).
+- [x] 1.3 `superadmin`: create institutes, set plans, activate/deactivate.
+- [x] 1.4 `RoleRequiredMixin`, `MenuRequiredMixin` (admin menu keys), `for_user` scoped managers, portal URL prefixes, 403 and data-scope tests for every role.
+- [x] Phase 1 complete (accounts, institutes, super admin shell, portal prefixes). Full SPEC section 10 demo volume waits until roadmap 2.8 (`seed_demo` is Phase 1 stack only).
 
 ## Phase 2: People and academics
 
+- [ ] 2.8 Demo data at scale: run `seed_demo` extensions for bulk students per SPEC section 10 (not before people/academics modules exist).
 - [ ] 2.1 `people`: Student, Teacher, Guardian profiles; auto IDs (`STU-`, `TCH-`).
 - [ ] 2.2 Guardian links to students; guardian account created on enrolment.
 - [ ] 2.3 `academics`: ClassLabel, Batch, Subject (independent lists), StudentBatchSubject, TeacherBatchSubject.

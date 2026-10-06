@@ -148,10 +148,10 @@ def change_password(
 
 
 _PORTAL_HOME_URL_NAMES = {
-    "admin": "accounts:admin_home",
-    "teacher": "accounts:teacher_home",
-    "student": "accounts:student_home",
-    "guardian": "accounts:guardian_home",
+    "admin": "admin:home",
+    "teacher": "teacher:home",
+    "student": "student:home",
+    "guardian": "guardian:home",
 }
 
 
@@ -178,11 +178,7 @@ def portal_home_url(user: User) -> str:
                 pass
     if user.role == Role.SUPER_ADMIN:
         try:
-            return reverse("accounts:super_admin_home")
-        except NoReverseMatch:
-            pass
-        try:
-            return reverse("admin:index")
+            return reverse("super:institute_list")
         except NoReverseMatch:
             pass
     raise ValueError(f"No portal home URL for role {user.role!r}")

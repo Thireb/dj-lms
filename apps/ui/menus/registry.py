@@ -8,7 +8,9 @@ from apps.core.roles import Role
 from apps.ui.menu_items import MenuGroup, ResolvedMenuGroup, ResolvedMenuItem
 from apps.ui.menus.admin import AdminMenu
 from apps.ui.menus.guardian import GuardianMenu
+from apps.ui.menus.profile import ADMIN_PROFILE_ITEMS
 from apps.ui.menus.student import StudentMenu
+from apps.ui.menus.super import SuperMenu
 from apps.ui.menus.teacher import TeacherMenu
 
 _PORTAL_MENUS = {
@@ -16,6 +18,7 @@ _PORTAL_MENUS = {
     "teacher": TeacherMenu,
     "student": StudentMenu,
     "guardian": GuardianMenu,
+    "super": SuperMenu,
 }
 
 _ROLE_PORTAL = {
@@ -99,6 +102,34 @@ def build_menu_groups(
 ) -> list[ResolvedMenuGroup]:
     menu_class = get_menu_class(portal)
     return resolve_menu_groups(menu_class.groups(), user=user, institute=institute)
+
+
+def build_profile_menu_items(
+    user: Any, institute: Any | None
+) -> list[ResolvedMenuItem]:
+    role = getattr(user, "role", None)
+    features = _institute_features(institute)
+    items: list[ResolvedMenuItem] = []
+    for item in ADMIN_PROFILE_ITEMS:
+        if item.admin_only and role != Role.INSTITUTE_ADMIN:
+            continue
+        if item.feature and item.feature not in features:
+            continue
+        url = safe_reverse(item.url_name)
+        disabled = url is None
+        post_only = item.post_only or item.url_name == "accounts:logout"
+        items.append(
+            ResolvedMenuItem(
+                label=item.label,
+                url="#" if disabled else url,
+                icon=item.icon,
+                menu_key=item.menu_key,
+                disabled=disabled,
+                url_name=item.url_name,
+                post_only=post_only,
+            )
+        )
+    return items
 
 
 def portal_for_user(user: Any) -> str | None:

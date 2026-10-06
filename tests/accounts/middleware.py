@@ -1,4 +1,4 @@
-"""Test-only middleware stubs until SubAdminProfile exists (roadmap 1.2)."""
+"""Test-only middleware stubs until SubAdminProfile exists (roadmap 9.3c)."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ class SubAdminTestMenuMiddleware:
             user is not None
             and getattr(user, "is_authenticated", False)
             and getattr(user, "role", None) == Role.SUB_ADMIN
-            and not getattr(user, "allowed_menus", None)
+            and getattr(user, "allowed_menus", None) is None
         ):
-            user.allowed_menus = ["dashboards", "account"]
+            user.allowed_menus = ["dashboards"]
         return self.get_response(request)

@@ -1,0 +1,19 @@
+from django.urls import path
+
+from apps.superadmin import views
+
+app_name = "super"
+
+urlpatterns = [
+    path("institutes/", views.InstituteListPage.as_view(), name="institute_list"),
+    path(
+        "institutes/create/",
+        views.CreateInstitutePage.as_view(),
+        name="institute_create",
+    ),
+    path(
+        "institutes/<int:pk>/edit/",
+        views.EditInstitutePage.as_view(),
+        name="institute_edit",
+    ),
+]

@@ -24,6 +24,7 @@ from apps.accounts.forms import (
     ProfileForm,
     SetPasswordForm,
 )
+from apps.accounts.models import User
 from apps.accounts.services import (
     TokenStatus,
     authenticate_user,
@@ -34,7 +35,6 @@ from apps.accounts.services import (
     set_password_from_token,
     update_profile,
 )
-from apps.core import menus as menu_keys
 from apps.core.roles import Role
 from apps.ui.components.actions import Button
 from apps.ui.components.forms import CrispyForm, PublicPostForm
@@ -222,23 +222,20 @@ PROFILE_ROLES = [
 
 
 class AccountFormPage(FormPage):
-    """Portal form page with per-role shell and admin menu_key for profile routes."""
+    """Portal form page with per-role shell; profile routes skip admin menu checks."""
 
     allowed_roles = PROFILE_ROLES
+    self_service = True
 
     def setup(self, request: HttpRequest, *args: Any, **kwargs: Any) -> None:
         super().setup(request, *args, **kwargs)
         user = request.user
+        if getattr(user, "is_super_admin", False):
+            self.portal = "super"
+            return
         portal = portal_for_user(user)
         if portal:
             self.portal = portal
-        elif getattr(user, "is_super_admin", False):
-            self.portal = "admin"
-        if self.portal == "admin" and user.role in (
-            Role.INSTITUTE_ADMIN,
-            Role.SUB_ADMIN,
-        ):
-            self.menu_key = menu_keys.ACCOUNT
 
 
 class ProfileView(AccountFormPage):
@@ -246,7 +243,27 @@ class ProfileView(AccountFormPage):
     title = "My profile"
 
     def get_form_kwargs(self) -> dict[str, Any]:
-        return {"user": self.request.user}
+        user = User.objects.get(pk=self.request.user.pk)
+        return {"user": user}
+
+    def form_invalid(self, form: ProfileForm) -> HttpResponse:
+        fresh = User.objects.get(pk=self.request.user.pk)
+        display_form = ProfileForm(
+            {
+                "first_name": fresh.first_name,
+                "last_name": fresh.last_name,
+                "phone": fresh.phone or "",
+                "timezone": fresh.timezone or "",
+            },
+            user=fresh,
+        )
+        display_form.is_valid()
+        for field, errors in form.errors.items():
+            for error in errors:
+                display_form.add_error(field if field != "__all__" else None, error)
+        context = self.get_context_data()
+        context["form"] = self.get_form_wrapper(display_form)
+        return self.render_to_response(context, status=200)
 
     def get_success_url(self) -> str:
         return reverse("accounts:profile")

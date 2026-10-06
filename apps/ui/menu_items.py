@@ -11,6 +11,7 @@ class MenuItem:
     menu_key: str | None = None
     feature: str | None = None
     post_only: bool = False
+    admin_only: bool = False
 
 
 @dataclass(frozen=True)

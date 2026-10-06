@@ -5,9 +5,8 @@ from __future__ import annotations
 import pytest
 from apps.accounts.forms import ProfileForm
 from apps.accounts.models import User
-from apps.accounts.views import ProfileView
 from apps.core.roles import Role
-from django.test import Client, RequestFactory
+from django.test import Client
 from django.urls import reverse
 
 from tests.conftest import (
@@ -193,6 +192,8 @@ def test_change_password_validate_password(client: Client, institute_a) -> None:
     )
     assert response.status_code == 200
     assert response.context is None or b"password" in response.content.lower()
+    user.refresh_from_db()
+    assert user.check_password(TEST_LOGIN_PASSWORD)
 
 
 @pytest.mark.django_db
@@ -221,34 +222,118 @@ def test_change_password_updates_password_and_keeps_session(
 
 
 @pytest.mark.django_db
-def test_profile_post_requires_csrf(client: Client, institute_a) -> None:
+def test_profile_post_csrf_enforced(client: Client, institute_a) -> None:
     user = make_user(
         email="teacher@example.com",
         role=Role.TEACHER,
         institute=institute_a,
     )
-    client = Client(enforce_csrf_checks=True)
-    _login(client, user)
-    response = client.post(
+    csrf_client = Client(enforce_csrf_checks=True)
+    _login(csrf_client, user)
+    get_response = csrf_client.get(reverse("accounts:profile"))
+    assert "csrfmiddlewaretoken" in get_response.content.decode()
+    token = csrf_client.cookies["csrftoken"].value
+    bad_response = csrf_client.post(
         reverse("accounts:profile"),
         {"first_name": "A", "last_name": "B", "phone": "", "timezone": ""},
     )
-    assert response.status_code == 403
+    assert bad_response.status_code == 403
+    good_response = csrf_client.post(
+        reverse("accounts:profile"),
+        {
+            "first_name": "A",
+            "last_name": "B",
+            "phone": "",
+            "timezone": "",
+            "csrfmiddlewaretoken": token,
+        },
+    )
+    assert good_response.status_code == 302
 
 
 @pytest.mark.django_db
-def test_sub_admin_without_account_menu_gets_403(institute_a) -> None:
+def test_profile_save_persists_all_fields(client: Client, institute_a) -> None:
+    user = make_user(
+        email="teacher@example.com",
+        role=Role.TEACHER,
+        institute=institute_a,
+        first_name="Before",
+        last_name="Name",
+    )
+    _login(client, user)
+    response = client.post(
+        reverse("accounts:profile"),
+        {
+            "first_name": "Ada",
+            "last_name": "Lovelace",
+            "phone": "+92-300-0000000",
+            "timezone": "Asia/Karachi",
+        },
+    )
+    assert response.status_code == 302
+    user.refresh_from_db()
+    assert user.first_name == "Ada"
+    assert user.last_name == "Lovelace"
+    assert user.phone == "+92-300-0000000"
+    assert user.timezone == "Asia/Karachi"
+
+
+@pytest.mark.django_db
+def test_profile_invalid_post_shows_db_name_not_tampered_value(
+    client: Client, institute_a
+) -> None:
+    user = make_user(
+        email="teacher@example.com",
+        role=Role.TEACHER,
+        institute=institute_a,
+        first_name="Stored",
+        last_name="User",
+    )
+    _login(client, user)
+    response = client.post(
+        reverse("accounts:profile"),
+        {
+            "first_name": "Tampered",
+            "last_name": "User",
+            "phone": "",
+            "timezone": "Not/A_Real_Zone",
+        },
+    )
+    assert response.status_code == 200
+    html = response.content.decode()
+    assert "Stored" in html
+    assert "Tampered" not in html
+    user.refresh_from_db()
+    assert user.first_name == "Stored"
+
+
+@pytest.mark.django_db
+def test_super_admin_profile_uses_super_portal_shell(client: Client) -> None:
+    user = make_user(
+        email="super@example.com",
+        role=Role.SUPER_ADMIN,
+        institute=None,
+    )
+    _login(client, user)
+    response = client.get(reverse("accounts:profile"))
+    html = response.content.decode()
+    assert response.status_code == 200
+    assert 'data-portal="super"' in html or "portal-super" in html
+
+
+@pytest.mark.django_db
+def test_sub_admin_without_account_menu_can_open_profile_and_password(
+    client: Client, institute_a
+) -> None:
+    """Stub middleware grants dashboards only; self_service still allows profile."""
     user = make_user(
         email="sub@example.com",
         role=Role.SUB_ADMIN,
         institute=institute_a,
     )
-    user.allowed_menus = ["dashboards"]
-    request = RequestFactory().get(reverse("accounts:profile"))
-    request.user = user
-    request.institute = institute_a
-    response = ProfileView.as_view()(request)
-    assert response.status_code == 403
+    _login(client, user)
+    assert client.get(reverse("accounts:profile")).status_code == 200
+    assert client.get(reverse("accounts:change_password")).status_code == 200
 
 
 @pytest.mark.django_db

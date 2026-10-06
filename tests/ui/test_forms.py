@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 from apps.core.tenancy import tenant_context
-from apps.institutes.models import Institute
+from apps.institutes.models import Institute, Plan
 from apps.ui.forms.base import BaseForm, HtmxModalForm, TenantModelForm
 from apps.ui.forms.layout import FormActions, Row, Section
 from apps.ui.forms.widgets import DatePicker, MoneyInput, TimePicker
@@ -70,7 +70,10 @@ def test_htmx_modal_form_helper_class() -> None:
 
 
 def test_tenant_model_form_accepts_institute(db) -> None:
-    institute = Institute.objects.create(name="Test institute")
+    institute = Institute.objects.create(
+        name="Test institute",
+        plan=Plan.default_basic(),
+    )
     form = InstituteForm(institute=institute)
     assert form.institute == institute
 
