@@ -12,15 +12,15 @@ class Section(LayoutObject):
         self.css_class = css_class or ""
 
     def render(self, form, context, template_pack=None, **kwargs):
-        fields_html = "".join(
+        field_parts = [
             render_field(field, form, context, template_pack=template_pack)
             for field in self.fields
-        )
+        ]
         return render_to_string(
             self.template,
             {
                 "legend": self.legend,
-                "fields_html": fields_html,
+                "field_parts": field_parts,
                 "css_class": self.css_class,
             },
         )
@@ -34,14 +34,14 @@ class Row(LayoutObject):
         self.css_class = css_class or ""
 
     def render(self, form, context, template_pack=None, **kwargs):
-        fields_html = "".join(
+        field_parts = [
             render_field(field, form, context, template_pack=template_pack)
             for field in self.fields
-        )
+        ]
         return render_to_string(
             self.template,
             {
-                "fields_html": fields_html,
+                "field_parts": field_parts,
                 "css_class": self.css_class,
             },
         )

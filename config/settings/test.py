@@ -23,3 +23,9 @@ PASSWORD_HASHERS = [  # noqa: F405
 ]
 
 ROOT_URLCONF = "config.urls_test"  # noqa: F405
+
+_MIDDLEWARE = list(MIDDLEWARE)  # noqa: F405  # from star import
+MIDDLEWARE = [
+    *_MIDDLEWARE,
+    "tests.accounts.middleware.SubAdminTestMenuMiddleware",
+]

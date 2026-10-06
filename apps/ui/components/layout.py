@@ -166,6 +166,18 @@ class PageHeader(Component):
             **props,
         )
 
+    def render(self, request=None):
+        ctx = self.get_context()
+        if request is not None:
+            actions = []
+            for action in ctx.get("actions") or []:
+                if hasattr(action, "render"):
+                    actions.append(action.render(request=request))
+                else:
+                    actions.append(action)
+            ctx["actions"] = actions
+        return render_component_template(self, ctx, request=request)
+
 
 class SectionCard(Component):
     template_name = "ui/components/section_card.html"
@@ -185,6 +197,13 @@ class SectionCard(Component):
             link_label=link_label,
             **props,
         )
+
+    def render(self, request=None):
+        ctx = self.get_context()
+        body = ctx.get("body")
+        if request is not None and body is not None and hasattr(body, "render"):
+            ctx["body"] = body.render(request=request)
+        return render_component_template(self, ctx, request=request)
 
 
 class Tabs(Component):

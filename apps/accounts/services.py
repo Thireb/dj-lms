@@ -85,24 +85,58 @@ def create_set_password_token(user: User, *, ttl_hours: int = 72) -> SetPassword
     return SetPasswordToken.create_for_user(user, ttl_hours=ttl_hours)
 
 
+_PORTAL_HOME_URL_NAMES = {
+    "admin": "accounts:admin_home",
+    "teacher": "accounts:teacher_home",
+    "student": "accounts:student_home",
+    "guardian": "accounts:guardian_home",
+}
+
+
 def _first_menu_url(portal: str, user: User) -> str | None:
     institute = getattr(user, "institute", None)
     groups = build_menu_groups(portal, user, institute)
     for group in groups:
         for item in group.items:
+            if item.post_only:
+                continue
             if not item.disabled and item.url and item.url != "#":
                 return item.url
     return None
 
 
+def portal_home_url(user: User) -> str:
+    portal = portal_for_user(user)
+    if portal:
+        url_name = _PORTAL_HOME_URL_NAMES.get(portal)
+        if url_name:
+            try:
+                return reverse(url_name)
+            except NoReverseMatch:
+                pass
+    if user.role == Role.SUPER_ADMIN:
+        try:
+            return reverse("accounts:super_admin_home")
+        except NoReverseMatch:
+            pass
+        try:
+            return reverse("admin:index")
+        except NoReverseMatch:
+            pass
+    raise ValueError(f"No portal home URL for role {user.role!r}")
+
+
 def post_login_redirect_url(user: User, next_url: str | None = None) -> str:
+    login_path = reverse("accounts:login")
+    logout_path = reverse("accounts:logout")
+
     if next_url and url_has_allowed_host_and_scheme(
         next_url,
         allowed_hosts={None},
         require_https=getattr(settings, "SECURE_SSL_REDIRECT", False),
     ):
-        login_path = reverse("accounts:login")
-        if next_url.rstrip("/") != login_path.rstrip("/"):
+        normalized = next_url.rstrip("/")
+        if normalized not in {login_path.rstrip("/"), logout_path.rstrip("/")}:
             return next_url
 
     portal = portal_for_user(user)
@@ -111,10 +145,4 @@ def post_login_redirect_url(user: User, next_url: str | None = None) -> str:
         if url:
             return url
 
-    if user.role == Role.SUPER_ADMIN:
-        try:
-            return reverse("admin:index")
-        except NoReverseMatch:
-            pass
-
-    return reverse("accounts:login")
+    return portal_home_url(user)

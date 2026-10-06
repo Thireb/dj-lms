@@ -20,7 +20,7 @@ from apps.accounts.services import (
     post_login_redirect_url,
     set_password_from_token,
 )
-from apps.ui.components.forms import CrispyForm
+from apps.ui.components.forms import CrispyForm, PublicPostForm
 from apps.ui.components.layout import PageHeader, PublicFormShell, SectionCard
 
 
@@ -48,8 +48,11 @@ class PublicFormPage(TemplateView):
         if self.form_class is None:
             raise ValueError("form_class is required")
         if self.request.method == "POST":
-            return self.form_class(self.request.POST, **self.get_form_kwargs())
-        return self.form_class(**self.get_form_kwargs())
+            form = self.form_class(self.request.POST, **self.get_form_kwargs())
+        else:
+            form = self.form_class(**self.get_form_kwargs())
+        form.helper.disable_csrf = True
+        return form
 
     def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
         return self.render_page(self.get_form())
@@ -67,7 +70,10 @@ class PublicFormPage(TemplateView):
         header = PageHeader(title=self.title)
         card = SectionCard(
             title=self.section_title or self.title,
-            body=CrispyForm(form=form),
+            body=PublicPostForm(
+                action=self.request.path,
+                body=CrispyForm(form=form),
+            ),
         )
         shell = PublicFormShell(page_title=self.title, header=header, content=card)
         return HttpResponse(shell.render(request=self.request))

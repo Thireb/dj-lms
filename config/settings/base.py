@@ -41,6 +41,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "apps.core.middleware.django_admin.DjangoAdminGateMiddleware",
     "apps.core.middleware.tenant.TenantMiddleware",
     "apps.core.middleware.timezone.TimezoneMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",

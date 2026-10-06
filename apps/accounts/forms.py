@@ -52,12 +52,12 @@ class SetPasswordForm(BaseForm):
 
     password = forms.CharField(
         label="New password",
-        widget=PasswordInput(),
+        widget=PasswordInput(attrs={"autocomplete": "new-password"}),
         min_length=8,
     )
     confirm_password = forms.CharField(
         label="Confirm password",
-        widget=PasswordInput(),
+        widget=PasswordInput(attrs={"autocomplete": "new-password"}),
         min_length=8,
     )
 

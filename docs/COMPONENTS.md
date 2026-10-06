@@ -20,7 +20,10 @@ Same idea as our Pearl project: crispy-forms for forms, Python classes for compo
 apps/ui/
   components/
     base.py        # Component base class
-    layout.py      # TopNavShell, SidebarShell, Sidebar, TopNav, HeroBanner, PageHeader, SectionCard, Tabs, Modal
+    layout.py      # TopNavShell, SidebarShell, Sidebar, TopNav, HeroBanner, PageHeader,
+                   # SectionCard, Tabs, Modal, PublicFormShell
+    forms.py       # CrispyForm, PublicPostForm
+    block_stack.py # BlockStack
     data.py        # StatCard, DataTable, Column, Badge, StatusBadge, Avatar,
                    # ProgressBar, ChartCard, EmptyState
     actions.py     # Button, QuickAction, ConfirmDialog, Toast
@@ -30,7 +33,7 @@ apps/ui/
   forms/
     base.py        # BaseForm, TenantModelForm, HtmxModalForm
     layout.py      # Section, Row, FormActions (crispy layout objects)
-    widgets.py     # DatePicker, TimePicker, MoneyInput
+    widgets.py     # DatePicker, TimePicker, MoneyInput, PasswordInput
   views/
     pages.py       # PortalPageView, DashboardPage, ListPage, DetailPage, FormPage
   templates/ui/
@@ -229,6 +232,11 @@ Every item here is a class. Names are fixed.
 | `SectionCard` | layout | titled card with "View all" | `title`, `body`, `link_url`, `link_label` |
 | `Tabs` | layout | tabs with HTMX swap | `tabs`, `active` |
 | `Modal` | layout | dialog (Alpine + HTMX) | `id`, `title`, `body` |
+| `PublicFormShell` | layout | centered public page (sign-in, set password) | `page_title`, `header`, `content` |
+| `CrispyForm` | forms | crispy form body (`form_tag=False` inside a parent form) | `form` |
+| `PublicPostForm` | forms | `<form method="post">` + CSRF wrapper for public pages | `action`, `body` |
+| `BlockStack` | block_stack | vertical stack of text or nested components | `blocks` |
+| `SignOutForm` | actions | POST sign out with CSRF | `logout_url` |
 | `StatCard` | data | number + label + note | `value`, `label`, `note`, `icon`, `tone` |
 | `DataTable` + `Column` | data | table with sort, empty state | `columns`, `rows` |
 | `Badge` | data | status pill | `text`, `tone` |
@@ -249,6 +257,8 @@ Every item here is a class. Names are fixed.
 | `PdfHeader` | pdf | institute header for PDFs | `institute` |
 
 Form layout objects: `Section`, `Row`, `FormActions`.
+
+Form widgets (not components): `PasswordInput` (show/hide toggle; static `type="password"` for no-JS and tests).
 
 ## 8. Menus
 

@@ -189,11 +189,18 @@ def dev_components(request: HttpRequest) -> HttpResponse:
         "pdf_header": PdfHeader(institute),
     }
 
+    rendered_components = {}
+    for name, component in components.items():
+        if hasattr(component, "render"):
+            rendered_components[name] = component.render(request=request)
+        else:
+            rendered_components[name] = component
+
     return render(
         request,
         "ui/dev/components.html",
         {
             "page_title": "Component gallery",
-            "components": components,
+            "components": rendered_components,
         },
     )
