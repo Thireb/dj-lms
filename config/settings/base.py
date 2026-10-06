@@ -18,10 +18,13 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "crispy_forms",
+    "apps.accounts",
     "apps.core",
     "apps.institutes",
     "apps.ui",
 ]
+
+AUTH_USER_MODEL = "accounts.User"
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = ("ui/forms",)
 CRISPY_TEMPLATE_PACK = "ui/forms"

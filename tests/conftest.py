@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import pytest
+from apps.accounts.models import User
 from apps.core.roles import Role
 from apps.institutes.models import Institute
 
@@ -84,3 +85,33 @@ def sub_admin_a(institute_a: Institute) -> FakeUser:
 @pytest.fixture
 def anonymous_user() -> FakeUser:
     return FakeUser(role="", institute_id=None, is_authenticated=False)
+
+
+def make_user(
+    *,
+    email: str,
+    role: str,
+    institute: Institute | None = None,
+    password: str = "pass",
+    is_staff: bool = False,
+    **extra: object,
+) -> User:
+    """Persist an accounts.User for integration tests."""
+    return User.objects.create_user(
+        email=email,
+        password=password,
+        role=role,
+        institute=institute,
+        is_staff=is_staff,
+        **extra,
+    )
+
+
+@pytest.fixture
+def institute_admin_user(institute_a: Institute) -> User:
+    return make_user(
+        email="admin-a@example.com",
+        role=Role.INSTITUTE_ADMIN,
+        institute=institute_a,
+        is_staff=True,
+    )
