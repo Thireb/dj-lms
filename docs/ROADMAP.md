@@ -3,6 +3,7 @@
 Open review follow-ups are tracked in `BACKLOG.md`. Fix each one in the first PR that touches its area.
 
 Build order. Finish each phase before the next. Tick boxes as you go.
+From 2.8 on, every phase that adds a model also extends `seed_demo` with that model's rows from `SPEC-DETAILS.md` section 10, in the same PR.
 
 ## Phase 0: Foundation
 
