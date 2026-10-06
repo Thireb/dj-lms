@@ -17,7 +17,7 @@ class DemoAdminDashboard(DashboardPage):
 class DemoTeacherDashboard(DashboardPage):
     portal = "teacher"
     title = "Teacher dashboard"
-    menu_key = "dashboard"
+    active_item = "dashboard"
     allowed_roles = [Role.TEACHER]
 
 
@@ -31,6 +31,8 @@ class DemoAdminPeopleList(ListPage):
 class DemoAdminMissingMenuKey(DashboardPage):
     """Intentionally misconfigured admin page for mixin tests."""
 
+    _access_test_exclude = True
+
     portal = "admin"
     title = "Misconfigured"
     menu_key = None
@@ -42,5 +44,13 @@ class DemoTeacherEmptyAllowedRoles(DashboardPage):
 
     portal = "teacher"
     title = "Closed"
-    menu_key = "dashboard"
+    active_item = "dashboard"
     allowed_roles = []
+
+
+class DemoTeacherInheritsDefaultAllowedRoles(DashboardPage):
+    """Inherits PortalPageView allowed_roles default (fail-closed)."""
+
+    portal = "teacher"
+    title = "Inherited roles"
+    active_item = "dashboard"

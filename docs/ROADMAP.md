@@ -14,6 +14,7 @@ Build order. Finish each phase before the next. Tick boxes as you go.
 - [x] 0.4b crispy-forms setup: `BaseForm`, `TenantModelForm`, `HtmxModalForm`, layout objects `Section`, `Row`, `FormActions`.
 - [x] 0.4c Base page classes: `PortalPageView`, `DashboardPage`, `ListPage`, `DetailPage`, `FormPage`; menu classes per portal.
 - [x] 0.5 Local run script and CI; Docker moves to Phase 12.
+- [x] 0.5b UI hardening from backlog (B8, B9, B16, C5, C6, C10).
 
 ## Phase 1: Accounts and institutes
 

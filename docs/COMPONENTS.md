@@ -122,6 +122,7 @@ class PortalPageView(RoleRequiredMixin, TenantRequiredMixin, TemplateView):
     template_name = "ui/layouts/app_shell.html"
     portal = None            # "admin", "teacher", "student", "guardian"
     menu_key = None          # admin views only: one of the keys in core/menus.py
+    active_item = None       # sidebar/top-nav highlight; defaults to menu_key when unset
     allowed_roles = []       # required, e.g. [Role.TEACHER] (from apps.core.roles); empty list = 403 for everyone
     title = ""
     breadcrumb = []
@@ -137,7 +138,7 @@ class PortalPageView(RoleRequiredMixin, TenantRequiredMixin, TemplateView):
 
     def get_context_data(self, **kw):
         ctx = super().get_context_data(**kw)
-        ctx["shell"] = self.shell_class(portal=self.portal, user=self.request.user, active=self.menu_key)   # TopNavShell for admin, SidebarShell for others
+        ctx["shell"] = self.shell_class(portal=self.portal, user=self.request.user, active=self.get_active_item())   # TopNavShell for admin, SidebarShell for others
         ctx["header"] = self.get_header()
         ctx.update(self.get_components())
         return ctx
@@ -239,7 +240,7 @@ Every item here is a class. Names are fixed.
 | `QuickAction` | actions | dashboard tile | `label`, `icon`, `url` |
 | `ConfirmDialog` | actions | confirm destructive actions | `message`, `confirm_label`, `url` |
 | `Toast` | actions | success/error message | `message`, `tone` |
-| `CountdownCard` | lectures | "Up next" with live timer + Join | `lecture`, `viewer` |
+| `CountdownCard` | lectures | "Up next" with live timer + Join | `lecture`, `viewer`; `scheduled_at` is validated to a UTC ISO string in `data-scheduled-at`, read by `countdownCard` in `static/js/app.js` |
 | `LectureRow` | lectures | one lecture in a list | `lecture`, `viewer` |
 | `ScheduleList` | lectures | lectures grouped by day | `lectures`, `viewer` |
 | `NotificationBell` | nav | bell + unread count | `user` |

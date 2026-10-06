@@ -25,9 +25,10 @@ class PortalPageView(
     TenantRequiredMixin,
     TemplateView,
 ):
-    template_name = "ui/layouts/portal_page.html"
+    template_name = "base.html"
     portal: str | None = None
     menu_key: str | None = None
+    active_item: str | None = None
     allowed_roles: list[str] = []
     title = ""
     breadcrumb: list[str] = []
@@ -47,6 +48,11 @@ class PortalPageView(
 
     def get_actions(self) -> list[Any]:
         return []
+
+    def get_active_item(self) -> str | None:
+        if self.active_item is not None:
+            return self.active_item
+        return self.menu_key
 
     def get_components(self) -> dict[str, Any]:
         return {}
@@ -98,7 +104,7 @@ class PortalPageView(
         shell = shell_class(
             portal=self.portal,
             user=self.request.user,
-            active=self.menu_key,
+            active=self.get_active_item(),
             institute=self.get_institute(),
             page_title=self.title,
             content=body,

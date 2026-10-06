@@ -1,4 +1,5 @@
 from apps.ui.components.base import Component
+from apps.ui.safe_url import safe_url
 
 
 class Button(Component):
@@ -9,7 +10,7 @@ class Button(Component):
         super().__init__(
             label=label,
             variant=variant or self.variant,
-            url=url,
+            url=safe_url(url) if url is not None else None,
             icon=icon,
             **props,
         )
@@ -19,7 +20,12 @@ class QuickAction(Component):
     template_name = "ui/components/quick_action.html"
 
     def __init__(self, label, icon, url, **props):
-        super().__init__(label=label, icon=icon, url=url, **props)
+        super().__init__(
+            label=label,
+            icon=icon,
+            url=safe_url(url),
+            **props,
+        )
 
 
 class ConfirmDialog(Component):
@@ -29,7 +35,7 @@ class ConfirmDialog(Component):
         super().__init__(
             message=message,
             confirm_label=confirm_label,
-            url=url,
+            url=safe_url(url),
             **props,
         )
 

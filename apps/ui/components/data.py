@@ -4,6 +4,8 @@ from collections.abc import Callable
 from typing import Any
 
 from apps.ui.components.base import Component
+from apps.ui.progress_value import clamp_progress_value
+from apps.ui.safe_url import safe_url
 
 
 class Column:
@@ -90,7 +92,7 @@ class ProgressBar(Component):
 
     def __init__(self, value, label="", tone=None, **props):
         super().__init__(
-            value=value,
+            value=clamp_progress_value(value),
             label=label,
             tone=tone or self.tone,
             **props,
@@ -104,7 +106,7 @@ class ChartCard(Component):
         super().__init__(
             title=title,
             chart_id=chart_id,
-            data_url=data_url,
+            data_url=safe_url(data_url),
             **props,
         )
 

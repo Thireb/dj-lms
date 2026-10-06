@@ -50,6 +50,8 @@ lms/
     base.html
     <app>/           # page templates per app
   static/
+    js/
+      app.js           # Alpine helpers (e.g. countdownCard for CountdownCard)
   tests/
   docs/              # these markdown files
   Dockerfile         # deploy only (Phase 12)
