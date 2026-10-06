@@ -63,11 +63,11 @@ Status: `[ ]` open, `[x]` done. Priority: **High** = fix before merge or before 
 
 | # | Item | Source | Priority | Status |
 |---|---|---|---|---|
-| P1 | Base `TenantAdmin` that uses `unscoped` (default manager is fail-closed, so Django admin shows nothing for tenant models). | PR #2 | High | [ ] |
-| P2 | `createsuperuser` creates `role=super_admin`; otherwise the developer account gets a 403. | PR #2 | High | [ ] |
-| P3 | Authenticated users with no institute can still reach logout. | PR #2 | Low | [ ] |
-| P4 | `Institute.is_active`; `TenantMiddleware` returns 403 for an inactive institute. | PR #2 | High | [ ] |
-| P5 | Rename `_is_super_admin` and `_user_institute_id` to public names. **PR #7:** `apps/core/mixins/access.py` now also imports `_is_super_admin` and `_user_role`; rename those too. | PR #2 | Low | [ ] |
+| P1 | Base `TenantAdmin` that uses `unscoped` (default manager is fail-closed, so Django admin shows nothing for tenant models). | PR #2 | High | [x] |
+| P2 | `createsuperuser` creates `role=super_admin`; otherwise the developer account gets a 403. Do in 1.1 with the User model. | PR #2 | High | [ ] |
+| P3 | Authenticated users with no institute can still reach logout. | PR #2 | Low | [x] |
+| P4 | `Institute.is_active`; `TenantMiddleware` returns 403 for an inactive institute. | PR #2 | High | [x] |
+| P5 | Rename `_is_super_admin` and `_user_institute_id` to public names. **PR #7:** `apps/core/mixins/access.py` now also imports `_is_super_admin` and `_user_role`; rename those too. | PR #2 | Low | [x] |
 | P6 | PROTECT blocks deleting an institute with data (test). | PR #2 | High | [x] in PR #3 |
 | P7 | Anonymous user with an institute id gets nothing from `for_user` (test). | PR #2 | High | [x] in PR #3 |
 

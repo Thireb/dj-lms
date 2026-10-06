@@ -7,7 +7,7 @@ from typing import Any
 from django.core.exceptions import ImproperlyConfigured
 from django.http import HttpRequest, HttpResponse, HttpResponseForbidden
 
-from apps.core.roles import Role, _is_super_admin, _user_role
+from apps.core.roles import Role, user_is_super_admin, user_role
 
 
 class RoleRequiredMixin:
@@ -21,7 +21,7 @@ class RoleRequiredMixin:
         user = request.user
         if not getattr(user, "is_authenticated", False):
             return HttpResponseForbidden("Forbidden.")
-        role = _user_role(user)
+        role = user_role(user)
         if role not in self.allowed_roles:
             return HttpResponseForbidden("Forbidden.")
         return super().dispatch(request, *args, **kwargs)
@@ -32,7 +32,7 @@ class TenantRequiredMixin:
 
     def dispatch(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
         user = request.user
-        if getattr(user, "is_authenticated", False) and _is_super_admin(user):
+        if getattr(user, "is_authenticated", False) and user_is_super_admin(user):
             return super().dispatch(request, *args, **kwargs)
         institute = getattr(request, "institute", None)
         if institute is None:
@@ -50,7 +50,7 @@ class MenuRequiredMixin:
         portal = getattr(self, "portal", None)
         user = request.user
         authenticated = getattr(user, "is_authenticated", False)
-        role = _user_role(user) if authenticated else None
+        role = user_role(user) if authenticated else None
 
         if role == Role.SUB_ADMIN and not key:
             return HttpResponseForbidden("Forbidden.")
