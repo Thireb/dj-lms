@@ -1,0 +1,60 @@
+name: CI
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  DATABASE_URL: postgres://lms:lms_dev_password@localhost:5432/lms_test
+  UV_CACHE_DIR: /tmp/uv-cache
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: lms
+          POSTGRES_PASSWORD: lms_dev_password
+          POSTGRES_DB: lms_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U lms -d lms_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Cache Tailwind standalone binary
+        uses: actions/cache@v4
+        id: tailwind-cache
+        with:
+          path: scripts/tailwindcss
+          key: tailwind-${{ hashFiles('static/css/TAILWIND_VERSION', 'static/css/TAILWIND_CHECKSUMS') }}-linux-x64
+
+      - name: Install dependencies
+        run: uv sync --group dev --locked
+
+      - name: Build Tailwind CSS
+        run: ./scripts/build-app-css.sh
+
+      - name: Ruff check
+        run: uv run ruff check .
+
+      - name: Ruff format check
+        run: uv run ruff format --check .
+
+      - name: Pytest
+        run: uv run pytest

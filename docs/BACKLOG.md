@@ -54,10 +54,10 @@ Status: `[ ]` open, `[x]` done. Priority: **High** = fix before merge or before 
 
 | # | Item | Source | Priority | Status |
 |---|---|---|---|---|
-| T1 | Tailwind build script: detect architecture (not only `linux-x64`) and verify the downloaded binary's checksum. | PR #3 | Low | [ ] |
-| T2 | Build Tailwind CSS in CI (the built `app.css` is gitignored). | PR #3 | High | [ ] |
-| T3 | Dev and CI on PostgreSQL (dev currently SQLite, prod Postgres). | PR #1 | High | [ ] |
-| T4 | `.env` is not loaded by anything. Use `uv run --env-file .env`, or add a loader (needs approval). Remove the unused `DEBUG` line from `.env.example`. | PR #1 | Low | [ ] |
+| T1 | Tailwind build script: detect architecture (not only `linux-x64`) and verify the downloaded binary's checksum. | PR #3 | Low | [x] |
+| T2 | Build Tailwind CSS in CI (the built `app.css` is gitignored). | PR #3 | High | [x] |
+| T3 | Dev and CI on PostgreSQL (dev currently SQLite, prod Postgres). | PR #1 | High | [x] |
+| T4 | `.env` is not loaded by anything. Use `uv run --env-file .env`, or add a loader (needs approval). Remove the unused `DEBUG` line from `.env.example`. | PR #1 | Low | [x] |
 
 ## Fix in Phase 1 (accounts and institutes), listed as roadmap 1.0
 

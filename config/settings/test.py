@@ -1,6 +1,9 @@
 """Test settings (pytest and CI)."""
 
+import os
+
 from .base import *  # noqa: F403
+from .db_url import database_config_from_url
 
 DEBUG = False
 
@@ -8,12 +11,12 @@ SECRET_KEY = "test-secret-key-not-for-production"
 
 INSTALLED_APPS = [*INSTALLED_APPS, "tests.testapp"]  # noqa: F405
 
-DATABASES = {  # noqa: F405
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": ":memory:",
-    }
-}
+_default_test_database_url = "postgres://lms:lms_dev_password@localhost:5432/lms_test"
+_database_url = os.environ.get("DATABASE_URL", _default_test_database_url)
+
+_db = database_config_from_url(_database_url)
+_db["TEST"] = {"NAME": "lms_test"}
+DATABASES = {"default": _db}  # noqa: F405
 
 PASSWORD_HASHERS = [  # noqa: F405
     "django.contrib.auth.hashers.MD5PasswordHasher",

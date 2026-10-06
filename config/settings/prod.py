@@ -1,9 +1,9 @@
 """Production settings."""
 
 import os
-from urllib.parse import unquote, urlparse
 
 from .base import *  # noqa: F403
+from .db_url import database_config_from_url
 
 DEBUG = False
 
@@ -20,17 +20,8 @@ CSRF_TRUSTED_ORIGINS = [
     origin.strip() for origin in _csrf_origins.split(",") if origin.strip()
 ]
 
-_database_url = os.environ["DATABASE_URL"]
-_parsed = urlparse(_database_url)
 DATABASES = {  # noqa: F405
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": _parsed.path.lstrip("/"),
-        "USER": unquote(_parsed.username or ""),
-        "PASSWORD": unquote(_parsed.password or ""),
-        "HOST": _parsed.hostname or "",
-        "PORT": str(_parsed.port or ""),
-    }
+    "default": database_config_from_url(os.environ["DATABASE_URL"]),
 }
 
 REDIS_URL = os.environ.get("REDIS_URL", "")

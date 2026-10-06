@@ -1,9 +1,11 @@
 """Development settings."""
 
 import os
-from urllib.parse import unquote, urlparse
+
+from django.core.exceptions import ImproperlyConfigured
 
 from .base import *  # noqa: F403
+from .db_url import database_config_from_url
 
 DEBUG = True
 
@@ -15,22 +17,9 @@ SECRET_KEY = os.environ.get(
 )
 
 _database_url = os.environ.get("DATABASE_URL")
-if _database_url:
-    parsed = urlparse(_database_url)
-    DATABASES = {  # noqa: F405
-        "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "NAME": parsed.path.lstrip("/"),
-            "USER": unquote(parsed.username or ""),
-            "PASSWORD": unquote(parsed.password or ""),
-            "HOST": parsed.hostname or "",
-            "PORT": str(parsed.port or ""),
-        }
-    }
-else:
-    DATABASES = {  # noqa: F405
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",  # noqa: F405
-        }
-    }
+if not _database_url:
+    raise ImproperlyConfigured(
+        "DATABASE_URL is required for development (see .env.example)."
+    )
+
+DATABASES = {"default": database_config_from_url(_database_url)}  # noqa: F405
