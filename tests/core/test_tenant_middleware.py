@@ -67,6 +67,96 @@ def test_middleware_forbidden_without_institute_id() -> None:
 
 
 @pytest.mark.django_db
+def test_middleware_allows_logout_without_institute_id() -> None:
+    reached: list[bool] = []
+
+    def get_response(request):  # noqa: ANN001
+        reached.append(True)
+        from django.http import HttpResponse
+
+        return HttpResponse("ok")
+
+    request = RequestFactory().get("/accounts/logout/")
+    request.user = FakeUser(role="teacher", institute_id=None)
+
+    response = TenantMiddleware(get_response)(request)
+
+    assert response.status_code == 200
+    assert reached == [True]
+
+
+@pytest.mark.django_db
+def test_middleware_inactive_institute_forbidden(institute_a: Institute) -> None:
+    institute_a.is_active = False
+    institute_a.save(update_fields=["is_active"])
+
+    def get_response(request):  # noqa: ANN001
+        pytest.fail("get_response should not run")
+
+    request = RequestFactory().get("/")
+    request.user = FakeUser(role="teacher", institute=institute_a)
+
+    response = TenantMiddleware(get_response)(request)
+
+    assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test_middleware_active_institute_ok(institute_a: Institute) -> None:
+    def get_response(request):  # noqa: ANN001
+        from django.http import HttpResponse
+
+        return HttpResponse("ok")
+
+    request = RequestFactory().get("/")
+    request.user = FakeUser(role="teacher", institute=institute_a)
+
+    response = TenantMiddleware(get_response)(request)
+
+    assert response.status_code == 200
+
+
+@pytest.mark.django_db
+def test_middleware_inactive_institute_mid_session(
+    institute_a: Institute,
+) -> None:
+    def get_response(request):  # noqa: ANN001
+        from django.http import HttpResponse
+
+        return HttpResponse("ok")
+
+    request = RequestFactory().get("/")
+    request.user = FakeUser(role="teacher", institute=institute_a)
+
+    assert TenantMiddleware(get_response)(request).status_code == 200
+
+    institute_a.is_active = False
+    institute_a.save(update_fields=["is_active"])
+
+    assert TenantMiddleware(get_response)(request).status_code == 403
+
+
+@pytest.mark.django_db
+def test_middleware_super_admin_ok_when_institute_inactive(
+    institute_a: Institute,
+) -> None:
+    institute_a.is_active = False
+    institute_a.save(update_fields=["is_active"])
+
+    def get_response(request):  # noqa: ANN001
+        from django.http import HttpResponse
+
+        return HttpResponse("ok")
+
+    request = RequestFactory().get("/")
+    request.user = FakeUser(role="super_admin", institute_id=None)
+
+    response = TenantMiddleware(get_response)(request)
+
+    assert response.status_code == 200
+
+
+@pytest.mark.django_db
 def test_middleware_forbidden_when_institute_missing() -> None:
     def get_response(request):  # noqa: ANN001
         pytest.fail("get_response should not run")

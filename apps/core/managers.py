@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 from django.db import models
 
-from apps.core.roles import _is_super_admin, _user_institute_id
+from apps.core.roles import user_institute_id, user_is_super_admin
 from apps.core.tenancy import get_current_institute
 
 if TYPE_CHECKING:
@@ -17,9 +17,9 @@ class TenantQuerySet(models.QuerySet):
     def for_user(self, user: AbstractBaseUser | Any) -> TenantQuerySet:
         if user is None or not getattr(user, "is_authenticated", False):
             return self.none()
-        if _is_super_admin(user):
+        if user_is_super_admin(user):
             return self.all()
-        institute_id = _user_institute_id(user)
+        institute_id = user_institute_id(user)
         if institute_id is None:
             return self.none()
         return self.filter(institute_id=institute_id)
