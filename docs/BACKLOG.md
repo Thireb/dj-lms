@@ -94,6 +94,20 @@ Status: `[ ]` open, `[x]` done. Priority: **High** = fix before merge or before 
 | M5 | `test_tenant_admin_changelist_forbidden_for_staff_non_super_admin` passes without the fix: the 403 comes from `TenantMiddleware` (a plain `auth.User` has no institute), not from `TenantAdmin`. Rewrite it with a user that passes the middleware once the 1.1 `User` model exists. | PR #14 | Low | [x] |
 | M6 | Plan flags only hide menu items (`apps/ui/menus/registry.py`). Views do not enforce them, so a premium URL still opens when the flag is off. Add `requires_feature` / a `feature_key` mixin as in `ARCHITECTURE.md` (access layer 3); test the flag on and off. Do with 1.2 (Plan and feature flags) at the latest. | main audit | High | [ ] |
 
+## Review of 1.1a/1.1b (PR #15, PR #16)
+
+| # | Item | Source | Priority | Status |
+|---|---|---|---|---|
+| R1 | Sign-in and set-password pages cannot be used in a browser. Rendered HTML: (a) every field is escaped text, because `Section.render` / `Row.render` in `apps/ui/forms/layout.py` join `SafeString`s with `"".join(...)`, which returns a plain `str` (a latent bug since PR #4); (b) the legend prints `None`; (c) there is no `<form>` tag (`helper.form_tag = False`, nothing wraps it); (d) no CSRF token, because `CrispyForm` is rendered inside `SectionCard` without `request`. Tests only POST directly, so all pass. Pass the parts as a list and loop in the template (no `mark_safe`); `{% if legend %}`; let public forms render their own `<form method="post">`; render nested components with `request`. Test: GET the page, parse the token, POST with `Client(enforce_csrf_checks=True)`, and assert `<input ... name="password">` is not escaped. | PR #16 | High | [ ] |
+| R2 | Post-login redirect is broken. Teacher, student and guardian go to `/accounts/logout/` (the only resolvable menu item; GET returns 405). `institute_admin` and `sub_admin` go to `/accounts/login/`, which redirects an authenticated user to itself: an infinite loop (verified). `_first_menu_url` must skip `post_only` items, and the fallback must never be the login URL for an authenticated user. Add a minimal per-portal home page (or one signed-in page with Sign out) until dashboards exist. Test every role. | PR #16 | High | [ ] |
+| R3 | `password_input.html` has no static `type="password"`, only Alpine `:type`. Until Alpine loads, or with JS off, the password shows as plain text. Add `type="password"` and keep `:type`. | PR #16 | Medium | [ ] |
+| R4 | `/django-admin/` is open to any `is_staff` user whatever their role. A teacher with `is_staff` and `is_superuser` gets 200 on `/django-admin/accounts/user/` and sees every institute's users (verified). Gate `AdminSite.has_permission` (or `UserAdmin` permissions) to `user_is_super_admin`, and make `User.clean()` reject `is_staff` / `is_superuser` for every other role (`ARCHITECTURE.md`: these flags are for developers only). | PR #15 | High | [ ] |
+| R5 | Docs: the `FEATURES.md` section 1 sign-in boxes are ticked, but sign-in does not work (R1, R2). Untick them until fixed. `CrispyForm`, `BlockStack`, `PublicFormShell` and `PasswordInput` are missing from `COMPONENTS.md` (AGENTS.md section 5 requires the table row). | PR #16 | Medium | [ ] |
+| R6 | 4 new pytest warnings: `{% csrf_token %} was used in a template, but the context did not provide the value` (`tests/ui/test_dev_components.py`). Same root cause as R1(d). AGENTS.md section 9: no new warnings. | PR #16 | Low | [ ] |
+| R7 | `SetPasswordToken.key` is stored in plain text, so anyone who reads the database can take over every account with an unused token. Store a SHA-256 hash and look up by hash. | PR #16 | Medium | [ ] |
+| R8 | Users of an inactive institute can sign in, then get 403 on every page. Reject them at login with a clear message. | PR #16 | Low | [ ] |
+| R9 | Test gaps (mutation): removing `validate_password` from `SetPasswordForm` passes all tests; reverting the top-nav POST Sign out (C8) passes all tests. The set-password field should use `autocomplete="new-password"`. | PR #16 | Low | [ ] |
+
 ## Later (deployment hardening, Phase 12)
 
 | # | Item | Priority | Status |
