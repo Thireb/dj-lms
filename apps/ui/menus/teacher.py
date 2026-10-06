@@ -109,7 +109,7 @@ class TeacherMenu:
             MenuGroup(
                 label="Account",
                 items=(
-                    MenuItem("My profile", "teacher:profile", "user"),
+                    MenuItem("My profile", "accounts:profile", "user"),
                     MenuItem("Account settings", "teacher:settings", "gear"),
                     MenuItem("Sign out", "accounts:logout", "right-from-bracket"),
                 ),

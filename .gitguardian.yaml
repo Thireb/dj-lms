@@ -1,0 +1,6 @@
+# Test fixtures use fake credentials only; see tests/conftest.py.
+version: 2
+
+secret:
+  ignored_paths:
+    - "tests/**"

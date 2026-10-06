@@ -1,0 +1,4 @@
+<form method="post" action="{{ action }}" enctype="multipart/form-data" class="space-y-4" novalidate>
+  {% csrf_token %}
+  {{ body }}
+</form>

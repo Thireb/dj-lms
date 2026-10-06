@@ -27,3 +27,19 @@ class PublicPostForm(Component):
         if request is not None and body is not None and hasattr(body, "render"):
             ctx["body"] = body.render(request=request)
         return render_component_template(self, ctx, request=request)
+
+
+class PortalPostForm(Component):
+    """Portal FormPage POST wrapper (CSRF + multipart + crispy body)."""
+
+    template_name = "ui/components/portal_post_form.html"
+
+    def __init__(self, *, action: str, body, **props):
+        super().__init__(action=action, body=body, **props)
+
+    def render(self, request=None):
+        ctx = self.get_context()
+        body = ctx.get("body")
+        if request is not None and body is not None and hasattr(body, "render"):
+            ctx["body"] = body.render(request=request)
+        return render_component_template(self, ctx, request=request)

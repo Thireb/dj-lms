@@ -16,7 +16,11 @@ from apps.accounts.services import (
 from apps.core.roles import Role
 from django.urls import reverse
 
-from tests.conftest import make_user
+from tests.conftest import (
+    TEST_INVALID_PASSWORD_FOR_VALIDATION,
+    TEST_LOGIN_PASSWORD,
+    make_user,
+)
 
 
 @pytest.mark.django_db
@@ -65,9 +69,11 @@ def test_authenticate_rejects_inactive_institute(institute_a) -> None:
         email="teacher@example.com",
         role=Role.TEACHER,
         institute=institute_a,
-        password="password123",
     )
-    result = authenticate_user(email="teacher@example.com", password="password123")
+    result = authenticate_user(
+        email="teacher@example.com",
+        password=TEST_LOGIN_PASSWORD,
+    )
     assert result.user is None
     assert result.error == INACTIVE_INSTITUTE_LOGIN_MESSAGE
 
@@ -78,9 +84,12 @@ def test_authenticate_allows_super_admin_without_institute() -> None:
 
     User.objects.create_superuser(
         email="super@example.com",
-        password="password123",
+        password=TEST_LOGIN_PASSWORD,
     )
-    result = authenticate_user(email="super@example.com", password="password123")
+    result = authenticate_user(
+        email="super@example.com",
+        password=TEST_LOGIN_PASSWORD,
+    )
     assert result.user is not None
     assert result.error is None
 
@@ -88,7 +97,10 @@ def test_authenticate_allows_super_admin_without_institute() -> None:
 @pytest.mark.django_db
 def test_set_password_form_calls_validate_password() -> None:
     form = SetPasswordForm(
-        data={"password": "password", "confirm_password": "password"},
+        data={
+            "password": TEST_INVALID_PASSWORD_FOR_VALIDATION,
+            "confirm_password": TEST_INVALID_PASSWORD_FOR_VALIDATION,
+        },
     )
     assert not form.is_valid()
     assert form.errors

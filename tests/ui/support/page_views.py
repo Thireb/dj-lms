@@ -4,7 +4,34 @@ from __future__ import annotations
 
 from apps.core import menus as menu_keys
 from apps.core.roles import Role
-from apps.ui.views.pages import DashboardPage, ListPage
+from apps.ui.forms.base import TenantModelForm
+from apps.ui.views.pages import DashboardPage, FormPage, ListPage
+from django.core.exceptions import ValidationError
+from tests.testapp.models import TenantProbe
+
+
+class TenantProbeCreateForm(TenantModelForm):
+    class Meta:
+        model = TenantProbe
+        fields = ["label"]
+
+    def clean_label(self) -> str:
+        label = (self.cleaned_data.get("label") or "").strip()
+        if not label:
+            raise ValidationError("Label is required.")
+        return label
+
+
+class DemoTenantProbeFormPage(FormPage):
+    portal = "teacher"
+    title = "Create probe"
+    active_item = "dashboard"
+    allowed_roles = [Role.TEACHER]
+    form_class = TenantProbeCreateForm
+    success_url = "/test/pages/probe-created/"
+
+    def on_form_valid(self, form: TenantProbeCreateForm) -> None:
+        form.save()
 
 
 class DemoAdminDashboard(DashboardPage):

@@ -4,24 +4,43 @@ from __future__ import annotations
 
 from typing import Any
 
+from django.contrib import messages
 from django.contrib.auth import logout
-from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
+from django.http import (
+    HttpRequest,
+    HttpResponse,
+    HttpResponseNotAllowed,
+    HttpResponseRedirect,
+)
 from django.shortcuts import redirect
 from django.urls import reverse, reverse_lazy
 from django.views import View
 from django.views.generic import TemplateView
 
-from apps.accounts.forms import ForgotPasswordForm, LoginForm, SetPasswordForm
+from apps.accounts.forms import (
+    ChangePasswordForm,
+    ForgotPasswordForm,
+    LoginForm,
+    ProfileForm,
+    SetPasswordForm,
+)
 from apps.accounts.services import (
     TokenStatus,
     authenticate_user,
+    change_password,
     login_with_remember_me,
     lookup_set_password_token,
     post_login_redirect_url,
     set_password_from_token,
+    update_profile,
 )
+from apps.core import menus as menu_keys
+from apps.core.roles import Role
+from apps.ui.components.actions import Button
 from apps.ui.components.forms import CrispyForm, PublicPostForm
 from apps.ui.components.layout import PageHeader, PublicFormShell, SectionCard
+from apps.ui.menus.registry import portal_for_user
+from apps.ui.views.pages import FormPage
 
 
 class PublicFormPage(TemplateView):
@@ -189,4 +208,88 @@ class LogoutView(View):
         return HttpResponseRedirect(reverse_lazy("accounts:login"))
 
     def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
-        return HttpResponse("Method not allowed", status=405)
+        return HttpResponseNotAllowed(["POST"])
+
+
+PROFILE_ROLES = [
+    Role.SUPER_ADMIN,
+    Role.INSTITUTE_ADMIN,
+    Role.SUB_ADMIN,
+    Role.TEACHER,
+    Role.STUDENT,
+    Role.GUARDIAN,
+]
+
+
+class AccountFormPage(FormPage):
+    """Portal form page with per-role shell and admin menu_key for profile routes."""
+
+    allowed_roles = PROFILE_ROLES
+
+    def setup(self, request: HttpRequest, *args: Any, **kwargs: Any) -> None:
+        super().setup(request, *args, **kwargs)
+        user = request.user
+        portal = portal_for_user(user)
+        if portal:
+            self.portal = portal
+        elif getattr(user, "is_super_admin", False):
+            self.portal = "admin"
+        if self.portal == "admin" and user.role in (
+            Role.INSTITUTE_ADMIN,
+            Role.SUB_ADMIN,
+        ):
+            self.menu_key = menu_keys.ACCOUNT
+
+
+class ProfileView(AccountFormPage):
+    form_class = ProfileForm
+    title = "My profile"
+
+    def get_form_kwargs(self) -> dict[str, Any]:
+        return {"user": self.request.user}
+
+    def get_success_url(self) -> str:
+        return reverse("accounts:profile")
+
+    def get_actions(self) -> list[Any]:
+        return [
+            Button(
+                label="Change password",
+                url=reverse("accounts:change_password"),
+                variant="secondary",
+            ),
+        ]
+
+    def form_valid(self, form: ProfileForm) -> HttpResponse:
+        update_profile(
+            self.request.user,
+            first_name=form.cleaned_data["first_name"],
+            last_name=form.cleaned_data["last_name"],
+            phone=form.cleaned_data.get("phone", ""),
+            timezone=form.cleaned_data.get("timezone", ""),
+        )
+        messages.success(self.request, "Profile updated.")
+        return HttpResponseRedirect(self.get_success_url())
+
+
+class ChangePasswordView(AccountFormPage):
+    form_class = ChangePasswordForm
+    title = "Change password"
+
+    def get_form_kwargs(self) -> dict[str, Any]:
+        return {
+            "user": self.request.user,
+            "cancel_url": reverse("accounts:profile"),
+        }
+
+    def get_success_url(self) -> str:
+        return reverse("accounts:profile")
+
+    def form_valid(self, form: ChangePasswordForm) -> HttpResponse:
+        change_password(
+            self.request,
+            self.request.user,
+            new_password=form.cleaned_data["new_password"],
+        )
+        messages.success(self.request, "Password changed.")
+        return HttpResponseRedirect(self.get_success_url())

@@ -5,6 +5,7 @@ from tests.ui.support.page_views import (
     DemoAdminDashboard,
     DemoAdminPeopleList,
     DemoTeacherDashboard,
+    DemoTenantProbeFormPage,
 )
 
 urlpatterns = [
@@ -23,5 +24,10 @@ urlpatterns = [
         "test/pages/admin-people/",
         DemoAdminPeopleList.as_view(),
         name="test_admin_people",
+    ),
+    path(
+        "test/pages/tenant-probe-form/",
+        DemoTenantProbeFormPage.as_view(),
+        name="test_tenant_probe_form",
     ),
 ]

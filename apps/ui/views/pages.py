@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from django.http import HttpResponse
+from django.core.exceptions import ImproperlyConfigured
+from django.http import HttpResponse, HttpResponseRedirect
 from django.views.generic import TemplateView
 
 from apps.core.mixins.access import (
@@ -10,6 +11,7 @@ from apps.core.mixins.access import (
     RoleRequiredMixin,
     TenantRequiredMixin,
 )
+from apps.ui.components.forms import CrispyForm, PortalPostForm
 from apps.ui.components.layout import PageHeader, SidebarShell, TopNavShell
 from apps.ui.components.page_layouts import (
     DashboardPageBody,
@@ -17,6 +19,7 @@ from apps.ui.components.page_layouts import (
     FormPageBody,
     ListPageBody,
 )
+from apps.ui.forms.base import TenantModelForm
 
 
 class PortalPageView(
@@ -167,12 +170,62 @@ class DetailPage(PortalPageView):
 
 class FormPage(PortalPageView):
     page_layout = "form"
-    form_class = None
+    form_class: type | None = None
+    success_url: str | None = None
+
+    def get_form_kwargs(self) -> dict[str, Any]:
+        kwargs: dict[str, Any] = {}
+        if self.form_class is not None and issubclass(self.form_class, TenantModelForm):
+            kwargs["institute"] = self.get_institute()
+        return kwargs
 
     def get_form(self) -> Any:
         if self.form_class is None:
             raise ValueError("FormPage requires form_class")
-        return self.form_class()
+        if self.request.method == "POST":
+            form = self.form_class(
+                self.request.POST,
+                self.request.FILES,
+                **self.get_form_kwargs(),
+            )
+        else:
+            form = self.form_class(**self.get_form_kwargs())
+        form.helper.disable_csrf = True
+        return form
+
+    def get_form_wrapper(self, form: Any) -> PortalPostForm:
+        return PortalPostForm(
+            action=self.request.path,
+            body=CrispyForm(form=form),
+        )
 
     def get_components(self) -> dict[str, Any]:
-        return {"form": self.get_form()}
+        return {"form": self.get_form_wrapper(self.get_form())}
+
+    def get(self, request, *args, **kwargs):
+        return self.render_to_response(self.get_context_data())
+
+    def post(self, request, *args, **kwargs):
+        form = self.get_form()
+        if form.is_valid():
+            return self.form_valid(form)
+        return self.form_invalid(form)
+
+    def form_valid(self, form: Any) -> HttpResponse:
+        self.on_form_valid(form)
+        return HttpResponseRedirect(self.get_success_url())
+
+    def form_invalid(self, form: Any) -> HttpResponse:
+        context = self.get_context_data()
+        context["form"] = self.get_form_wrapper(form)
+        return self.render_to_response(context, status=200)
+
+    def on_form_valid(self, form: Any) -> None:
+        """Hook for subclasses; business logic belongs in services."""
+
+    def get_success_url(self) -> str:
+        if self.success_url:
+            return self.success_url
+        raise ImproperlyConfigured(
+            f"{self.__class__.__name__} requires success_url or get_success_url()."
+        )

@@ -48,6 +48,7 @@ class TenantModelForm(BaseForm, forms.ModelForm):
                 continue
             model = field.queryset.model
             if issubclass(model, TenantModel):
+                # unscoped: limit choices to this institute (not tenant context).
                 field.queryset = model.unscoped.filter(institute=self.institute)
 
     def clean(self):

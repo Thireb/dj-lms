@@ -11,6 +11,7 @@ FINANCE = "finance"
 TEACHER_SALARY = "teacher_salary"
 ACADEMIC = "academic"
 MESSAGES = "messages"
+ACCOUNT = "account"
 
 ADMIN_MENU_KEYS: tuple[str, ...] = (
     DASHBOARDS,
@@ -21,4 +22,5 @@ ADMIN_MENU_KEYS: tuple[str, ...] = (
     TEACHER_SALARY,
     ACADEMIC,
     MESSAGES,
+    ACCOUNT,
 )

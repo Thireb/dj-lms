@@ -89,6 +89,7 @@ class User(AbstractUser):
         on_delete=models.PROTECT,
         related_name="users",
     )
+    phone = models.CharField(max_length=32, blank=True, default="")
     timezone = models.CharField(max_length=63, blank=True, default="")
 
     USERNAME_FIELD = "email"

@@ -36,6 +36,12 @@ def test_scheduled_at_to_iso_impossible_dates_return_empty() -> None:
     assert scheduled_at_to_iso("2026-13-01T10:00:00") == ""
 
 
+def test_scheduled_at_to_iso_year_one_positive_offset_returns_empty() -> None:
+    assert scheduled_at_to_iso("0001-01-01T00:00:00+01:00") == ""
+    aware = datetime(1, 1, 1, tzinfo=ZoneInfo("Europe/Paris"))
+    assert scheduled_at_to_iso(aware) == ""
+
+
 def test_scheduled_at_to_iso_converts_offset_to_utc() -> None:
     local = datetime(2026, 8, 16, 20, 0, 0, tzinfo=ZoneInfo("Asia/Karachi"))
     assert scheduled_at_to_iso(local) == "2026-08-16T15:00:00+00:00"

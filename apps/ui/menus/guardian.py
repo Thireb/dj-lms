@@ -82,6 +82,7 @@ class GuardianMenu:
                 label="Account",
                 items=(
                     MenuItem("Student profile", "guardian:student_profile", "user"),
+                    MenuItem("My account", "accounts:profile", "user"),
                     MenuItem("Account settings", "guardian:settings", "gear"),
                     MenuItem("Sign out", "accounts:logout", "right-from-bracket"),
                 ),

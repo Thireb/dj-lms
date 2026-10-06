@@ -31,7 +31,7 @@ Status: `[ ]` open, `[x]` done. Priority: **High** = fix before merge or before 
 | B14 | `scheduled_at_to_iso` keeps the input offset (`+05:00`) instead of converting to UTC; `ARCHITECTURE.md` section 9 says the `data-` attribute holds the UTC timestamp. Add `.astimezone(datetime.UTC)`. | PR #6 | Low | [x] in PR #6 |
 | B15 | No test that `js/app.js` loads before Alpine in `base.html` (moving it after Alpine registers `countdownCard` too late; all tests still pass). No test runs `app.js` itself (removing the JS ISO check also passes). Add an order assertion; JS behaviour tests can wait for a JS test runner (needs approval). | PR #6 | Low | [x] order test in PR #6 (JS tests: B18) |
 | B16 | `COMPONENTS.md` `CountdownCard` row: note that `scheduled_at` is rendered as a validated UTC ISO string in `data-scheduled-at` and read by `countdownCard` in `static/js/app.js`. List `static/js/app.js` in `ARCHITECTURE.md` layout. | PR #6 | Low | [x] |
-| B17 | `scheduled_at_to_iso` raises `OverflowError` for a year-1 datetime with a positive offset (`"0001-01-01T00:00:00+01:00"` or an aware `datetime(1, 1, 1, tzinfo=+01:00)`): `astimezone(UTC)` goes below `datetime.min`, so the page 500s. Catch `OverflowError` with `ValueError` and return `""`. Test both inputs. Do with roadmap 3.4. | PR #6 | Low | [ ] |
+| B17 | `scheduled_at_to_iso` raises `OverflowError` for a year-1 datetime with a positive offset (`"0001-01-01T00:00:00+01:00"` or an aware `datetime(1, 1, 1, tzinfo=+01:00)`): `astimezone(UTC)` goes below `datetime.min`, so the page 500s. Catch `OverflowError` with `ValueError` and return `""`. Test both inputs. Do with roadmap 3.4. | PR #6 | Low | [x] |
 | B18 | No test runs `static/js/app.js` (removing the JS ISO check still passes). Add JS behaviour tests for `countdownCard` once a JS test runner is approved (new dependency, ask first). | PR #6 | Low | [ ] |
 
 ## Fix in PR C (pages and menus)
@@ -44,7 +44,7 @@ Status: `[ ]` open, `[x]` done. Priority: **High** = fix before merge or before 
 | C4 | Page and mixin access tests: each demo page allows only its roles; every other role plus anonymous gets 403; mutation-sensitive coverage for empty `allowed_roles` and missing tenant institute. | PR #7 / AGENTS.md §7 | High | [x] |
 | C5 | Non-admin pages use `menu_key` for active-item highlighting (teacher `"dashboard"`, not a `core/menus.py` key). `COMPONENTS.md` says `menu_key` is admin only. Use a separate `active_item` attribute, or document it. | PR #7 | Low | [x] |
 | C6 | Dead templates: `ui/layouts/pages/default.html` is never rendered (`build_page_body` falls back to `ListPageBody`), and `ui/layouts/portal_page.html` is a placeholder comment. Remove or use them. | PR #7 | Low | [x] |
-| C7 | `FormPage` has no POST handling (POST returns 405) and builds `form_class()` without `institute`, so a `TenantModelForm` cannot save. Fix before the first real form page (roadmap 1.x). | PR #7 | High | [ ] |
+| C7 | `FormPage` has no POST handling (POST returns 405) and builds `form_class()` without `institute`, so a `TenantModelForm` cannot save. Fix before the first real form page (roadmap 1.x). | PR #7 | High | [x] |
 | C8 | Sign out menu items are plain links to `accounts:logout`. Django 5 `LogoutView` is POST-only, so the link will return 405 once the URL exists. Render Sign out as a POST form button with CSRF. Do with Phase 1 login. | PR #7 | Low | [x] |
 | C9 | Anonymous users get 403 from page classes instead of a redirect to login. Redirect once the login URL exists (Phase 1). | PR #7 | Low | [x] |
 | C10 | Access test gaps after the C3/C4 fix (PR #7, `04ed6fa`): no test covers a page that never sets `allowed_roles` (changing the default to all roles leaves all 132 tests passing; the empty-list test sets `[]` explicitly). `ImproperlyConfigured` for an admin page without `menu_key` only fires at request time; add a test that walks every `PortalPageView` subclass with `portal = "admin"` and asserts `menu_key` is a key in `core/menus.py`. The two `test_mutation_sensitive_*` tests duplicate the tests above them. | PR #7 | Low | [x] |
@@ -71,17 +71,15 @@ Status: `[ ]` open, `[x]` done. Priority: **High** = fix before merge or before 
 | P6 | PROTECT blocks deleting an institute with data (test). | PR #2 | High | [x] in PR #3 |
 | P7 | Anonymous user with an institute id gets nothing from `for_user` (test). | PR #2 | High | [x] in PR #3 |
 
-## Fix before roadmap 1.1c (PR #15 review / auth hardening)
+## Main audit 2026-10-06 (2)
 
 | # | Item | Source | Priority | Status |
 |---|---|---|---|---|
-| R1 | Section/Row: pass rendered field parts as a list (loop in template); legend only when set; public forms use their own POST form + CSRF (`PublicPostForm`); nested components receive `request`. | 1.1b review | High | [x] |
-| R2 | `_first_menu_url` skips `post_only` items; authenticated users never redirected to login; portal home pages as fallback targets. | 1.1b review | High | [x] |
-| R3 | Password widget keeps static `type="password"` plus Alpine show/hide toggle. | 1.1b review | High | [x] |
-| R4 | Gate `/django-admin/` to `user_is_super_admin`; `User.clean()` rejects `is_staff`/`is_superuser` for product roles. | 1.1b review | High | [x] |
-| R5 | Document 1.1b components in `COMPONENTS.md`; verify sign-in flows in browser before ticking `FEATURES.md`. | 1.1b review | High | [x] |
-| R6 | Zero pytest warnings; tests for `validate_password`, top-nav POST Sign out; set-password fields use `autocomplete="new-password"`. | 1.1b review | High | [x] |
-| R9 | Same as R6 (pytest warning budget). | 1.1b review | High | [x] |
+| N1 | Comment why `TenantModelForm` uses `model.unscoped` when limiting related choice querysets. | main audit | Low | [x] |
+| N2 | `LogoutView.get` returns `HttpResponseNotAllowed(["POST"])`; test 405 and `Allow: POST`. | main audit | Low | [x] |
+| N3 | Remove obsolete "Fix before roadmap 1.1c" backlog table (items already done). | main audit | Low | [x] |
+| N4 | ROADMAP sub-item 1.1c; track N1–N4 and B17 in this table. | main audit | Low | [x] |
+| B17 | `scheduled_at_to_iso` catches `OverflowError` for year-1 datetimes with positive offset. | main audit / PR #6 | Low | [x] |
 
 ## Main audit 2026-10-06 (fixed in PR #14, follow-ups from its review)
 
