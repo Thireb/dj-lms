@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import secrets
 from datetime import timedelta
 
@@ -165,13 +166,21 @@ class SetPasswordToken(models.Model):
     def generate_key(cls) -> str:
         return secrets.token_urlsafe(32)
 
+    @staticmethod
+    def hash_key(plaintext_key: str) -> str:
+        return hashlib.sha256(plaintext_key.encode("utf-8")).hexdigest()
+
     @classmethod
-    def create_for_user(cls, user: User, *, ttl_hours: int = 72) -> SetPasswordToken:
-        return cls.objects.create(
+    def create_for_user(
+        cls, user: User, *, ttl_hours: int = 72
+    ) -> tuple[str, SetPasswordToken]:
+        plaintext_key = cls.generate_key()
+        token = cls.objects.create(
             user=user,
-            key=cls.generate_key(),
+            key=cls.hash_key(plaintext_key),
             expires_at=timezone.now() + timedelta(hours=ttl_hours),
         )
+        return plaintext_key, token
 
     def is_valid(self) -> bool:
         if self.used_at is not None:

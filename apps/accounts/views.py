@@ -95,13 +95,17 @@ class LoginView(PublicFormPage):
         }
 
     def form_valid(self, form: LoginForm) -> HttpResponse:
-        user = authenticate_user(
+        auth = authenticate_user(
             email=form.cleaned_data["email"],
             password=form.cleaned_data["password"],
         )
-        if user is None:
+        if auth.error:
+            form.add_error("email", auth.error)
+            return self.render_page(form)
+        if auth.user is None:
             form.add_error("password", "Email or password is incorrect.")
             return self.render_page(form)
+        user = auth.user
         remember = form.cleaned_data.get("remember_me", False)
         login_with_remember_me(self.request, user, remember=remember)
         next_url = self.request.GET.get("next") or self.request.POST.get("next")

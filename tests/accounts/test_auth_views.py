@@ -116,8 +116,8 @@ def test_set_password_happy_path(client: Client, institute_a) -> None:
         institute=institute_a,
         password="unset",
     )
-    token = create_set_password_token(user)
-    url = reverse("accounts:set_password", kwargs={"token": token.key})
+    issued = create_set_password_token(user)
+    url = reverse("accounts:set_password", kwargs={"token": issued.key})
     response = client.post(
         url,
         {"password": "newpass123", "confirm_password": "newpass123"},
@@ -125,8 +125,8 @@ def test_set_password_happy_path(client: Client, institute_a) -> None:
     assert response.status_code == 302
     user.refresh_from_db()
     assert user.check_password("newpass123")
-    token.refresh_from_db()
-    assert token.used_at is not None
+    issued.token.refresh_from_db()
+    assert issued.token.used_at is not None
 
 
 @pytest.mark.django_db
@@ -136,12 +136,13 @@ def test_set_password_expired_token(client: Client, institute_a) -> None:
         role=Role.STUDENT,
         institute=institute_a,
     )
-    token = SetPasswordToken.objects.create(
+    plaintext_key = SetPasswordToken.generate_key()
+    SetPasswordToken.objects.create(
         user=user,
-        key=SetPasswordToken.generate_key(),
+        key=SetPasswordToken.hash_key(plaintext_key),
         expires_at=timezone.now() - timedelta(hours=1),
     )
-    url = reverse("accounts:set_password", kwargs={"token": token.key})
+    url = reverse("accounts:set_password", kwargs={"token": plaintext_key})
     response = client.get(url)
     assert response.status_code == 200
     assert b"expired" in response.content.lower()
@@ -154,9 +155,9 @@ def test_set_password_used_token(client: Client, institute_a) -> None:
         role=Role.STUDENT,
         institute=institute_a,
     )
-    token = create_set_password_token(user)
-    token.mark_used()
-    url = reverse("accounts:set_password", kwargs={"token": token.key})
+    issued = create_set_password_token(user)
+    issued.token.mark_used()
+    url = reverse("accounts:set_password", kwargs={"token": issued.key})
     response = client.get(url)
     assert response.status_code == 200
     assert b"already used" in response.content.lower()
@@ -258,6 +259,47 @@ def test_role_login_csrf_flow_reaches_portal_home(
     )
     assert response.status_code == 200
     assert response.request["PATH_INFO"] == reverse(home_name)
+
+
+@pytest.mark.django_db
+def test_login_rejects_inactive_institute(client: Client, institute_a) -> None:
+    institute_a.is_active = False
+    institute_a.save(update_fields=["is_active"])
+    make_user(
+        email="teacher@example.com",
+        role=Role.TEACHER,
+        institute=institute_a,
+        password="password123",
+    )
+    response = client.post(
+        reverse("accounts:login"),
+        {
+            "email": "teacher@example.com",
+            "password": "password123",
+        },
+    )
+    assert response.status_code == 200
+    assert not response.wsgi_request.user.is_authenticated
+    assert b"not active" in response.content.lower()
+
+
+@pytest.mark.django_db
+def test_login_active_institute_still_works(client: Client, institute_a) -> None:
+    make_user(
+        email="teacher@example.com",
+        role=Role.TEACHER,
+        institute=institute_a,
+        password="password123",
+    )
+    response = client.post(
+        reverse("accounts:login"),
+        {
+            "email": "teacher@example.com",
+            "password": "password123",
+        },
+    )
+    assert response.status_code == 302
+    assert response.wsgi_request.user.is_authenticated
 
 
 @pytest.mark.django_db

@@ -14,6 +14,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 
 from apps.accounts.models import SetPasswordToken, User
 from apps.core.roles import Role
+from apps.institutes.models import Institute
 from apps.ui.menus.registry import build_menu_groups, portal_for_user
 
 if TYPE_CHECKING:
@@ -33,13 +34,33 @@ class TokenLookup:
     token: SetPasswordToken | None = None
 
 
-def authenticate_user(*, email: str, password: str) -> User | None:
+@dataclass(frozen=True)
+class AuthenticateResult:
+    user: User | None = None
+    error: str | None = None
+
+
+INACTIVE_INSTITUTE_LOGIN_MESSAGE = (
+    "Your institute is not active. Contact your institute administrator."
+)
+
+
+def authenticate_user(*, email: str, password: str) -> AuthenticateResult:
     user = authenticate(username=email, password=password)
     if user is None or not isinstance(user, User):
-        return None
+        return AuthenticateResult()
     if not user.is_active:
-        return None
-    return user
+        return AuthenticateResult()
+    if user.role != Role.SUPER_ADMIN:
+        if user.institute_id is None:
+            return AuthenticateResult()
+        try:
+            institute = Institute.objects.get(pk=user.institute_id)
+        except Institute.DoesNotExist:
+            return AuthenticateResult()
+        if not institute.is_active:
+            return AuthenticateResult(error=INACTIVE_INSTITUTE_LOGIN_MESSAGE)
+    return AuthenticateResult(user=user)
 
 
 def apply_session_remember_me(request: HttpRequest, *, remember: bool) -> None:
@@ -59,8 +80,9 @@ def login_with_remember_me(
 def lookup_set_password_token(key: str) -> TokenLookup:
     if not key:
         return TokenLookup(status=TokenStatus.MISSING)
+    key_hash = SetPasswordToken.hash_key(key)
     try:
-        token = SetPasswordToken.objects.select_related("user").get(key=key)
+        token = SetPasswordToken.objects.select_related("user").get(key=key_hash)
     except SetPasswordToken.DoesNotExist:
         return TokenLookup(status=TokenStatus.MISSING)
     if token.used_at is not None:
@@ -81,8 +103,19 @@ def set_password_from_token(*, token: SetPasswordToken, password: str) -> User:
     return user
 
 
-def create_set_password_token(user: User, *, ttl_hours: int = 72) -> SetPasswordToken:
-    return SetPasswordToken.create_for_user(user, ttl_hours=ttl_hours)
+@dataclass(frozen=True)
+class CreatedSetPasswordToken:
+    """Plaintext key for URLs plus the persisted token row (hash only in DB)."""
+
+    key: str
+    token: SetPasswordToken
+
+
+def create_set_password_token(
+    user: User, *, ttl_hours: int = 72
+) -> CreatedSetPasswordToken:
+    plaintext_key, token = SetPasswordToken.create_for_user(user, ttl_hours=ttl_hours)
+    return CreatedSetPasswordToken(key=plaintext_key, token=token)
 
 
 _PORTAL_HOME_URL_NAMES = {
