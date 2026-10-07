@@ -65,4 +65,16 @@ urlpatterns = [
         people.TeacherStatusView.as_view(),
         name="teacher_status",
     ),
+    path("students/", people.StudentListPage.as_view(), name="student_list"),
+    path("students/enrol/", people.StudentEnrolPage.as_view(), name="student_create"),
+    path(
+        "students/<int:pk>/edit/",
+        people.StudentEditPage.as_view(),
+        name="student_edit",
+    ),
+    path(
+        "students/<int:pk>/status/",
+        people.StudentStatusView.as_view(),
+        name="student_status",
+    ),
 ]

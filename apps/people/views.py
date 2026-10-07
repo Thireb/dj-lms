@@ -1,7 +1,8 @@
-"""Admin pages for teachers (People menu, roadmap 2.5a)."""
+"""Admin pages for teachers and students (People menu, roadmap 2.5)."""
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 from urllib.parse import urlencode
 
@@ -12,18 +13,29 @@ from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 
-from apps.academics.models import Batch
+from apps.academics.models import Batch, ClassLabel
 from apps.core import menus as menu_keys
 from apps.core.roles import Role
-from apps.people.forms import TeacherCreateForm, TeacherForm
-from apps.people.models import ProfileStatus, TeacherProfile
+from apps.people.forms import (
+    PersonForm,
+    StudentEnrolForm,
+    StudentForm,
+    TeacherCreateForm,
+    TeacherForm,
+)
+from apps.people.models import ProfileStatus, StudentProfile, TeacherProfile
 from apps.people.services import (
+    StudentDetails,
     create_teacher,
+    enrol_student,
+    list_students,
     list_teachers,
+    set_student_active,
     set_teacher_active,
+    update_student,
     update_teacher,
 )
-from apps.people.ui import TeacherTable, teacher_status_dialog
+from apps.people.ui import StudentTable, TeacherTable, profile_status_dialog
 from apps.ui.components.actions import Button
 from apps.ui.components.data import EmptyState
 from apps.ui.components.nav import FilterBar, Pagination
@@ -37,40 +49,44 @@ class PeopleAdminMixin:
     portal = "admin"
     menu_key = menu_keys.PEOPLE
     allowed_roles = [Role.INSTITUTE_ADMIN, Role.SUB_ADMIN]
+    url_prefix = ""
+
+    def url(self, action: str, **kwargs: Any) -> str:
+        return reverse(f"admin:{self.url_prefix}_{action}", kwargs=kwargs or None)
 
 
-class TeacherObjectMixin(PeopleAdminMixin):
-    """Load the teacher only after the access mixins have passed."""
+class ProfileObjectMixin(PeopleAdminMixin):
+    """Load the profile only after the access mixins have passed."""
 
-    teacher: TeacherProfile
+    model: type[StudentProfile] | type[TeacherProfile]
 
-    def get_object(self) -> TeacherProfile:
-        teachers = TeacherProfile.objects.for_user(self.request.user)
-        return get_object_or_404(teachers.select_related("user"), pk=self.kwargs["pk"])
+    def get_object(self) -> StudentProfile | TeacherProfile:
+        profiles = self.model.objects.for_user(self.request.user)
+        return get_object_or_404(profiles.select_related("user"), pk=self.kwargs["pk"])
 
 
-class TeacherListPage(PeopleAdminMixin, ListPage):
-    title = "All teachers"
+# Lists
+
+
+class PeopleListPage(PeopleAdminMixin, ListPage):
+    filter_keys = ("q", "batch", "status")
+    noun = ""
+    plural = ""
 
     def get_actions(self) -> list[Any]:
-        return [Button("Add teacher", url=reverse("admin:teacher_create"))]
+        return [Button(self.create_label, url=self.url("create"))]
 
     def get_filters(self) -> dict[str, str]:
-        return {
-            key: self.request.GET.get(key, "").strip()
-            for key in ("q", "batch", "status")
-        }
+        return {key: self.request.GET.get(key, "").strip() for key in self.filter_keys}
+
+    @staticmethod
+    def id_filter(value: str) -> int | None:
+        return int(value) if value.isdigit() else None
 
     def get_components(self) -> dict[str, Any]:
         filters = self.get_filters()
-        batch_id = int(filters["batch"]) if filters["batch"].isdigit() else None
-        teachers = list_teachers(
-            self.request.user,
-            search=filters["q"],
-            batch_id=batch_id,
-            status=filters["status"],
-        )
-        page = Paginator(teachers, PAGE_SIZE).get_page(self.request.GET.get("page"))
+        rows = self.get_rows(filters)
+        page = Paginator(rows, PAGE_SIZE).get_page(self.request.GET.get("page"))
         query = urlencode({key: value for key, value in filters.items() if value})
         return {
             "filters": FilterBar(filters=self.filter_fields(filters)),
@@ -78,18 +94,18 @@ class TeacherListPage(PeopleAdminMixin, ListPage):
             "pagination": Pagination(page, query=query),
         }
 
+    def options(self, model: type, empty_label: str) -> list[tuple[str, str]]:
+        rows = model.objects.for_user(self.request.user).order_by("name")
+        return [("", empty_label)] + [(str(row.pk), row.name) for row in rows]
+
     def filter_fields(self, filters: dict[str, str]) -> list[dict[str, Any]]:
-        batches = Batch.objects.for_user(self.request.user).order_by("name")
-        batch_options = [("", "Any batch")] + [
-            (str(batch.pk), batch.name) for batch in batches
-        ]
         return [
             {"name": "q", "label": "Search", "value": filters["q"]},
             {
                 "name": "batch",
                 "label": "Batch",
                 "value": filters["batch"],
-                "options": batch_options,
+                "options": self.options(Batch, "Any batch"),
             },
             {
                 "name": "status",
@@ -99,36 +115,118 @@ class TeacherListPage(PeopleAdminMixin, ListPage):
             },
         ]
 
-    def get_table(self, teachers: list[TeacherProfile], filtered: bool) -> Any:
-        if not teachers and not filtered:
+    def get_table(self, rows: list[Any], filtered: bool) -> Any:
+        if not rows and not filtered:
             return EmptyState(
-                "No teachers yet.",
-                action=Button(
-                    "Add your first teacher", url=reverse("admin:teacher_create")
-                ),
+                f"No {self.plural} yet.",
+                action=Button(self.first_label, url=self.url("create")),
             )
-        return TeacherTable(teachers)
+        return self.table_class(rows)
 
 
-class TeacherFormPage(PeopleAdminMixin, FormPage):
-    """Maps service errors back onto the form."""
+class TeacherListPage(PeopleListPage):
+    title = "All teachers"
+    url_prefix = "teacher"
+    plural = "teachers"
+    create_label = "Add teacher"
+    first_label = "Add your first teacher"
+    table_class = TeacherTable
+
+    def get_rows(self, filters: dict[str, str]) -> Any:
+        return list_teachers(
+            self.request.user,
+            search=filters["q"],
+            batch_id=self.id_filter(filters["batch"]),
+            status=filters["status"],
+        )
+
+
+class StudentListPage(PeopleListPage):
+    title = "All students"
+    url_prefix = "student"
+    plural = "students"
+    create_label = "Enrol student"
+    first_label = "Enrol your first student"
+    table_class = StudentTable
+    filter_keys = ("q", "batch", "class_label", "status")
+
+    def get_rows(self, filters: dict[str, str]) -> Any:
+        return list_students(
+            self.request.user,
+            search=filters["q"],
+            batch_id=self.id_filter(filters["batch"]),
+            class_label_id=self.id_filter(filters["class_label"]),
+            status=filters["status"],
+        )
+
+    def filter_fields(self, filters: dict[str, str]) -> list[dict[str, Any]]:
+        fields = super().filter_fields(filters)
+        class_filter = {
+            "name": "class_label",
+            "label": "Class",
+            "value": filters["class_label"],
+            "options": self.options(ClassLabel, "Any class"),
+        }
+        return [*fields[:2], class_filter, *fields[2:]]
+
+
+# Forms
+
+
+class PeopleFormPage(PeopleAdminMixin, FormPage):
+    """Maps service errors back onto the form, then returns to the list."""
+
+    success_message = ""
 
     def get_form_kwargs(self) -> dict[str, Any]:
-        return {"user": self.request.user, "cancel_url": reverse("admin:teacher_list")}
+        return {"user": self.request.user, "cancel_url": self.url("list")}
 
-    def form_valid(self, form: TeacherForm) -> HttpResponse:
+    def form_valid(self, form: PersonForm) -> HttpResponse:
         try:
             self.save(form)
         except ValidationError as error:
             for field, field_errors in error.message_dict.items():
                 form.add_error(field if field in form.fields else None, field_errors)
             return self.form_invalid(form)
-        return HttpResponseRedirect(reverse("admin:teacher_list"))
+        messages.success(self.request, self.success_message)
+        return HttpResponseRedirect(self.url("list"))
 
 
-class TeacherCreatePage(TeacherFormPage):
+class ProfileEditPage(ProfileObjectMixin, PeopleFormPage):
+    success_message = "Changes saved."
+    profile: StudentProfile | TeacherProfile
+
+    def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        self.profile = self.get_object()
+        return super().get(request, *args, **kwargs)
+
+    def post(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        self.profile = self.get_object()
+        return super().post(request, *args, **kwargs)
+
+    def current_selections(self) -> dict:
+        current: dict = {}
+        links = self.profile.batch_subjects.select_related("batch", "subject")
+        for link in links:
+            current.setdefault(link.batch, []).append(link.subject)
+        return current
+
+    def get_form_kwargs(self) -> dict[str, Any]:
+        return {
+            **super().get_form_kwargs(),
+            "current": self.current_selections(),
+            "initial": self.get_initial(),
+        }
+
+    def get_actions(self) -> list[Any]:
+        return [profile_status_dialog(self.profile)]
+
+
+class TeacherCreatePage(PeopleFormPage):
     title = "Add teacher"
+    url_prefix = "teacher"
     form_class = TeacherCreateForm
+    success_message = "Teacher added."
 
     def save(self, form: TeacherCreateForm) -> None:
         data = form.cleaned_data
@@ -143,51 +241,30 @@ class TeacherCreatePage(TeacherFormPage):
             joining_date=data["joining_date"],
             selections=form.selections(),
         )
-        messages.success(self.request, "Teacher added.")
 
 
-class TeacherEditPage(TeacherObjectMixin, TeacherFormPage):
+class TeacherEditPage(ProfileEditPage):
     title = "Edit teacher"
+    url_prefix = "teacher"
+    model = TeacherProfile
     form_class = TeacherForm
+    success_message = "Teacher saved."
 
-    def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
-        self.teacher = self.get_object()
-        return super().get(request, *args, **kwargs)
-
-    def post(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
-        self.teacher = self.get_object()
-        return super().post(request, *args, **kwargs)
-
-    def current_selections(self) -> dict:
-        current: dict = {}
-        links = self.teacher.batch_subjects.select_related("batch", "subject")
-        for link in links:
-            current.setdefault(link.batch, []).append(link.subject)
-        return current
-
-    def get_form_kwargs(self) -> dict[str, Any]:
-        teacher = self.teacher
-        user = teacher.user
+    def get_initial(self) -> dict[str, Any]:
+        teacher = self.profile
         return {
-            **super().get_form_kwargs(),
-            "current": self.current_selections(),
-            "initial": {
-                "full_name": user.get_full_name(),
-                "phone": user.phone,
-                "email": user.email,
-                "cnic": teacher.cnic,
-                "address": teacher.address,
-                "joining_date": teacher.joining_date,
-            },
+            "full_name": teacher.user.get_full_name(),
+            "phone": teacher.user.phone,
+            "email": teacher.user.email,
+            "cnic": teacher.cnic,
+            "address": teacher.address,
+            "joining_date": teacher.joining_date,
         }
-
-    def get_actions(self) -> list[Any]:
-        return [teacher_status_dialog(self.teacher)]
 
     def save(self, form: TeacherForm) -> None:
         data = form.cleaned_data
         update_teacher(
-            self.teacher,
+            self.profile,
             full_name=data["full_name"],
             email=data["email"],
             phone=data["phone"],
@@ -196,20 +273,106 @@ class TeacherEditPage(TeacherObjectMixin, TeacherFormPage):
             joining_date=data["joining_date"],
             selections=form.selections(),
         )
-        messages.success(self.request, "Teacher saved.")
 
 
-class TeacherStatusView(TeacherObjectMixin, PortalPageView):
+def _student_details(data: dict[str, Any]) -> StudentDetails:
+    return StudentDetails(
+        full_name=data["full_name"],
+        phone=data["phone"],
+        guardian_phone=data["guardian_phone"],
+        father_name=data["father_name"],
+        cnic=data["cnic"],
+        date_of_birth=data["date_of_birth"],
+        gender=data["gender"],
+        class_label=data["class_label"],
+        address=data["address"],
+        city=data["city"],
+    )
+
+
+class StudentEnrolPage(PeopleFormPage):
+    title = "Enrol student"
+    url_prefix = "student"
+    form_class = StudentEnrolForm
+    success_message = "Student enrolled."
+
+    def save(self, form: StudentEnrolForm) -> None:
+        data = form.cleaned_data
+        enrol_student(
+            self.get_institute(),
+            _student_details(data),
+            email=data["email"],
+            password=data["password"],
+            selections=form.selections(),
+            guardian_name=data["guardian_name"],
+            guardian_email=data["guardian_email"],
+            guardian_password=data["guardian_password"],
+        )
+
+
+class StudentEditPage(ProfileEditPage):
+    title = "Edit student"
+    url_prefix = "student"
+    model = StudentProfile
+    form_class = StudentForm
+    success_message = "Student saved."
+
+    def get_form_kwargs(self) -> dict[str, Any]:
+        return {**super().get_form_kwargs(), "current_label": self.profile.class_label}
+
+    def get_initial(self) -> dict[str, Any]:
+        student = self.profile
+        return {
+            "full_name": student.user.get_full_name(),
+            "father_name": student.father_name,
+            "cnic": student.cnic,
+            "date_of_birth": student.date_of_birth,
+            "gender": student.gender,
+            "class_label": student.class_label_id,
+            "phone": student.user.phone,
+            "guardian_phone": student.guardian_phone,
+            "address": student.address,
+            "city": student.city,
+            "email": student.user.email,
+        }
+
+    def save(self, form: StudentForm) -> None:
+        data = form.cleaned_data
+        update_student(
+            self.profile,
+            _student_details(data),
+            email=data["email"],
+            selections=form.selections(),
+        )
+
+
+# Status
+
+
+class ProfileStatusView(ProfileObjectMixin, PortalPageView):
     """POST-only activate or deactivate, reached from the confirm dialog."""
 
     http_method_names = ["post"]
+    set_active: Callable[..., Any]
 
     def post(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
-        teacher = self.get_object()
+        profile = self.get_object()
         action = request.POST.get("action")
         if action not in {"activate", "deactivate"}:
             messages.error(request, "Unknown action.")
         else:
-            set_teacher_active(teacher, is_active=action == "activate")
-            messages.success(request, f"{teacher} {action}d.")
-        return HttpResponseRedirect(reverse("admin:teacher_list"))
+            self.set_active(profile, is_active=action == "activate")
+            messages.success(request, f"{profile} {action}d.")
+        return HttpResponseRedirect(self.url("list"))
+
+
+class TeacherStatusView(ProfileStatusView):
+    url_prefix = "teacher"
+    model = TeacherProfile
+    set_active = staticmethod(set_teacher_active)
+
+
+class StudentStatusView(ProfileStatusView):
+    url_prefix = "student"
+    model = StudentProfile
+    set_active = staticmethod(set_student_active)

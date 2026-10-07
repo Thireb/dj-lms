@@ -570,15 +570,15 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "    menu_key = menu_keys.DASHBOARDS\n",
     ),
     (
-        "teacher status changes sign-in",
+        "profile status changes sign-in",
         "apps/people/services.py",
-        "    teacher.user.is_active = is_active\n",
+        "    profile.user.is_active = is_active\n",
         "    pass\n",
     ),
     (
-        "teacher status changes profile",
+        "profile status changes profile",
         "apps/people/services.py",
-        "    teacher.status = ProfileStatus.ACTIVE if is_active"
+        "    profile.status = ProfileStatus.ACTIVE if is_active"
         " else ProfileStatus.INACTIVE\n",
         "    pass\n",
     ),
@@ -635,10 +635,10 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "    if status:",
     ),
     (
-        "teacher object scoped",
+        "profile object scoped",
         "apps/people/views.py",
-        "        teachers = TeacherProfile.objects.for_user(self.request.user)\n",
-        "        teachers = TeacherProfile.unscoped.all()\n",
+        "        profiles = self.model.objects.for_user(self.request.user)\n",
+        "        profiles = self.model.unscoped.all()\n",
     ),
     (
         "teacher status action checked",
@@ -675,6 +675,66 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "apps/ui/templates/ui/components/filter_bar.html",
         "{% if f.options %}",
         "{% if False %}",
+    ),
+    (
+        "student list scoped",
+        "apps/people/services.py",
+        "StudentProfile.objects.for_user(user).select_related(",
+        "StudentProfile.unscoped.select_related(",
+    ),
+    (
+        "student class filter",
+        "apps/people/services.py",
+        "        students = students.filter(class_label_id=class_label_id)\n",
+        "        pass\n",
+    ),
+    (
+        "student search guardian phone",
+        "apps/people/services.py",
+        "            | Q(guardian_phone__icontains=term)\n",
+        "",
+    ),
+    (
+        "student and guardian emails differ",
+        "apps/people/services.py",
+        "    if email.strip().lower() == guardian_email.strip().lower():",
+        "    if False:",
+    ),
+    (
+        "new guardian needs password",
+        "apps/people/services.py",
+        '    if not password:\n        raise ValidationError({"guardian_password"',
+        '    if False:\n        raise ValidationError({"guardian_password"',
+    ),
+    (
+        "enrol student atomic",
+        "apps/people/services.py",
+        "@transaction.atomic\ndef enrol_student(",
+        "def enrol_student(",
+    ),
+    (
+        "student status sync",
+        "apps/people/services.py",
+        "    _set_active(student, is_active=is_active)\n",
+        "    pass\n",
+    ),
+    (
+        "class options scoped",
+        "apps/people/forms.py",
+        "labels = ClassLabel.objects.for_user(user).filter(is_active=True)",
+        "labels = ClassLabel.unscoped.filter(is_active=True)",
+    ),
+    (
+        "class options active only",
+        "apps/people/forms.py",
+        "labels = ClassLabel.objects.for_user(user).filter(is_active=True)",
+        "labels = ClassLabel.objects.for_user(user)",
+    ),
+    (
+        "edit keeps current class",
+        "apps/people/forms.py",
+        "        if current_label is not None:",
+        "        if False:",
     ),
 ]
 
