@@ -250,6 +250,20 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "@transaction.atomic\ndef create_student_profile",
         "def create_student_profile",
     ),
+    (
+        "profile admin registered",
+        "apps/people/admin.py",
+        "developer_admin_site.register(StudentProfile, StudentProfileAdmin)\n",
+        "",
+    ),
+    (
+        "profile admin has no add",
+        "apps/people/admin.py",
+        "    def has_add_permission(self, request):  # noqa: ANN001\n"
+        "        return False\n",
+        "    def has_add_permission(self, request):  # noqa: ANN001\n"
+        "        return super().has_add_permission(request)\n",
+    ),
 ]
 
 
