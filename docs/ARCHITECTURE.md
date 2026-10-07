@@ -123,6 +123,11 @@ Institute structure (important, matches the reference):
 - `StudentProfile.class_label` is an optional label only. It does not attach batches.
 - There is no `Course` model. "Course documents" attach to batch and subject.
 
+People:
+- `StudentProfile` (`student_code`, father name, CNIC, date of birth, gender, guardian phone, address, city, status), `TeacherProfile` (`teacher_code`, CNIC, address, joining date, status), `GuardianProfile`. Name, email and own phone stay on `User`.
+- `CodeSequence` (institute, prefix, last number) gives `STU-001` and `TCH-001` codes in `people.services.next_code`. It locks the row, so two saves never get the same code, and numbers never go down.
+- `for_user` on profiles: admins and sub-admins see the institute, a student, teacher or guardian sees only their own profile. Teachers see students only after batches exist (2.3), guardians only through links (2.2).
+
 Operations:
 - `Lecture` (batch, subject(s), teacher, starts_at UTC, duration, status, delivery: manual_link / in_person / zoom later, meeting_url).
 - `RecurringSeries` (rule, start, end) generates `Lecture` rows.

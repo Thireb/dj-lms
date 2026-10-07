@@ -21,6 +21,7 @@ INSTALLED_APPS = [
     "apps.accounts",
     "apps.core",
     "apps.institutes",
+    "apps.people",
     "apps.superadmin",
     "apps.ui",
 ]
