@@ -1,7 +1,12 @@
 from config.developer_admin_site import developer_admin_site
 
 from apps.core.admin import TenantAdmin
-from apps.people.models import GuardianProfile, StudentProfile, TeacherProfile
+from apps.people.models import (
+    GuardianProfile,
+    GuardianStudentLink,
+    StudentProfile,
+    TeacherProfile,
+)
 
 
 class ProfileAdmin(TenantAdmin):
@@ -28,6 +33,12 @@ class GuardianProfileAdmin(ProfileAdmin):
     readonly_fields = ("institute", "user")
 
 
+class GuardianStudentLinkAdmin(ProfileAdmin):
+    list_display = ("guardian", "student", "institute", "created_at")
+    readonly_fields = ("institute", "guardian", "student")
+
+
 developer_admin_site.register(StudentProfile, StudentProfileAdmin)
 developer_admin_site.register(TeacherProfile, TeacherProfileAdmin)
 developer_admin_site.register(GuardianProfile, GuardianProfileAdmin)
+developer_admin_site.register(GuardianStudentLink, GuardianStudentLinkAdmin)

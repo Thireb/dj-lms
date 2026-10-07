@@ -175,14 +175,14 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
     (
         "people own-row scope",
         "apps/people/models.py",
-        '            return scoped.filter(user_id=getattr(user, "pk", None))\n',
+        "            return scoped.filter(user_id=user_id)\n",
         "            return scoped\n",
     ),
     (
         "people other roles see nothing",
         "apps/people/models.py",
-        "        return scoped.none()\n",
-        "        return scoped\n",
+        "        return self.none()\n",
+        "        return self\n",
     ),
     (
         "people admins see institute",
@@ -263,6 +263,81 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "        return False\n",
         "    def has_add_permission(self, request):  # noqa: ANN001\n"
         "        return super().has_add_permission(request)\n",
+    ),
+    (
+        "guardian sees linked students only",
+        "apps/people/models.py",
+        "            return self.filter(guardian_links__guardian__user_id=user_id)",
+        "            return self.filter(guardian_links__isnull=False)",
+    ),
+    (
+        "student sees linked guardians only",
+        "apps/people/models.py",
+        "            return self.filter(student_links__student__user_id=user_id)",
+        "            return self.filter(student_links__isnull=False)",
+    ),
+    (
+        "link scope guardian",
+        "apps/people/models.py",
+        "            return scoped.filter(guardian__user_id=user_id)\n",
+        "            return scoped\n",
+    ),
+    (
+        "link scope student",
+        "apps/people/models.py",
+        "            return scoped.filter(student__user_id=user_id)\n",
+        "            return scoped\n",
+    ),
+    (
+        "link scope other roles",
+        "apps/people/models.py",
+        "        return scoped.none()\n",
+        "        return scoped\n",
+    ),
+    (
+        "link institute check",
+        "apps/people/models.py",
+        "            if profile is not None and profile.institute_id"
+        " != self.institute_id:",
+        "            if False:",
+    ),
+    (
+        "link save validates",
+        "apps/people/models.py",
+        "        # Same reason as ProfileBase.save: the database enforces uniqueness.\n"
+        "        self.full_clean(validate_unique=False, validate_constraints=False)\n",
+        "        pass\n",
+    ),
+    (
+        "enrol reuses same-institute guardian only",
+        "apps/people/services.py",
+        "    return is_guardian and user.institute_id == institute.pk\n",
+        "    return is_guardian\n",
+    ),
+    (
+        "enrol reuses guardians only",
+        "apps/people/services.py",
+        "    return is_guardian and user.institute_id == institute.pk\n",
+        "    return user.institute_id == institute.pk\n",
+    ),
+    (
+        "enrol validates password",
+        "apps/people/services.py",
+        "        validate_password(password, user)\n",
+        "        pass\n",
+    ),
+    (
+        "enrol normalises email",
+        "apps/people/services.py",
+        "    email = email.strip().lower()\n",
+        "    email = email\n",
+    ),
+    (
+        "link admin has no add",
+        "apps/people/admin.py",
+        "developer_admin_site.register("
+        "GuardianStudentLink, GuardianStudentLinkAdmin)\n",
+        "developer_admin_site.register(GuardianStudentLink)\n",
     ),
 ]
 

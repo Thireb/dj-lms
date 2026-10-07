@@ -149,7 +149,9 @@ Same lists as the student for the chosen child, plus:
 - Contact: Student phone, Guardian phone*, Address, City.
 - Academic: Batches* (multi-select). For each chosen batch, a subjects multi-select*.
 - Fees: Fee plans* (multi-select) with optional discount per plan (amount or percent). Read-only "Monthly fee" total updates live.
+- Guardian: Guardian name*, Guardian email*, Guardian password* (not needed when the email is an existing guardian).
 - Logins: Student email* + password*, Guardian email* + password*. Emails must be different and unique in the system.
+- Existing guardian: if the guardian email already belongs to a guardian of this institute, the new student is linked to that guardian (one guardian, many children). The password, name and phone typed are ignored. If the email belongs to any other account, show "This email is already used by another account." and do not say which role or institute uses it.
 - Validation: at least one batch, each batch has at least one subject, at least one fee plan.
 
 ### 4.2 Add / edit teacher
@@ -233,7 +235,7 @@ Full name*, Institute name*, Phone*, Email, Website, Message*. Saved for Super A
 ## 5. Bulk student upload
 
 - Excel template with one row per student. Columns:
-  `full_name*, father_name, cnic, dob (YYYY-MM-DD), gender, class_label, phone, guardian_phone*, address, city, batches* (comma list), subjects* (BatchName:Subject1|Subject2; next batch after a semicolon), fee_plans* (comma list), discount, student_email*, student_password*, guardian_email*, guardian_password*`
+  `full_name*, father_name, cnic, dob (YYYY-MM-DD), gender, class_label, phone, guardian_name*, guardian_phone*, address, city, batches* (comma list), subjects* (BatchName:Subject1|Subject2; next batch after a semicolon), fee_plans* (comma list), discount, student_email*, student_password*, guardian_email*, guardian_password*`
 - Steps: download template, upload, preview with row-level errors, confirm to import valid rows only.
 - Errors listed per row (missing field, unknown batch/subject/plan, duplicate email). Import is all-or-nothing per row, never partial per row.
 

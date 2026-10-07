@@ -124,7 +124,7 @@ def test_guardian_sees_only_own_profile(people) -> None:
 
 @pytest.mark.django_db
 def test_guardian_cannot_see_unlinked_student(people) -> None:
-    # Guardians reach students only through links (roadmap 2.2).
+    # Guardians reach students only through links (see test_guardian_links).
     user = people["guardian_a"].user
 
     assert _visible(StudentProfile, user) == set()

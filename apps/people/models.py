@@ -35,8 +35,8 @@ class Gender(models.TextChoices):
 class OwnProfileQuerySet(TenantQuerySet):
     """Admins see the institute; the profile's own user sees only their row.
 
-    Every other role sees nothing until its link exists: teachers reach
-    students through batches (roadmap 2.3), guardians through links (2.2).
+    Other roles see a profile only through a link (``for_linked_role``).
+    Teachers reach students through batches later (roadmap 2.3).
     """
 
     own_role: str = ""
@@ -44,15 +44,24 @@ class OwnProfileQuerySet(TenantQuerySet):
     def for_user(self, user: Any) -> OwnProfileQuerySet:
         scoped = super().for_user(user)
         role = user_role(user)
+        user_id = getattr(user, "pk", None)
         if role in INSTITUTE_WIDE_ROLES:
             return scoped
         if role == self.own_role:
-            return scoped.filter(user_id=getattr(user, "pk", None))
-        return scoped.none()
+            return scoped.filter(user_id=user_id)
+        return scoped.for_linked_role(role, user_id)
+
+    def for_linked_role(self, role: str | None, user_id: Any) -> OwnProfileQuerySet:
+        return self.none()
 
 
 class StudentProfileQuerySet(OwnProfileQuerySet):
     own_role = Role.STUDENT
+
+    def for_linked_role(self, role: str | None, user_id: Any) -> OwnProfileQuerySet:
+        if role == Role.GUARDIAN:
+            return self.filter(guardian_links__guardian__user_id=user_id)
+        return self.none()
 
 
 class TeacherProfileQuerySet(OwnProfileQuerySet):
@@ -61,6 +70,27 @@ class TeacherProfileQuerySet(OwnProfileQuerySet):
 
 class GuardianProfileQuerySet(OwnProfileQuerySet):
     own_role = Role.GUARDIAN
+
+    def for_linked_role(self, role: str | None, user_id: Any) -> OwnProfileQuerySet:
+        if role == Role.STUDENT:
+            return self.filter(student_links__student__user_id=user_id)
+        return self.none()
+
+
+class GuardianStudentLinkQuerySet(TenantQuerySet):
+    """Admins see the institute; a guardian or student sees only their links."""
+
+    def for_user(self, user: Any) -> GuardianStudentLinkQuerySet:
+        scoped = super().for_user(user)
+        role = user_role(user)
+        user_id = getattr(user, "pk", None)
+        if role in INSTITUTE_WIDE_ROLES:
+            return scoped
+        if role == Role.GUARDIAN:
+            return scoped.filter(guardian__user_id=user_id)
+        if role == Role.STUDENT:
+            return scoped.filter(student__user_id=user_id)
+        return scoped.none()
 
 
 class CodeSequence(TenantModel):
@@ -195,3 +225,41 @@ class GuardianProfile(ProfileBase):
 
     class Meta:
         ordering = ["-created_at"]
+
+
+class GuardianStudentLink(TenantModel):
+    """One guardian linked to one student. A guardian can have many children."""
+
+    guardian = models.ForeignKey(
+        GuardianProfile, on_delete=models.PROTECT, related_name="student_links"
+    )
+    student = models.ForeignKey(
+        StudentProfile, on_delete=models.PROTECT, related_name="guardian_links"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    objects = TenantManager.from_queryset(GuardianStudentLinkQuerySet)()
+    unscoped = UnscopedTenantManager.from_queryset(GuardianStudentLinkQuerySet)()
+
+    class Meta:
+        ordering = ["created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["guardian", "student"], name="people_guardian_student_unique"
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.guardian} - {self.student}"
+
+    def clean(self) -> None:
+        super().clean()
+        for name in ("guardian", "student"):
+            profile = getattr(self, name, None)
+            if profile is not None and profile.institute_id != self.institute_id:
+                raise ValidationError({name: "Must belong to the same institute."})
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        # Same reason as ProfileBase.save: the database enforces uniqueness.
+        self.full_clean(validate_unique=False, validate_constraints=False)
+        super().save(*args, **kwargs)

@@ -126,7 +126,8 @@ Institute structure (important, matches the reference):
 People:
 - `StudentProfile` (`student_code`, father name, CNIC, date of birth, gender, guardian phone, address, city, status), `TeacherProfile` (`teacher_code`, CNIC, address, joining date, status), `GuardianProfile`. Name, email and own phone stay on `User`.
 - `CodeSequence` (institute, prefix, last number) gives `STU-001` and `TCH-001` codes in `people.services.next_code`. It locks the row, so two saves never get the same code, and numbers never go down.
-- `for_user` on profiles: admins and sub-admins see the institute, a student, teacher or guardian sees only their own profile. Teachers see students only after batches exist (2.3), guardians only through links (2.2).
+- `GuardianStudentLink` (guardian, student), one row per pair. `people.services.enrol_guardian` creates the guardian account and profile, or reuses a guardian of the same institute with that email, and adds the link.
+- `for_user` on profiles: admins and sub-admins see the institute. A student, teacher or guardian sees their own profile. A guardian also sees linked students; a student also sees their linked guardians. Teachers see students only after batches exist (2.3).
 
 Operations:
 - `Lecture` (batch, subject(s), teacher, starts_at UTC, duration, status, delivery: manual_link / in_person / zoom later, meeting_url).
