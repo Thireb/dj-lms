@@ -13,8 +13,8 @@ from apps.academics.models import (
 from apps.core.roles import Role
 from apps.people.models import GuardianProfile, StudentProfile, TeacherProfile
 
-from tests.academics.conftest import link_student
 from tests.people.conftest import account
+from tests.school import link_student
 
 
 def _visible(model, profile_or_user) -> list:

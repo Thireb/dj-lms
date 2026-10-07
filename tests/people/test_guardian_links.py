@@ -12,7 +12,7 @@ from apps.core.tenancy import (
 )
 from apps.people.models import GuardianProfile, GuardianStudentLink, StudentProfile
 from apps.people.services import (
-    GUARDIAN_EMAIL_TAKEN,
+    EMAIL_TAKEN,
     enrol_guardian,
 )
 from django.core.exceptions import ValidationError
@@ -131,7 +131,7 @@ def test_email_of_another_role_is_rejected(institute_a, role) -> None:
     with pytest.raises(ValidationError) as error:
         _enrol(child, "taken@example.com")
 
-    assert error.value.message_dict == {"guardian_email": [GUARDIAN_EMAIL_TAKEN]}
+    assert error.value.message_dict == {"guardian_email": [EMAIL_TAKEN]}
 
 
 @pytest.mark.django_db
@@ -155,7 +155,7 @@ def test_guardian_of_other_institute_is_rejected_without_leak(
     with pytest.raises(ValidationError) as error:
         _enrol(child_a, "parent@example.com")
 
-    assert error.value.message_dict == {"guardian_email": [GUARDIAN_EMAIL_TAKEN]}
+    assert error.value.message_dict == {"guardian_email": [EMAIL_TAKEN]}
     # unscoped: test assertion outside a tenant context.
     assert not GuardianStudentLink.unscoped.filter(student=child_a).exists()
 

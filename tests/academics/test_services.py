@@ -18,7 +18,7 @@ from apps.academics.services import (
 from apps.core.tenancy import TenantContextError, tenant_context
 from django.core.exceptions import ValidationError
 
-from tests.academics.conftest import link_student, link_teacher, make_lists
+from tests.school import link_student, link_teacher, make_lists
 
 
 def _pairs(links) -> set:

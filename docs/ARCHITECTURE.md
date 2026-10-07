@@ -129,6 +129,9 @@ People:
 - `GuardianStudentLink` (guardian, student), one row per pair. `people.services.enrol_guardian` creates the guardian account and profile, or reuses a guardian of the same institute with that email, and adds the link.
 - `for_user` on profiles: admins and sub-admins see the institute. A student, teacher or guardian sees their own profile. A guardian also sees linked students; a student also sees their linked guardians. A teacher also sees every student enrolled in a batch they teach. A student or guardian also sees the teachers of their (child's) batches. Teachers do not see guardians yet (messaging, Phase 6).
 
+- Status: activating or deactivating a student or teacher changes `profile.status` and `User.is_active` together, in one service call (decided 2026-10-07). An inactive person cannot sign in, and an open session ends on the next request.
+- Names: forms take one "Full name"; the service splits it at the first space into `first_name` and `last_name`.
+
 Academics:
 - `ClassLabel`, `Batch`, `Subject`: name and `is_active`. Names are unique per institute, ignoring case.
 - `academics.services.set_student_batch_subjects` and `set_teacher_batch_subjects` replace a person's (batch, subject) pairs. Rules: at least one batch, at least one subject per batch, same institute, and inactive rows cannot be added (they may stay if already linked).

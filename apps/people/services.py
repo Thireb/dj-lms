@@ -1,14 +1,18 @@
-"""Profiles, per-institute ID codes (STU-001, TCH-001) and guardian links."""
+"""Profiles, ID codes (STU-001, TCH-001), guardian links and teacher accounts."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 from typing import Any
 
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.db.models import Prefetch, Q, QuerySet
 
+from apps.academics.models import TeacherBatchSubject
+from apps.academics.services import Selections, set_teacher_batch_subjects
 from apps.accounts.models import User
 from apps.core.roles import Role
 from apps.core.tenancy import require_tenant_context
@@ -17,6 +21,7 @@ from apps.people.models import (
     CodeSequence,
     GuardianProfile,
     GuardianStudentLink,
+    ProfileStatus,
     StudentProfile,
     TeacherProfile,
 )
@@ -60,7 +65,7 @@ def create_guardian_profile(user: User) -> GuardianProfile:
     return GuardianProfile.objects.create(institute=user.institute, user=user)
 
 
-GUARDIAN_EMAIL_TAKEN = "This email is already used by another account."
+EMAIL_TAKEN = "This email is already used by another account."
 
 
 @dataclass(frozen=True)
@@ -105,7 +110,7 @@ def enrol_guardian(
         ).first() or create_guardian_profile(existing)
         created = False
     else:
-        raise ValidationError({"guardian_email": GUARDIAN_EMAIL_TAKEN})
+        raise ValidationError({"guardian_email": EMAIL_TAKEN})
     GuardianStudentLink.objects.get_or_create(
         institute=institute, guardian=guardian, student=student
     )
@@ -133,3 +138,130 @@ def _create_guardian(
         **fields,
     )
     return create_guardian_profile(user)
+
+
+# Teachers (roadmap 2.5a, SPEC 4.2)
+
+
+def list_teachers(
+    user: object,
+    *,
+    search: str = "",
+    batch_id: int | None = None,
+    status: str = "",
+) -> QuerySet[TeacherProfile]:
+    """The user's teachers, newest first, with links prefetched for the table."""
+    teachers = TeacherProfile.objects.for_user(user).select_related("user")
+    for term in search.split():
+        teachers = teachers.filter(
+            Q(user__first_name__icontains=term)
+            | Q(user__last_name__icontains=term)
+            | Q(user__email__icontains=term)
+            | Q(user__phone__icontains=term)
+            | Q(teacher_code__icontains=term)
+        )
+    if batch_id is not None:
+        teachers = teachers.filter(batch_subjects__batch_id=batch_id).distinct()
+    if status in ProfileStatus.values:
+        teachers = teachers.filter(status=status)
+    links = TeacherBatchSubject.objects.select_related("batch", "subject")
+    return teachers.prefetch_related(
+        Prefetch("batch_subjects", queryset=links)
+    ).order_by("-created_at", "-pk")
+
+
+def split_full_name(full_name: str) -> tuple[str, str]:
+    """ "Sam A. Sample" -> ("Sam", "A. Sample"); the profile page edits both."""
+    parts = " ".join(full_name.split()).split(" ", 1)
+    return parts[0], parts[1] if len(parts) > 1 else ""
+
+
+def _check_email_free(email: str, field: str, user: User | None = None) -> str:
+    email = email.strip().lower()
+    taken = User.objects.filter(email__iexact=email)
+    if user is not None:
+        taken = taken.exclude(pk=user.pk)
+    if taken.exists():
+        raise ValidationError({field: EMAIL_TAKEN})
+    return email
+
+
+def _set_pairs(teacher: TeacherProfile, selections: Selections) -> None:
+    try:
+        set_teacher_batch_subjects(teacher, selections)
+    except ValidationError as error:
+        raise ValidationError({"batch_subjects": error.messages}) from error
+
+
+@transaction.atomic
+def create_teacher(
+    institute: Institute,
+    *,
+    full_name: str,
+    email: str,
+    password: str,
+    phone: str,
+    selections: Selections,
+    cnic: str = "",
+    address: str = "",
+    joining_date: date | None = None,
+) -> TeacherProfile:
+    require_tenant_context(institute)
+    email = _check_email_free(email, "email")
+    first_name, last_name = split_full_name(full_name)
+    user = User(
+        email=email,
+        role=Role.TEACHER,
+        institute=institute,
+        first_name=first_name,
+        last_name=last_name,
+        phone=phone.strip(),
+    )
+    try:
+        validate_password(password, user)
+    except ValidationError as error:
+        raise ValidationError({"password": error.messages}) from error
+    user.set_password(password)
+    user.save()
+    teacher = create_teacher_profile(
+        user, cnic=cnic.strip(), address=address.strip(), joining_date=joining_date
+    )
+    _set_pairs(teacher, selections)
+    return teacher
+
+
+@transaction.atomic
+def update_teacher(
+    teacher: TeacherProfile,
+    *,
+    full_name: str,
+    email: str,
+    phone: str,
+    selections: Selections,
+    cnic: str = "",
+    address: str = "",
+    joining_date: date | None = None,
+) -> TeacherProfile:
+    require_tenant_context(teacher.institute)
+    user = teacher.user
+    user.email = _check_email_free(email, "email", user=user)
+    user.first_name, user.last_name = split_full_name(full_name)
+    user.phone = phone.strip()
+    user.save()
+    teacher.cnic = cnic.strip()
+    teacher.address = address.strip()
+    teacher.joining_date = joining_date
+    teacher.save()
+    _set_pairs(teacher, selections)
+    return teacher
+
+
+@transaction.atomic
+def set_teacher_active(teacher: TeacherProfile, *, is_active: bool) -> TeacherProfile:
+    """Status and sign-in change together: an inactive teacher cannot sign in."""
+    require_tenant_context(teacher.institute)
+    teacher.status = ProfileStatus.ACTIVE if is_active else ProfileStatus.INACTIVE
+    teacher.save(update_fields=["status"])
+    teacher.user.is_active = is_active
+    teacher.user.save(update_fields=["is_active"])
+    return teacher
