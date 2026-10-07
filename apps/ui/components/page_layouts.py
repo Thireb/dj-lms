@@ -1,6 +1,10 @@
 from __future__ import annotations
 
-from apps.ui.components.base import Component, render_component_template
+from apps.ui.components.base import (
+    Component,
+    render_child,
+    render_component_template,
+)
 
 
 class DashboardPageBody(Component):
@@ -48,6 +52,12 @@ class ListPageBody(Component):
             pagination=pagination,
             **props,
         )
+
+    def render(self, request=None):
+        ctx = self.get_context()
+        for key in ("header", "filters", "table", "pagination"):
+            ctx[key] = render_child(ctx.get(key), request)
+        return render_component_template(self, ctx, request=request)
 
 
 class DetailPageBody(Component):

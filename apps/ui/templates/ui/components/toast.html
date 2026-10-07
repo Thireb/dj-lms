@@ -1,1 +1,1 @@
-<div class="toast toast-{{ tone }} rounded-lg border px-4 py-3 text-sm" role="status">{{ message }}</div>
+<div class="toast toast-{{ tone }} rounded-lg border bg-surface px-4 py-3 text-sm {% if tone == 'error' %}border-danger text-danger{% elif tone == 'success' %}border-success text-success{% else %}border-border text-text{% endif %}" role="status">{{ message }}</div>

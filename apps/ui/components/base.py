@@ -13,6 +13,13 @@ def render_component_template(
     )
 
 
+def render_child(child: object, request: HttpRequest | None = None) -> object:
+    """Render a nested component with the request (for CSRF); keep text as is."""
+    if isinstance(child, Component):
+        return child.render(request=request)
+    return child
+
+
 class Component:
     template_name: str = ""
 

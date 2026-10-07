@@ -3,7 +3,11 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-from apps.ui.components.base import Component
+from apps.ui.components.base import (
+    Component,
+    render_child,
+    render_component_template,
+)
 from apps.ui.progress_value import clamp_progress_value
 from apps.ui.safe_url import safe_url
 
@@ -68,6 +72,13 @@ class DataTable(Component):
         ctx["empty_title"] = self.props.get("empty_title", self.empty_title)
         ctx["row_actions"] = self.props.get("row_actions", self.row_actions)
         return ctx
+
+    def render(self, request=None):
+        ctx = self.get_context()
+        ctx["cells"] = [
+            [render_child(cell, request) for cell in row] for row in ctx["cells"]
+        ]
+        return render_component_template(self, ctx, request=request)
 
 
 class Badge(Component):

@@ -1,8 +1,21 @@
 from __future__ import annotations
 
+from django.contrib.messages import get_messages
+
+from apps.ui.components.actions import Toast
 from apps.ui.components.base import Component, render_component_template
 from apps.ui.components.nav import NotificationBell
 from apps.ui.safe_url import safe_url
+
+
+def render_toasts(request) -> list:
+    """One Toast per Django message; reading them marks them as shown."""
+    if request is None:
+        return []
+    return [
+        Toast(str(message), tone=message.level_tag or "info").render(request=request)
+        for message in get_messages(request)
+    ]
 
 
 class TopNav(Component):
@@ -88,6 +101,7 @@ class TopNavShell(Component):
             content = ctx.get("content")
             if content is not None and hasattr(content, "render"):
                 ctx["content"] = content.render(request=request)
+        ctx["toasts"] = render_toasts(request)
         return render_component_template(self, ctx, request=request)
 
 
@@ -141,6 +155,7 @@ class SidebarShell(Component):
             content = ctx.get("content")
             if content is not None and hasattr(content, "render"):
                 ctx["content"] = content.render(request=request)
+        ctx["toasts"] = render_toasts(request)
         return render_component_template(self, ctx, request=request)
 
 
