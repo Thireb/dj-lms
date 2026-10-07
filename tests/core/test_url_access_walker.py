@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import pytest
+from apps.academics.models import Batch, ClassLabel, Subject
 from apps.accounts.models import User
 from apps.core.roles import Role
 from apps.ui.views.pages import PortalPageView
@@ -76,7 +77,16 @@ def test_walker_finds_the_product_urls() -> None:
         "super:institute_edit",
         "super:institute_status",
         "accounts:profile",
+        "admin:batch_list",
+        "admin:batch_edit",
     } <= names
+
+
+def test_every_route_with_a_pk_has_an_object() -> None:
+    # A pk route without a real row would pass the walker with a 404.
+    for route in PRODUCT_ROUTES:
+        if route.kwarg_names and route.name.startswith("admin:"):
+            assert route.name in ROUTE_OBJECTS, route.name
 
 
 @pytest.mark.parametrize("route", PRODUCT_ROUTES, ids=lambda r: r.name)
@@ -86,8 +96,25 @@ def test_every_product_view_declares_roles(route: Route) -> None:
     assert route.view_class.allowed_roles, f"{route.name} has no allowed_roles"
 
 
+# Routes whose pk is not an institute: build a row in the institute instead.
+ROUTE_OBJECTS = {
+    f"admin:{prefix}_{action}": model
+    for prefix, model in (
+        ("class", ClassLabel),
+        ("batch", Batch),
+        ("subject", Subject),
+    )
+    for action in ("edit", "status")
+}
+
+
 def _url(route: Route, institute) -> str:
-    kwargs = {name: institute.pk for name in route.kwarg_names}
+    pk = institute.pk
+    model = ROUTE_OBJECTS.get(route.name)
+    if model is not None:
+        # unscoped: test setup outside a tenant context.
+        pk = model.unscoped.get_or_create(institute=institute, name="Walker")[0].pk
+    kwargs = {name: pk for name in route.kwarg_names}
     return reverse(route.name, kwargs=kwargs)
 
 

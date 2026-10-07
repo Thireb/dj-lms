@@ -18,6 +18,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "crispy_forms",
+    "apps.academics",
     "apps.accounts",
     "apps.core",
     "apps.institutes",

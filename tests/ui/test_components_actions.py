@@ -50,3 +50,9 @@ def test_copy_field_renders_value_readonly() -> None:
     assert "readonly" in html
     assert 'value="https://example.com/x/"' in html
     assert "Copy link" in html
+
+
+def test_toast_tones_use_theme_colors() -> None:
+    assert "border-success" in str(Toast("Saved", tone="success"))
+    assert "border-danger" in str(Toast("Failed", tone="error"))
+    assert "border-border" in str(Toast("Note", tone="info"))

@@ -1,9 +1,9 @@
 <div class="space-y-4">
-  {% for block in blocks %}
-    {% if block.template_name|default_if_none:"" %}
-      {{ block }}
+  {% for item in items %}
+    {% if item.is_component %}
+      {{ item.html }}
     {% else %}
-      <p class="text-sm text-text">{{ block }}</p>
+      <p class="text-sm text-text">{{ item.html }}</p>
     {% endif %}
   {% endfor %}
 </div>

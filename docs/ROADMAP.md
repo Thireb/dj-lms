@@ -33,7 +33,9 @@ From 2.8 on, every phase that adds a model also extends `seed_demo` with that mo
 
 - [x] 2.1 `people`: Student, Teacher, Guardian profiles; auto IDs (`STU-`, `TCH-`).
 - [x] 2.2 Guardian links to students; guardian account created on enrolment.
-- [ ] 2.3 `academics`: ClassLabel, Batch, Subject (independent lists), StudentBatchSubject, TeacherBatchSubject.
+- [x] 2.3 `academics`: ClassLabel, Batch, Subject (independent lists), StudentBatchSubject, TeacherBatchSubject.
+  - [x] 2.3a Models, link services (`set_student_batch_subjects`, `set_teacher_batch_subjects`), `for_user` scopes through batches, `StudentProfile.class_label`.
+  - [x] 2.3b Admin pages for Classes, Batches and Subjects (Institute menu): list, add, edit, deactivate (SPEC 3 and 4.3).
 - [ ] 2.4 Admin dashboard with counts and recent enrolments.
 - [ ] 2.5 Student and teacher list, create, edit, activate/deactivate.
 - [ ] 2.6 Bulk student upload from Excel template with error report.

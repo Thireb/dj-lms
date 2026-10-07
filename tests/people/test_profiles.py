@@ -4,10 +4,9 @@ from __future__ import annotations
 
 import pytest
 from apps.core.roles import Role
-from apps.core.tenancy import tenant_context
+from apps.core.tenancy import TenantContextError, tenant_context
 from apps.people.models import CodeSequence, StudentProfile, TeacherProfile
 from apps.people.services import (
-    TenantContextError,
     create_guardian_profile,
     create_student_profile,
     create_teacher_profile,

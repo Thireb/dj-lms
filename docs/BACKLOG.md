@@ -143,6 +143,16 @@ Status: `[ ]` open, `[x]` done. Priority: **High** = fix before merge or before 
 | R8 | Users of an inactive institute can sign in, then get 403 on every page. Reject them at login with a clear message. | PR #16 | Low | [x] fixed in PR #18 |
 | R9 | Test gaps (mutation): removing `validate_password` from `SetPasswordForm` passes all tests; reverting the top-nav POST Sign out (C8) passes all tests. The set-password field should use `autocomplete="new-password"`. | PR #16 | Low | [x] fixed in PR #17 |
 
+## Build of 2.3 (academics)
+
+| # | Item | Source | Priority | Status |
+|---|---|---|---|---|
+| S1 | Flash messages were never shown: no template rendered `messages`, so "Campus profile updated.", "Institute saved." and every other `messages.success` call was lost. Fixed: both shells render one `Toast` per message; toast tones use theme colors. | 2.3b build | Medium | [x] |
+| S2 | `ListPageBody`, `DataTable` and `BlockStack` rendered nested components without `request`, so a `ConfirmDialog` in a table row had no CSRF token and its POST got 403. Fixed with `render_child`; test posts with `enforce_csrf_checks=True`. | 2.3b build | High | [x] |
+| S3 | `badge-tone-*` classes (used by `Badge`) have no CSS, so status badges show no color. Map each tone to theme token classes in `badge.html`, as `toast.html` now does. | 2.3b build | Low | [ ] |
+| S4 | `static/css/src/input.css` `@source` paths start with `../../../../`, which is outside the repo. Classes are still found by Tailwind's automatic detection. Fix the paths to `../../../`. | 2.3b build | Low | [ ] |
+| S5 | `apps/institutes/urls/admin.py` is not included anywhere; admin URLs live in `apps/ui/urlconf/admin.py`. Delete it or include it. | 2.3b build | Low | [ ] |
+
 ## Later (deployment hardening, Phase 12)
 
 | # | Item | Priority | Status |

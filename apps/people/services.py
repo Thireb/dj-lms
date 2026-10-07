@@ -11,7 +11,7 @@ from django.db import transaction
 
 from apps.accounts.models import User
 from apps.core.roles import Role
-from apps.core.tenancy import get_current_institute
+from apps.core.tenancy import require_tenant_context
 from apps.institutes.models import Institute
 from apps.people.models import (
     CodeSequence,
@@ -25,20 +25,9 @@ STUDENT_CODE_PREFIX = "STU"
 TEACHER_CODE_PREFIX = "TCH"
 
 
-class TenantContextError(RuntimeError):
-    """Raised when a service runs outside the institute it writes to."""
-
-
-def _require_context(institute: Institute | None) -> None:
-    current = get_current_institute()
-    if institute is None or current is None or current.pk != institute.pk:
-        msg = "Run inside tenant_context() for this institute."
-        raise TenantContextError(msg)
-
-
 def next_code(institute: Institute, prefix: str) -> str:
     """Return the next code for the prefix. Numbers are never reused."""
-    _require_context(institute)
+    require_tenant_context(institute)
     with transaction.atomic():
         sequence, _ = CodeSequence.objects.select_for_update().get_or_create(
             institute=institute, prefix=prefix
@@ -67,7 +56,7 @@ def create_teacher_profile(user: User, **fields: Any) -> TeacherProfile:
 
 
 def create_guardian_profile(user: User) -> GuardianProfile:
-    _require_context(user.institute)
+    require_tenant_context(user.institute)
     return GuardianProfile.objects.create(institute=user.institute, user=user)
 
 
@@ -97,7 +86,7 @@ def enrol_guardian(
     is an error that does not say which role or institute owns it.
     """
     institute = student.institute
-    _require_context(institute)
+    require_tenant_context(institute)
     email = email.strip().lower()
     existing = User.objects.filter(email__iexact=email).first()
     if existing is None:
