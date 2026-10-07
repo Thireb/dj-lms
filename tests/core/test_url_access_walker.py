@@ -140,6 +140,17 @@ ROUTE_OBJECTS = {
 }
 
 
+ADMIN_PORTAL_ROLES = {Role.INSTITUTE_ADMIN, Role.SUB_ADMIN}
+
+
+@pytest.mark.parametrize("route", PRODUCT_ROUTES, ids=lambda r: r.name)
+def test_admin_portal_views_allow_admin_roles_only(route: Route) -> None:
+    # The 403 walk only checks roles outside allowed_roles, so an extra role
+    # added to an admin page would pass it unseen.
+    if getattr(route.view_class, "portal", None) == "admin":
+        assert set(route.view_class.allowed_roles) <= ADMIN_PORTAL_ROLES, route.name
+
+
 def _url(route: Route, institute) -> str:
     build = ROUTE_OBJECTS.get(route.name)
     pk = build(institute) if build is not None else institute.pk
