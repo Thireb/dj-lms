@@ -172,6 +172,84 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "        user = User.objects.get(pk=self.request.user.pk)\n",
         "        user = self.request.user\n",
     ),
+    (
+        "people own-row scope",
+        "apps/people/models.py",
+        '            return scoped.filter(user_id=getattr(user, "pk", None))\n',
+        "            return scoped\n",
+    ),
+    (
+        "people other roles see nothing",
+        "apps/people/models.py",
+        "        return scoped.none()\n",
+        "        return scoped\n",
+    ),
+    (
+        "people admins see institute",
+        "apps/people/models.py",
+        "            return scoped\n",
+        "            return scoped.none()\n",
+    ),
+    (
+        "people scoped manager",
+        "apps/people/models.py",
+        "    unscoped = UnscopedTenantManager.from_queryset(StudentProfileQuerySet)()",
+        "    unscoped = UnscopedTenantManager()",
+    ),
+    (
+        "profile role check",
+        "apps/people/models.py",
+        "        if user.role != self.profile_role:",
+        "        if False:",
+    ),
+    (
+        "profile institute check",
+        "apps/people/models.py",
+        "        if user.institute_id != self.institute_id:",
+        "        if False:",
+    ),
+    (
+        "profile save validates",
+        "apps/people/models.py",
+        "        self.full_clean(validate_unique=False, validate_constraints=False)\n",
+        "        pass\n",
+    ),
+    (
+        "student cnic validator",
+        "apps/people/models.py",
+        "validators=[cnic_validator]",
+        "validators=[]",
+    ),
+    (
+        "teacher cnic validator",
+        "apps/people/models.py",
+        "validators=[cnic_validator]\n"
+        "    )\n"
+        '    address = models.TextField(blank=True, default="")\n'
+        "    joining_date",
+        "validators=[]\n"
+        "    )\n"
+        '    address = models.TextField(blank=True, default="")\n'
+        "    joining_date",
+    ),
+    (
+        "code needs tenant context",
+        "apps/people/services.py",
+        "    if institute is None or current is None or current.pk != institute.pk:",
+        "    if False:",
+    ),
+    (
+        "code counter saved",
+        "apps/people/services.py",
+        '        sequence.save(update_fields=["last_number"])\n',
+        "        pass\n",
+    ),
+    (
+        "student create is atomic",
+        "apps/people/services.py",
+        "@transaction.atomic\ndef create_student_profile",
+        "def create_student_profile",
+    ),
 ]
 
 
