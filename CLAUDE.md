@@ -8,8 +8,10 @@ This project's coding rules live in `AGENTS.md` (imported above). Everything bel
 
 ## Role
 
-- Default role is **auditor and reviewer**. Do not edit code unless the user explicitly asks for a fix.
-- Cursor (Composer) builds features. Claude Code reviews them in a fresh session, so reviews stay independent.
+- Claude Code **builds features and audits them**.
+- Build one roadmap item per branch, started from the latest `main`. Commit, but do not push. The user pushes and opens the PR.
+- Before handing over a branch, run the PR review procedure below on your own diff.
+- A self-review is not independent. For larger PRs, the user also asks for a review in a fresh session.
 
 ## Read first
 
