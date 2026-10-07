@@ -39,11 +39,11 @@ Plan: **B** = Basic, **P** = Premium. Plan split is from the reference pricing p
 Setup order the reference teaches: Campus, Classes, Batches, Subjects, Fee Plans, Teachers, Students, then a test lecture and test challan.
 
 - [x] Campus profile: name, address, contact (logo deferred to roadmap 12.2). (verify)
-- [ ] Classes: name-only list (an optional label on a student, e.g. "Grade 9").
-- [ ] Batches: name-only list (a running group, e.g. "Morning", "Weekend").
-- [ ] Subjects: name-only list.
+- [x] Classes: name-only list (an optional label on a student, e.g. "Grade 9").
+- [x] Batches: name-only list (a running group, e.g. "Morning", "Weekend").
+- [x] Subjects: name-only list.
 - [ ] Fee Plans: name + amount.
-- [ ] **Key rule:** classes, batches, and subjects are independent lists. Links are made only when a student is enrolled or a teacher is added (see sections 3 and 4).
+- [x] **Key rule:** classes, batches, and subjects are independent lists. Links are made only when a student is enrolled or a teacher is added (see sections 3 and 4).
 
 ## 3. Students (Admin)
 

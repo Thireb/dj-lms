@@ -1,4 +1,4 @@
-"""Link students and teachers to (batch, subject) pairs."""
+"""Class, batch and subject lists, and the (batch, subject) links on people."""
 
 from __future__ import annotations
 
@@ -6,9 +6,12 @@ from collections.abc import Iterable, Mapping
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.db.models import Count, QuerySet
 
 from apps.academics.models import (
     Batch,
+    ClassLabel,
+    NameList,
     StudentBatchSubject,
     Subject,
     TeacherBatchSubject,
@@ -19,6 +22,66 @@ from apps.people.models import StudentProfile, TeacherProfile
 
 Selections = Mapping[Batch, Iterable[Subject]]
 Pair = tuple[int, int]
+
+# Relation from each list to the students on it, for the "Students" column.
+STUDENT_RELATIONS = {
+    ClassLabel: "students",
+    Batch: "student_links__student",
+    Subject: "student_links__student",
+}
+
+
+def list_name_rows(
+    model: type[NameList], user: object, search: str = ""
+) -> QuerySet[NameList]:
+    """The user's rows, newest first, with ``student_count``."""
+    rows = model.objects.for_user(user)
+    if search:
+        rows = rows.filter(name__icontains=search)
+    relation = STUDENT_RELATIONS[model]
+    return rows.annotate(student_count=Count(relation, distinct=True)).order_by(
+        "-created_at", "-pk"
+    )
+
+
+def create_name_row(
+    model: type[NameList], institute: Institute, *, name: str, noun: str
+) -> NameList:
+    require_tenant_context(institute)
+    name = _clean_name(model, institute, name, noun)
+    return model.objects.create(institute=institute, name=name)
+
+
+def rename_name_row(row: NameList, *, name: str, noun: str) -> NameList:
+    require_tenant_context(row.institute)
+    row.name = _clean_name(type(row), row.institute, name, noun, exclude_pk=row.pk)
+    row.save(update_fields=["name"])
+    return row
+
+
+def set_name_row_active(row: NameList, *, is_active: bool) -> NameList:
+    require_tenant_context(row.institute)
+    row.is_active = is_active
+    row.save(update_fields=["is_active"])
+    return row
+
+
+def _clean_name(
+    model: type[NameList],
+    institute: Institute,
+    name: str,
+    noun: str,
+    exclude_pk: int | None = None,
+) -> str:
+    name = " ".join(name.split())
+    if not name:
+        raise ValidationError({"name": "Enter a name."})
+    taken = model.objects.filter(institute=institute, name__iexact=name)
+    if exclude_pk is not None:
+        taken = taken.exclude(pk=exclude_pk)
+    if taken.exists():
+        raise ValidationError({"name": f"A {noun} named {name} already exists."})
+    return name
 
 
 def set_student_batch_subjects(student: StudentProfile, selections: Selections) -> None:

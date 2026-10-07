@@ -444,8 +444,8 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
     (
         "pairs need tenant context",
         "apps/academics/services.py",
-        "    require_tenant_context(institute)\n",
-        "",
+        "    require_tenant_context(institute)\n    links = ",
+        "    links = ",
     ),
     (
         "list admin institute read only",
@@ -460,6 +460,114 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "        return False\n",
         "    def has_change_permission(self, request, obj=None):  # noqa: ANN001\n"
         "        return True\n",
+    ),
+    (
+        "table cells get request",
+        "apps/ui/components/data.py",
+        "[render_child(cell, request) for cell in row]",
+        "[cell for cell in row]",
+    ),
+    (
+        "list body passes request",
+        "apps/ui/components/page_layouts.py",
+        "ctx[key] = render_child(ctx.get(key), request)",
+        "ctx[key] = render_child(ctx.get(key))",
+    ),
+    (
+        "block stack passes request",
+        "apps/ui/components/block_stack.py",
+        '"html": render_child(block, request),',
+        '"html": render_child(block),',
+    ),
+    (
+        "top nav shell shows toasts",
+        "apps/ui/templates/ui/components/top_nav_shell.html",
+        "{% for toast in toasts %}",
+        "{% for toast in no_toasts %}",
+    ),
+    (
+        "sidebar shell shows toasts",
+        "apps/ui/templates/ui/components/sidebar_shell.html",
+        "{% for toast in toasts %}",
+        "{% for toast in no_toasts %}",
+    ),
+    (
+        "toast tone colors",
+        "apps/ui/templates/ui/components/toast.html",
+        "{% if tone == 'error' %}border-danger",
+        "{% if False %}border-danger",
+    ),
+    (
+        "create row needs tenant context",
+        "apps/academics/services.py",
+        "    require_tenant_context(institute)\n    name = ",
+        "    name = ",
+    ),
+    (
+        "rename row needs tenant context",
+        "apps/academics/services.py",
+        "    require_tenant_context(row.institute)\n    row.name = ",
+        "    row.name = ",
+    ),
+    (
+        "row status needs tenant context",
+        "apps/academics/services.py",
+        "    require_tenant_context(row.institute)\n    row.is_active = ",
+        "    row.is_active = ",
+    ),
+    (
+        "duplicate name check",
+        "apps/academics/services.py",
+        "    if taken.exists():",
+        "    if False:",
+    ),
+    (
+        "rename may keep own name",
+        "apps/academics/services.py",
+        "        taken = taken.exclude(pk=exclude_pk)\n",
+        "        pass\n",
+    ),
+    (
+        "name spaces collapsed",
+        "apps/academics/services.py",
+        '    name = " ".join(name.split())\n',
+        "    name = name.strip()\n",
+    ),
+    (
+        "list rows scoped",
+        "apps/academics/services.py",
+        "    rows = model.objects.for_user(user)\n",
+        "    rows = model.unscoped.all()\n",
+    ),
+    (
+        "student count distinct",
+        "apps/academics/services.py",
+        "student_count=Count(relation, distinct=True)",
+        "student_count=Count(relation)",
+    ),
+    (
+        "row object scoped",
+        "apps/academics/views.py",
+        "        rows = self.model.objects.for_user(self.request.user)\n",
+        "        rows = self.model.unscoped.all()\n",
+    ),
+    (
+        "row status action checked",
+        "apps/academics/views.py",
+        '        if action not in {"activate", "deactivate"}:',
+        "        if False:",
+    ),
+    (
+        "list pages roles",
+        "apps/academics/views.py",
+        "    allowed_roles = [Role.INSTITUTE_ADMIN, Role.SUB_ADMIN]\n",
+        "    allowed_roles = [Role.INSTITUTE_ADMIN, Role.SUB_ADMIN, Role.TEACHER]\n",
+    ),
+    (
+        "list pages menu key",
+        "apps/academics/views.py",
+        "    menu_key = menu_keys.INSTITUTE\n",
+        "    menu_key = menu_keys.DASHBOARDS\n",
     ),
 ]
 

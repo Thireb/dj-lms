@@ -9,7 +9,12 @@ from apps.academics.models import (
     Subject,
     TeacherBatchSubject,
 )
-from apps.academics.services import set_student_batch_subjects
+from apps.academics.services import (
+    create_name_row,
+    rename_name_row,
+    set_name_row_active,
+    set_student_batch_subjects,
+)
 from apps.core.tenancy import TenantContextError, tenant_context
 from django.core.exceptions import ValidationError
 
@@ -166,3 +171,15 @@ def test_setting_pairs_needs_tenant_context(school) -> None:
 def test_setting_pairs_rejects_other_institute_context(school, institute_b) -> None:
     with tenant_context(institute_b), pytest.raises(TenantContextError):
         set_student_batch_subjects(school.student_1, {school.morning: [school.math]})
+
+
+@pytest.mark.django_db
+def test_list_row_services_need_tenant_context(institute_a) -> None:
+    (row,) = make_lists(institute_a, Batch, "Morning")
+
+    with pytest.raises(TenantContextError):
+        create_name_row(Batch, institute_a, name="Evening", noun="batch")
+    with pytest.raises(TenantContextError):
+        rename_name_row(row, name="Late", noun="batch")
+    with pytest.raises(TenantContextError):
+        set_name_row_active(row, is_active=False)
