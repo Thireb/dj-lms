@@ -255,13 +255,13 @@ Every item here is a class. Names are fixed.
 | `LectureRow` | lectures | one lecture in a list | `lecture`, `viewer` |
 | `ScheduleList` | lectures | lectures grouped by day | `lectures`, `viewer` |
 | `NotificationBell` | nav | bell + unread count | `user` |
-| `FilterBar` | nav | search + selects; each filter has `name`, `label`, optional `value`, `placeholder` | `filters` |
+| `FilterBar` | nav | search + selects; each filter has `name`, `label`, optional `value`, `placeholder`; a filter with `options` (list of value, label) renders a select | `filters` |
 | `Pagination` | nav | page links; `query` keeps the current filters | `page_obj`, `query` |
 | `PdfHeader` | pdf | institute header for PDFs | `institute` |
 
 Form layout objects: `Section`, `Row`, `FormActions`.
 
-Form widgets (not components): `PasswordInput` (show/hide toggle; static `type="password"` for no-JS and tests).
+Form widgets (not components): `PasswordInput` (show/hide toggle; static `type="password"` for no-JS and tests). `GroupedCheckboxes` (one fieldset per choice group, for example subjects under each batch; `empty_text` when there are no choices).
 
 ## 8. Menus
 
