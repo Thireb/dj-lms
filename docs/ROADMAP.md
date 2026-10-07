@@ -32,7 +32,7 @@ From 2.8 on, every phase that adds a model also extends `seed_demo` with that mo
 ## Phase 2: People and academics
 
 - [x] 2.1 `people`: Student, Teacher, Guardian profiles; auto IDs (`STU-`, `TCH-`).
-- [ ] 2.2 Guardian links to students; guardian account created on enrolment.
+- [x] 2.2 Guardian links to students; guardian account created on enrolment.
 - [ ] 2.3 `academics`: ClassLabel, Batch, Subject (independent lists), StudentBatchSubject, TeacherBatchSubject.
 - [ ] 2.4 Admin dashboard with counts and recent enrolments.
 - [ ] 2.5 Student and teacher list, create, edit, activate/deactivate.

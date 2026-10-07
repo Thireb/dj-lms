@@ -4,11 +4,18 @@ from __future__ import annotations
 
 import pytest
 from apps.core.roles import Role
+from apps.core.tenancy import tenant_context
+from apps.people.services import enrol_guardian
 
-from tests.conftest import make_user
-from tests.people.conftest import guardian, student, teacher
+from tests.conftest import TEST_LOGIN_PASSWORD, make_user
+from tests.people.conftest import student, teacher
 
-CHANGELISTS = ["studentprofile", "teacherprofile", "guardianprofile"]
+CHANGELISTS = [
+    "studentprofile",
+    "teacherprofile",
+    "guardianprofile",
+    "guardianstudentlink",
+]
 
 
 @pytest.fixture
@@ -26,9 +33,10 @@ def super_client(client):
 @pytest.mark.django_db
 @pytest.mark.parametrize("model", CHANGELISTS)
 def test_super_admin_sees_profile_changelist(super_client, institute_a, model):
-    student(institute_a, "s@example.com")
+    child = student(institute_a, "s@example.com")
     teacher(institute_a, "t@example.com")
-    guardian(institute_a, "g@example.com")
+    with tenant_context(institute_a):
+        enrol_guardian(child, email="g@example.com", password=TEST_LOGIN_PASSWORD)
 
     response = super_client.get(f"/django-admin/people/{model}/")
 
