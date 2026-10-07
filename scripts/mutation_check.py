@@ -179,10 +179,10 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "            return scoped\n",
     ),
     (
-        "people other roles see nothing",
+        "guardian profiles hidden from teachers",
         "apps/people/models.py",
-        "        return self.none()\n",
-        "        return self\n",
+        "student_links__student__user_id=user_id)\n        return self.none()\n",
+        "student_links__student__user_id=user_id)\n        return self\n",
     ),
     (
         "people admins see institute",
@@ -234,7 +234,7 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
     ),
     (
         "code needs tenant context",
-        "apps/people/services.py",
+        "apps/core/tenancy.py",
         "    if institute is None or current is None or current.pk != institute.pk:",
         "    if False:",
     ),
