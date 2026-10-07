@@ -94,7 +94,7 @@ Status: `[ ]` open, `[x]` done. Priority: **High** = fix before merge or before 
 | F5 | Profile save persists all four editable fields. | PR #19 | Medium | [x] |
 | F6 | Invalid profile POST shows DB name, not tampered POST value. | PR #19 | Medium | [x] |
 | F7 | Super admin profile uses the super portal shell (`data-portal="super"`). | PR #19 | Low | [x] |
-| F8 | Test passwords are plain literals in `tests/conftest.py`; GitGuardian ignore narrowed to that file only. **PR #20 ticked this but did not change the code; done in the Phase 1 audit fix.** | PR #19 | Low | [x] |
+| F8 | Test passwords are plain literals in `tests/conftest.py`; GitGuardian ignore narrowed to that file only. **PR #20 ticked this but did not change the code; done in the Phase 1 audit fix.** `.gitguardian.yaml` applies to the `ggshield` CLI only. The GitGuardian PR check ignores it and flagged `tests/conftest.py` on PR #21 (false positive, fake values). Stop PR alerts with an excluded path for `tests/` in the GitGuardian dashboard (manual, outside the repo). | PR #19 | Low | [x] |
 
 ## Review of Phase 1 (PR #20)
 

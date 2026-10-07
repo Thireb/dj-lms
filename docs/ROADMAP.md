@@ -31,7 +31,6 @@ From 2.8 on, every phase that adds a model also extends `seed_demo` with that mo
 
 ## Phase 2: People and academics
 
-- [ ] 2.8 Demo data at scale: run `seed_demo` extensions for bulk students per SPEC section 10 (not before people/academics modules exist).
 - [ ] 2.1 `people`: Student, Teacher, Guardian profiles; auto IDs (`STU-`, `TCH-`).
 - [ ] 2.2 Guardian links to students; guardian account created on enrolment.
 - [ ] 2.3 `academics`: ClassLabel, Batch, Subject (independent lists), StudentBatchSubject, TeacherBatchSubject.
@@ -39,6 +38,7 @@ From 2.8 on, every phase that adds a model also extends `seed_demo` with that mo
 - [ ] 2.5 Student and teacher list, create, edit, activate/deactivate.
 - [ ] 2.6 Bulk student upload from Excel template with error report.
 - [ ] 2.7 Portal Access: block/unblock, auto-block defaulters, exemptions, blocked page.
+- [ ] 2.8 Demo data at scale: extend `seed_demo` with bulk students per SPEC section 10. Build last in Phase 2, after 2.1 to 2.3 add the people and academics models.
 
 ## Phase 3: Lectures
 
