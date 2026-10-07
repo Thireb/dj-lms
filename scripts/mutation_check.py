@@ -339,6 +339,128 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "GuardianStudentLink, GuardianStudentLinkAdmin)\n",
         "developer_admin_site.register(GuardianStudentLink)\n",
     ),
+    (
+        "list scope filters by role",
+        "apps/academics/models.py",
+        'return scoped.filter(**{lookup: getattr(user, "pk", None)}).distinct()\n',
+        "return scoped.distinct()\n",
+    ),
+    (
+        "list scope distinct",
+        "apps/academics/models.py",
+        'return scoped.filter(**{lookup: getattr(user, "pk", None)}).distinct()\n',
+        'return scoped.filter(**{lookup: getattr(user, "pk", None)})\n',
+    ),
+    (
+        "list scope unknown role sees nothing",
+        "apps/academics/models.py",
+        "        if lookup is None:\n            return scoped.none()\n",
+        "        if lookup is None:\n            return scoped\n",
+    ),
+    (
+        "list scope admins see institute",
+        "apps/academics/models.py",
+        "        if role in INSTITUTE_WIDE_ROLES:\n            return scoped\n",
+        "        if role in INSTITUTE_WIDE_ROLES:\n            return scoped.none()\n",
+    ),
+    (
+        "student list lookup",
+        "apps/academics/models.py",
+        '    Role.STUDENT: "student_links__student__user_id",\n',
+        '    Role.STUDENT: "teacher_links__teacher__user_id",\n',
+    ),
+    (
+        "teacher sees students of own batches",
+        "apps/people/models.py",
+        "batch_subjects__batch__teacher_links__teacher__user_id=user_id\n",
+        "batch_subjects__isnull=False\n",
+    ),
+    (
+        "teacher student list distinct",
+        "apps/people/models.py",
+        "            ).distinct()\n",
+        "            )\n",
+    ),
+    (
+        "student sees teachers of own batches",
+        "apps/people/models.py",
+        'return self.filter(**{f"{students}user_id": user_id}).distinct()\n',
+        "return self.distinct()\n",
+    ),
+    (
+        "guardian sees teachers of child batches",
+        "apps/people/models.py",
+        "            return self.filter(**{lookup: user_id}).distinct()\n",
+        "            return self.distinct()\n",
+    ),
+    (
+        "class label institute check",
+        "apps/people/models.py",
+        "        if label is not None and label.institute_id != self.institute_id:",
+        "        if False:",
+    ),
+    (
+        "academics link institute check",
+        "apps/academics/models.py",
+        "if related is not None and related.institute_id != self.institute_id:",
+        "if False:",
+    ),
+    (
+        "academics link save validates",
+        "apps/academics/models.py",
+        "        self.full_clean(validate_unique=False, validate_constraints=False)\n",
+        "        pass\n",
+    ),
+    (
+        "at least one batch",
+        "apps/academics/services.py",
+        "    if not selections:\n",
+        "    if False:\n",
+    ),
+    (
+        "each batch needs a subject",
+        "apps/academics/services.py",
+        "        if not subjects:\n",
+        "        if False:\n",
+    ),
+    (
+        "pairs from this institute",
+        "apps/academics/services.py",
+        "            if item.institute_id != institute.pk:",
+        "            if False:",
+    ),
+    (
+        "new pairs must be active",
+        "apps/academics/services.py",
+        "        if not item.is_active:",
+        "        if False:",
+    ),
+    (
+        "stale pairs removed",
+        "apps/academics/services.py",
+        "        links.filter(batch_id=batch_id, subject_id=subject_id).delete()\n",
+        "        pass\n",
+    ),
+    (
+        "pairs need tenant context",
+        "apps/academics/services.py",
+        "    require_tenant_context(institute)\n",
+        "",
+    ),
+    (
+        "list admin institute read only",
+        "apps/academics/admin.py",
+        '        return ("institute",) if obj is not None else ()\n',
+        "        return ()\n",
+    ),
+    (
+        "link admin no change",
+        "apps/academics/admin.py",
+        "    def has_change_permission(self, request, obj=None):  # noqa: ANN001\n"
+        "        return False\n",
+        "    def has_change_permission(self, request, obj=None):  # noqa: ANN001\n"
+        "        return True\n",
+    ),
 ]
 
 

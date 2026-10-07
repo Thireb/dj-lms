@@ -36,3 +36,15 @@ def tenant_context(institute: Institute | None) -> Iterator[None]:
         yield
     finally:
         _current_institute.reset(token)
+
+
+class TenantContextError(RuntimeError):
+    """Raised when a service runs outside the institute it writes to."""
+
+
+def require_tenant_context(institute: Institute | None) -> None:
+    """Fail unless the current tenant context is exactly this institute."""
+    current = get_current_institute()
+    if institute is None or current is None or current.pk != institute.pk:
+        msg = "Run inside tenant_context() for this institute."
+        raise TenantContextError(msg)

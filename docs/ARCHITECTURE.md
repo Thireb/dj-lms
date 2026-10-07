@@ -127,7 +127,13 @@ People:
 - `StudentProfile` (`student_code`, father name, CNIC, date of birth, gender, guardian phone, address, city, status), `TeacherProfile` (`teacher_code`, CNIC, address, joining date, status), `GuardianProfile`. Name, email and own phone stay on `User`.
 - `CodeSequence` (institute, prefix, last number) gives `STU-001` and `TCH-001` codes in `people.services.next_code`. It locks the row, so two saves never get the same code, and numbers never go down.
 - `GuardianStudentLink` (guardian, student), one row per pair. `people.services.enrol_guardian` creates the guardian account and profile, or reuses a guardian of the same institute with that email, and adds the link.
-- `for_user` on profiles: admins and sub-admins see the institute. A student, teacher or guardian sees their own profile. A guardian also sees linked students; a student also sees their linked guardians. Teachers see students only after batches exist (2.3).
+- `for_user` on profiles: admins and sub-admins see the institute. A student, teacher or guardian sees their own profile. A guardian also sees linked students; a student also sees their linked guardians. A teacher also sees every student enrolled in a batch they teach. A student or guardian also sees the teachers of their (child's) batches. Teachers do not see guardians yet (messaging, Phase 6).
+
+Academics:
+- `ClassLabel`, `Batch`, `Subject`: name and `is_active`. Names are unique per institute, ignoring case.
+- `academics.services.set_student_batch_subjects` and `set_teacher_batch_subjects` replace a person's (batch, subject) pairs. Rules: at least one batch, at least one subject per batch, same institute, and inactive rows cannot be added (they may stay if already linked).
+- `for_user`: admins see the institute. A teacher sees their batches and subjects, and the enrolments in their batches. A student or guardian sees their (child's) batches, subjects, enrolments, and the teaching links of those batches. Class labels are admin only.
+- Reverse relations (for example `teacher.batch_subjects`) use the fail-closed tenant manager, so they return nothing outside a tenant context.
 
 Operations:
 - `Lecture` (batch, subject(s), teacher, starts_at UTC, duration, status, delivery: manual_link / in_person / zoom later, meeting_url).

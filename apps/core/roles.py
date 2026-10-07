@@ -14,6 +14,12 @@ class Role:
     GUARDIAN = "guardian"
 
 
+# Roles whose for_user scope is the whole institute (ARCHITECTURE.md section 4).
+INSTITUTE_WIDE_ROLES = frozenset(
+    {Role.SUPER_ADMIN, Role.INSTITUTE_ADMIN, Role.SUB_ADMIN}
+)
+
+
 def user_role(user: Any) -> str | None:
     role = getattr(user, "role", None)
     if role is not None:

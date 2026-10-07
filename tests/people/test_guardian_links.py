@@ -5,11 +5,14 @@ from __future__ import annotations
 import pytest
 from apps.accounts.models import User
 from apps.core.roles import Role
-from apps.core.tenancy import clear_current_institute, tenant_context
+from apps.core.tenancy import (
+    TenantContextError,
+    clear_current_institute,
+    tenant_context,
+)
 from apps.people.models import GuardianProfile, GuardianStudentLink, StudentProfile
 from apps.people.services import (
     GUARDIAN_EMAIL_TAKEN,
-    TenantContextError,
     enrol_guardian,
 )
 from django.core.exceptions import ValidationError

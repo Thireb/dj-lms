@@ -11,12 +11,7 @@ from django.db import models
 
 from apps.core.managers import TenantManager, TenantQuerySet, UnscopedTenantManager
 from apps.core.models import TenantModel
-from apps.core.roles import Role, user_role
-
-# Roles that see every profile in their own institute (ARCHITECTURE.md section 4).
-INSTITUTE_WIDE_ROLES = frozenset(
-    {Role.SUPER_ADMIN, Role.INSTITUTE_ADMIN, Role.SUB_ADMIN}
-)
+from apps.core.roles import INSTITUTE_WIDE_ROLES, Role, user_role
 
 cnic_validator = RegexValidator(r"^\d{13}$", "CNIC must be exactly 13 digits.")
 
@@ -35,8 +30,8 @@ class Gender(models.TextChoices):
 class OwnProfileQuerySet(TenantQuerySet):
     """Admins see the institute; the profile's own user sees only their row.
 
-    Other roles see a profile only through a link (``for_linked_role``).
-    Teachers reach students through batches later (roadmap 2.3).
+    Other roles see a profile only through a link (``for_linked_role``):
+    guardian links (people) or shared batches (academics).
     """
 
     own_role: str = ""
@@ -61,11 +56,26 @@ class StudentProfileQuerySet(OwnProfileQuerySet):
     def for_linked_role(self, role: str | None, user_id: Any) -> OwnProfileQuerySet:
         if role == Role.GUARDIAN:
             return self.filter(guardian_links__guardian__user_id=user_id)
+        if role == Role.TEACHER:
+            # Every student enrolled in a batch the teacher teaches.
+            return self.filter(
+                batch_subjects__batch__teacher_links__teacher__user_id=user_id
+            ).distinct()
         return self.none()
 
 
 class TeacherProfileQuerySet(OwnProfileQuerySet):
     own_role = Role.TEACHER
+
+    def for_linked_role(self, role: str | None, user_id: Any) -> OwnProfileQuerySet:
+        # Students and guardians see the teachers of their batches.
+        students = "batch_subjects__batch__student_links__student__"
+        if role == Role.STUDENT:
+            return self.filter(**{f"{students}user_id": user_id}).distinct()
+        if role == Role.GUARDIAN:
+            lookup = f"{students}guardian_links__guardian__user_id"
+            return self.filter(**{lookup: user_id}).distinct()
+        return self.none()
 
 
 class GuardianProfileQuerySet(OwnProfileQuerySet):
@@ -149,6 +159,13 @@ class StudentProfile(ProfileBase):
         related_name="student_profile",
     )
     student_code = models.CharField(max_length=16)
+    class_label = models.ForeignKey(
+        "academics.ClassLabel",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="students",
+    )
     father_name = models.CharField(max_length=150, blank=True, default="")
     cnic = models.CharField(
         "CNIC", max_length=13, blank=True, default="", validators=[cnic_validator]
@@ -164,6 +181,12 @@ class StudentProfile(ProfileBase):
         max_length=8, choices=ProfileStatus.choices, default=ProfileStatus.ACTIVE
     )
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def clean(self) -> None:
+        super().clean()
+        label = self.class_label
+        if label is not None and label.institute_id != self.institute_id:
+            raise ValidationError({"class_label": "Must belong to the same institute."})
 
     objects = TenantManager.from_queryset(StudentProfileQuerySet)()
     unscoped = UnscopedTenantManager.from_queryset(StudentProfileQuerySet)()
