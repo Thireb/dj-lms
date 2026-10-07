@@ -293,3 +293,14 @@ def test_sub_admin_without_people_menu_gets_403(client, institute_a) -> None:
     )
 
     assert client.get(_url("list")).status_code == 403
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("role", [Role.TEACHER, Role.STUDENT, Role.GUARDIAN])
+@pytest.mark.parametrize("action", ["list", "create"])
+def test_other_roles_get_403(client, institute_a, role, action) -> None:
+    client.force_login(
+        make_user(email="x@example.com", role=role, institute=institute_a)
+    )
+
+    assert client.get(_url(action)).status_code == 403
