@@ -16,6 +16,9 @@ import pytest
 from apps.academics.models import Batch, ClassLabel, Subject
 from apps.accounts.models import User
 from apps.core.roles import Role
+from apps.core.tenancy import tenant_context
+from apps.people.models import TeacherProfile
+from apps.people.services import create_teacher_profile
 from apps.ui.views.pages import PortalPageView
 from django.test import Client
 from django.urls import URLPattern, URLResolver, get_resolver, reverse
@@ -79,6 +82,8 @@ def test_walker_finds_the_product_urls() -> None:
         "accounts:profile",
         "admin:batch_list",
         "admin:batch_edit",
+        "admin:teacher_list",
+        "admin:teacher_edit",
     } <= names
 
 
@@ -97,23 +102,47 @@ def test_every_product_view_declares_roles(route: Route) -> None:
 
 
 # Routes whose pk is not an institute: build a row in the institute instead.
-ROUTE_OBJECTS = {
-    f"admin:{prefix}_{action}": model
-    for prefix, model in (
-        ("class", ClassLabel),
-        ("batch", Batch),
-        ("subject", Subject),
+def _name_row(model):
+    def build(institute) -> int:
+        # unscoped: test setup outside a tenant context.
+        row, _ = model.unscoped.get_or_create(institute=institute, name="Walker")
+        return row.pk
+
+    return build
+
+
+def _teacher(institute) -> int:
+    # unscoped: test setup outside a tenant context.
+    existing = TeacherProfile.unscoped.filter(institute=institute).first()
+    if existing is not None:
+        return existing.pk
+    user = make_user(
+        email="teacher-row-walker@example.com",
+        role=Role.TEACHER,
+        institute=institute,
     )
-    for action in ("edit", "status")
+    with tenant_context(institute):
+        return create_teacher_profile(user).pk
+
+
+ROUTE_OBJECTS = {
+    **{
+        f"admin:{prefix}_{action}": _name_row(model)
+        for prefix, model in (
+            ("class", ClassLabel),
+            ("batch", Batch),
+            ("subject", Subject),
+        )
+        for action in ("edit", "status")
+    },
+    "admin:teacher_edit": _teacher,
+    "admin:teacher_status": _teacher,
 }
 
 
 def _url(route: Route, institute) -> str:
-    pk = institute.pk
-    model = ROUTE_OBJECTS.get(route.name)
-    if model is not None:
-        # unscoped: test setup outside a tenant context.
-        pk = model.unscoped.get_or_create(institute=institute, name="Walker")[0].pk
+    build = ROUTE_OBJECTS.get(route.name)
+    pk = build(institute) if build is not None else institute.pk
     kwargs = {name: pk for name in route.kwarg_names}
     return reverse(route.name, kwargs=kwargs)
 

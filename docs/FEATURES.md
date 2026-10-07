@@ -58,8 +58,8 @@ Setup order the reference teaches: Campus, Classes, Batches, Subjects, Fee Plans
 
 ## 4. Teachers (Admin)
 
-- [ ] Add / edit teacher: name, login, batches*, subjects for each batch*. Saving links the teacher to those batches and subjects.
-- [ ] Teacher code auto-filled (like `TCH-001`).
+- [x] Add / edit teacher: name, login, batches*, subjects for each batch*. Saving links the teacher to those batches and subjects.
+- [x] Teacher code auto-filled (like `TCH-001`).
 - [ ] All Teachers list; Teacher Lecture History.
 
 ## 5. Lectures (B)

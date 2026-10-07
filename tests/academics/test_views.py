@@ -12,8 +12,8 @@ from apps.core.roles import Role
 from django.test import Client, RequestFactory
 from django.urls import reverse
 
-from tests.academics.conftest import make_lists
 from tests.conftest import make_user
+from tests.school import make_lists
 
 KINDS = [
     pytest.param(ClassLabel, "class", "classes", id="class"),

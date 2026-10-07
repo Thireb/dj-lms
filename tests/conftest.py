@@ -12,6 +12,9 @@ from apps.institutes.models import Institute, Plan
 
 from tests.testapp.models import TenantProbe
 
+# Shared fixtures that need the people and academics apps.
+pytest_plugins = ["tests.school"]
+
 # Fake test-only passwords. Never real credentials (AGENTS.md section 6).
 TEST_LOGIN_PASSWORD = "fake-login-Pass-7kM"
 TEST_NEW_PASSWORD = "fake-new-Pass-4nP"

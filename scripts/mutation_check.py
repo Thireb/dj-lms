@@ -569,6 +569,113 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "    menu_key = menu_keys.INSTITUTE\n",
         "    menu_key = menu_keys.DASHBOARDS\n",
     ),
+    (
+        "teacher status changes sign-in",
+        "apps/people/services.py",
+        "    teacher.user.is_active = is_active\n",
+        "    pass\n",
+    ),
+    (
+        "teacher status changes profile",
+        "apps/people/services.py",
+        "    teacher.status = ProfileStatus.ACTIVE if is_active"
+        " else ProfileStatus.INACTIVE\n",
+        "    pass\n",
+    ),
+    (
+        "teacher email must be free",
+        "apps/people/services.py",
+        '    email = _check_email_free(email, "email")\n',
+        "    email = email.strip().lower()\n",
+    ),
+    (
+        "teacher may keep own email",
+        "apps/people/services.py",
+        "        taken = taken.exclude(pk=user.pk)\n",
+        "        pass\n",
+    ),
+    (
+        "teacher password validated",
+        "apps/people/services.py",
+        "        validate_password(password, user)\n"
+        "    except ValidationError as error:\n"
+        '        raise ValidationError({"password"',
+        "        pass\n"
+        "    except ValidationError as error:\n"
+        '        raise ValidationError({"password"',
+    ),
+    (
+        "teacher create atomic",
+        "apps/people/services.py",
+        "@transaction.atomic\ndef create_teacher(",
+        "def create_teacher(",
+    ),
+    (
+        "teacher pair errors on field",
+        "apps/people/services.py",
+        '        raise ValidationError({"batch_subjects": error.messages}) from error',
+        "        raise",
+    ),
+    (
+        "teacher list scoped",
+        "apps/people/services.py",
+        "TeacherProfile.objects.for_user(user).select_related",
+        "TeacherProfile.unscoped.select_related",
+    ),
+    (
+        "teacher batch filter",
+        "apps/people/services.py",
+        "teachers = teachers.filter(batch_subjects__batch_id=batch_id).distinct()",
+        "teachers = teachers",
+    ),
+    (
+        "teacher status filter checked",
+        "apps/people/services.py",
+        "    if status in ProfileStatus.values:",
+        "    if status:",
+    ),
+    (
+        "teacher object scoped",
+        "apps/people/views.py",
+        "        teachers = TeacherProfile.objects.for_user(self.request.user)\n",
+        "        teachers = TeacherProfile.unscoped.all()\n",
+    ),
+    (
+        "teacher status action checked",
+        "apps/people/views.py",
+        '        if action not in {"activate", "deactivate"}:',
+        "        if False:",
+    ),
+    (
+        "teacher pages roles",
+        "apps/people/views.py",
+        "    allowed_roles = [Role.INSTITUTE_ADMIN, Role.SUB_ADMIN]\n",
+        "    allowed_roles = [Role.INSTITUTE_ADMIN, Role.SUB_ADMIN, Role.TEACHER]\n",
+    ),
+    (
+        "teacher pages menu key",
+        "apps/people/views.py",
+        "    menu_key = menu_keys.PEOPLE\n",
+        "    menu_key = menu_keys.DASHBOARDS\n",
+    ),
+    (
+        "pair field offers active only",
+        "apps/academics/forms.py",
+        "                    if (batch.is_active and subject.is_active)",
+        "                    if True",
+    ),
+    (
+        "pair field keeps linked pairs",
+        "apps/academics/forms.py",
+        "                    or (batch.pk, subject.pk) in kept",
+        "                    or False",
+    ),
+    (
+        "filter bar selects",
+        "apps/ui/templates/ui/components/filter_bar.html",
+        "{% if f.options %}",
+        "{% if False %}",
+    ),
 ]
 
 

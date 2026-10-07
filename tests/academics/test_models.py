@@ -16,9 +16,9 @@ from apps.people.models import StudentProfile
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 
-from tests.academics.conftest import make_lists
 from tests.conftest import FakeUser
 from tests.people.conftest import student, teacher
+from tests.school import make_lists
 
 ALL_MODELS = [ClassLabel, Batch, Subject, StudentBatchSubject, TeacherBatchSubject]
 NAME_LISTS = [ClassLabel, Batch, Subject]

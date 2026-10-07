@@ -1,4 +1,4 @@
-"""A small fake school for academics tests. Fake names only."""
+"""A small fake school for tests, loaded by tests/conftest.py. Fake names only."""
 
 from __future__ import annotations
 

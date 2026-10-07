@@ -4,6 +4,7 @@ from django.urls import path
 
 from apps.academics import views as academics
 from apps.institutes.views import CampusProfilePage, InstituteSettingsPage
+from apps.people import views as people
 from apps.ui.views import portal_home
 
 app_name = "admin"
@@ -51,5 +52,17 @@ urlpatterns = [
         "subjects/<int:pk>/status/",
         academics.SubjectStatusView.as_view(),
         name="subject_status",
+    ),
+    path("teachers/", people.TeacherListPage.as_view(), name="teacher_list"),
+    path("teachers/add/", people.TeacherCreatePage.as_view(), name="teacher_create"),
+    path(
+        "teachers/<int:pk>/edit/",
+        people.TeacherEditPage.as_view(),
+        name="teacher_edit",
+    ),
+    path(
+        "teachers/<int:pk>/status/",
+        people.TeacherStatusView.as_view(),
+        name="teacher_status",
     ),
 ]
