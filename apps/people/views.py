@@ -7,19 +7,30 @@ from typing import Any
 from urllib.parse import urlencode
 
 from django.contrib import messages
+from django.core import signing
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
+from django.utils.cache import patch_cache_control
 
 from apps.academics.models import Batch, ClassLabel
 from apps.core import menus as menu_keys
 from apps.core.roles import Role
+from apps.people.bulk_upload import (
+    RowCheck,
+    UploadError,
+    build_template,
+    check_rows,
+    import_rows,
+    read_rows,
+)
 from apps.people.forms import (
     PersonForm,
     StudentEnrolForm,
     StudentForm,
+    StudentUploadForm,
     TeacherCreateForm,
     TeacherForm,
 )
@@ -35,11 +46,19 @@ from apps.people.services import (
     update_student,
     update_teacher,
 )
-from apps.people.ui import StudentTable, TeacherTable, profile_status_dialog
-from apps.ui.components.actions import Button
+from apps.people.ui import (
+    BulkPreviewTable,
+    StudentTable,
+    TeacherTable,
+    profile_status_dialog,
+)
+from apps.ui.components.actions import Button, ConfirmDialog
+from apps.ui.components.block_stack import BlockStack
 from apps.ui.components.data import EmptyState
+from apps.ui.components.forms import CrispyForm, PortalPostForm
+from apps.ui.components.layout import SectionCard
 from apps.ui.components.nav import FilterBar, Pagination
-from apps.ui.views.pages import FormPage, ListPage, PortalPageView
+from apps.ui.views.pages import DetailPage, FormPage, ListPage, PortalPageView
 
 PAGE_SIZE = 25
 STATUS_OPTIONS = [("", "Any status"), *ProfileStatus.choices]
@@ -376,3 +395,136 @@ class StudentStatusView(ProfileStatusView):
     url_prefix = "student"
     model = StudentProfile
     set_active = staticmethod(set_student_active)
+
+
+# Bulk upload (roadmap 2.6, SPEC 5)
+
+UPLOAD_MAX_AGE = 30 * 60  # seconds a checked file stays importable
+
+
+def _students(count: int) -> str:
+    return f"{count} student" if count == 1 else f"{count} students"
+
+
+def _upload_salt(request: HttpRequest) -> str:
+    # The signed rows only work for the same admin in the same institute.
+    return f"people.bulk-upload:{request.user.pk}:{request.user.institute_id}"
+
+
+class StudentBulkUploadPage(PeopleAdminMixin, DetailPage):
+    """Upload the file, then see every row checked before anything is saved."""
+
+    title = "Bulk upload students"
+    url_prefix = "student"
+    checks: list[RowCheck] | None = None
+    form: StudentUploadForm | None = None
+
+    def get_actions(self) -> list[Any]:
+        return [
+            Button(
+                "Download template",
+                url=self.url("bulk_template"),
+                variant="secondary",
+            )
+        ]
+
+    def post(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        self.form = StudentUploadForm(
+            request.POST, request.FILES, cancel_url=self.url("list")
+        )
+        if self.form.is_valid():
+            try:
+                rows = read_rows(self.form.cleaned_data["file"])
+            except UploadError as error:
+                self.form.add_error("file", str(error))
+            else:
+                self.checks = check_rows(self.get_institute(), rows)
+        response = self.render_to_response(self.get_context_data())
+        # The preview carries the checked rows, passwords included.
+        patch_cache_control(response, no_store=True, private=True)
+        return response
+
+    def get_primary_cards(self) -> list[Any]:
+        form = self.form or StudentUploadForm(cancel_url=self.url("list"))
+        form.helper.disable_csrf = True
+        cards = [
+            SectionCard(
+                title="Upload a file",
+                body=PortalPostForm(
+                    action=self.url("bulk_upload"), body=CrispyForm(form=form)
+                ),
+            )
+        ]
+        if self.checks is not None:
+            cards.append(self.preview_card())
+        return cards
+
+    def preview_card(self) -> SectionCard:
+        good = [row for row in self.checks if row.ok]
+        bad = len(self.checks) - len(good)
+        blocks: list[Any] = [
+            f"Rows ready: {len(good)}. Rows with errors (skipped): {bad}.",
+            BulkPreviewTable(self.checks),
+        ]
+        if good:
+            ready = [{"number": row.number, "values": row.values} for row in good]
+            payload = signing.dumps(
+                ready, salt=_upload_salt(self.request), compress=True
+            )
+            blocks.append(
+                ConfirmDialog(
+                    f"Import {_students(len(good))}? Each one gets a student and a "
+                    "guardian sign-in.",
+                    f"Import {_students(len(good))}",
+                    url=self.url("bulk_import"),
+                    variant="primary",
+                    fields=[("rows", payload)],
+                )
+            )
+        return SectionCard(title="Check the rows", body=BlockStack(blocks=blocks))
+
+
+class StudentBulkImportView(PeopleAdminMixin, PortalPageView):
+    """POST-only: import the rows checked on the preview page."""
+
+    http_method_names = ["post"]
+    url_prefix = "student"
+
+    def post(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        try:
+            rows = signing.loads(
+                request.POST.get("rows", ""),
+                salt=_upload_salt(request),
+                max_age=UPLOAD_MAX_AGE,
+            )
+        except signing.BadSignature:
+            messages.error(request, "This upload has expired. Upload the file again.")
+            return HttpResponseRedirect(self.url("bulk_upload"))
+        result = import_rows(self.get_institute(), rows)
+        if result.codes:
+            messages.success(
+                request,
+                f"Imported {_students(len(result.codes))}: "
+                f"{result.codes[0]} to {result.codes[-1]}.",
+            )
+        for row in result.failed:
+            messages.error(request, f"Row {row.number}: {' '.join(row.errors)}")
+        return HttpResponseRedirect(self.url("list"))
+
+
+class StudentBulkTemplateView(PeopleAdminMixin, PortalPageView):
+    """The empty Excel template with a Help sheet."""
+
+    url_prefix = "student"
+
+    def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        response = HttpResponse(
+            build_template(),
+            content_type=(
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            ),
+        )
+        response["Content-Disposition"] = (
+            'attachment; filename="student-upload-template.xlsx"'
+        )
+        return response

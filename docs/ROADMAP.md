@@ -40,7 +40,7 @@ From 2.8 on, every phase that adds a model also extends `seed_demo` with that mo
 - [x] 2.5 Student and teacher list, create, edit, activate/deactivate.
   - [x] 2.5a Teachers: list (search, batch and status filters), add, edit, activate/deactivate.
   - [x] 2.5b Students: list, enrol (with guardian), edit, activate/deactivate. Fee plans wait for Phase 7.
-- [ ] 2.6 Bulk student upload from Excel template with error report.
+- [x] 2.6 Bulk student upload from Excel template with error report.
 - [ ] 2.7 Portal Access: block/unblock, auto-block defaulters, exemptions, blocked page.
 - [ ] 2.8 Demo data at scale: extend `seed_demo` with bulk students per SPEC section 10. Build last in Phase 2, after 2.1 to 2.3 add the people and academics models.
 

@@ -162,3 +162,24 @@ class StudentEnrolForm(StudentForm):
             "guardian_email",
             "guardian_password",
         ]
+
+
+class StudentUploadForm(BaseForm):
+    """Bulk upload step 1 (SPEC 5). The service reads and checks the rows."""
+
+    save_label = "Check file"
+
+    file = forms.FileField(
+        label="Excel file (.xlsx)",
+        widget=forms.ClearableFileInput(attrs={"accept": ".xlsx"}),
+    )
+
+    def __init__(self, *args, cancel_url: str, **kwargs):
+        self.cancel_url = cancel_url
+        super().__init__(*args, **kwargs)
+
+    def clean_file(self):
+        upload = self.cleaned_data["file"]
+        if not upload.name.lower().endswith(".xlsx"):
+            raise forms.ValidationError("Upload an .xlsx file made from the template.")
+        return upload

@@ -90,3 +90,23 @@ class StudentTable(DataTable):
         Column("actions", "", _actions),
     ]
     empty_title = "No students match these filters."
+
+
+def _row_result(row) -> BlockStack:
+    if row.ok:
+        return BlockStack(blocks=[Badge("Ready", tone="success")])
+    return BlockStack(blocks=[Badge("Has errors", tone="danger"), *row.errors])
+
+
+class BulkPreviewTable(DataTable):
+    """One line per uploaded row: what will be imported, or why not."""
+
+    columns = [
+        Column("number", "Row"),
+        Column("name", "Name", lambda row: row.values["full_name"]),
+        Column("email", "Student email", lambda row: row.values["student_email"]),
+        Column("guardian", "Guardian email", lambda row: row.values["guardian_email"]),
+        Column("batches", "Batches", lambda row: row.values["batches"]),
+        Column("result", "Result", _row_result),
+    ]
+    empty_title = "No rows."

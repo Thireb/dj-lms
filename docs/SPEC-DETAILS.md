@@ -237,6 +237,8 @@ Full name*, Institute name*, Phone*, Email, Website, Message*. Saved for Super A
 - Excel template with one row per student. Columns:
   `full_name*, father_name, cnic, dob (YYYY-MM-DD), gender, class_label, phone, guardian_name*, guardian_phone*, address, city, batches* (comma list), subjects* (BatchName:Subject1|Subject2; next batch after a semicolon), fee_plans* (comma list), discount, student_email*, student_password*, guardian_email*, guardian_password*`
 - Steps: download template, upload, preview with row-level errors, confirm to import valid rows only.
+- Built in 2.6 without `fee_plans` and `discount` (they come with Phase 7). Limits: one `.xlsx` file up to 1 MB and 50 rows. Column names are not case sensitive. Batch, subject and class names must match active rows of the institute (case is ignored). `guardian_password` may be blank when the guardian already has an account, or when an earlier row in the same file creates that guardian.
+- The checked rows travel to the import step in a signed form field (valid 30 minutes, only for the admin who uploaded the file). Import checks every row again and enrols each good row in its own transaction.
 - Errors listed per row (missing field, unknown batch/subject/plan, duplicate email). Import is all-or-nothing per row, never partial per row.
 
 ## 6. Business rules

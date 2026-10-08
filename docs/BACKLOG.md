@@ -153,6 +153,8 @@ Status: `[ ]` open, `[x]` done. Priority: **High** = fix before merge or before 
 | S4 | `static/css/src/input.css` `@source` paths start with `../../../../`, which is outside the repo. Classes are still found by Tailwind's automatic detection. Fix the paths to `../../../`. | 2.3b build | Low | [ ] |
 | S5 | `apps/institutes/urls/admin.py` is not included anywhere; admin URLs live in `apps/ui/urlconf/admin.py`. Delete it or include it. | 2.3b build | Low | [ ] |
 | S6 | The URL walker only checked roles outside `allowed_roles`, so adding `Role.TEACHER` to an admin page passed every test (found by the 2.5a mutation check). Fixed: the walker now asserts admin portal views allow only `institute_admin` and `sub_admin`. | 2.5a build | Medium | [x] |
+| S7 | `DetailPageBody` rendered its cards without `request`, so a form inside a card had no CSRF token (same cause as S2). Fixed with `render_child`; test added. | 2.6 build | Medium | [x] |
+| S8 | Bulk upload runs in the web request: about 0.55 s of password hashing per row, so files are capped at 50 rows. Move the import to a Celery task when Celery arrives (roadmap 3.2), then raise the cap. | 2.6 build | Low | [ ] |
 
 ## Later (deployment hardening, Phase 12)
 

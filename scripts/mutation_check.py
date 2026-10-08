@@ -736,6 +736,98 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "        if current_label is not None:",
         "        if False:",
     ),
+    (
+        "upload file size limit",
+        "apps/people/bulk_upload.py",
+        "    if len(data) > MAX_FILE_BYTES:",
+        "    if False:",
+    ),
+    (
+        "upload row limit",
+        "apps/people/bulk_upload.py",
+        "            if len(found) == MAX_ROWS:",
+        "            if False:",
+    ),
+    (
+        "upload required columns",
+        "apps/people/bulk_upload.py",
+        "        if missing:\n            raise UploadError",
+        "        if False:\n            raise UploadError",
+    ),
+    (
+        "upload batches match subjects",
+        "apps/people/bulk_upload.py",
+        "    if {batch.lower() for batch, _ in groups} != listed:",
+        "    if False:",
+    ),
+    (
+        "upload lists are institute only",
+        "apps/people/bulk_upload.py",
+        "rows = model.objects.filter(institute=institute, is_active=True)",
+        "rows = model.unscoped.filter(is_active=True)",
+    ),
+    (
+        "upload duplicate student email",
+        "apps/people/bulk_upload.py",
+        "    if email in student_emails or email in new_guardians:",
+        "    if False:",
+    ),
+    (
+        "upload guardian of same institute only",
+        "apps/people/bulk_upload.py",
+        "if existing.role != Role.GUARDIAN or existing.institute_id != institute.pk:",
+        "if existing.role != Role.GUARDIAN:",
+    ),
+    (
+        "upload new guardian needs password",
+        "apps/people/bulk_upload.py",
+        '        if not values.get("guardian_password"):',
+        "        if False:",
+    ),
+    (
+        "upload sibling shares new guardian",
+        "apps/people/bulk_upload.py",
+        '            new_guardians.add(row.values["guardian_email"].lower())\n',
+        "",
+    ),
+    (
+        "upload checks again on import",
+        "apps/people/bulk_upload.py",
+        "        if not row.ok:\n"
+        "            failed.append(row)\n"
+        "            continue\n",
+        "",
+    ),
+    (
+        "upload check needs tenant context",
+        "apps/people/bulk_upload.py",
+        "    require_tenant_context(institute)\n    lookups = ",
+        "    lookups = ",
+    ),
+    (
+        "upload payload salt per admin",
+        "apps/people/views.py",
+        'return f"people.bulk-upload:{request.user.pk}:{request.user.institute_id}"',
+        'return "people.bulk-upload"',
+    ),
+    (
+        "upload preview not cached",
+        "apps/people/views.py",
+        "        patch_cache_control(response, no_store=True, private=True)\n",
+        "",
+    ),
+    (
+        "upload xlsx extension",
+        "apps/people/forms.py",
+        '        if not upload.name.lower().endswith(".xlsx"):',
+        "        if False:",
+    ),
+    (
+        "detail body passes request",
+        "apps/ui/components/page_layouts.py",
+        "ctx[key] = [render_child(card, request) for card in ctx[key]]",
+        "ctx[key] = [render_child(card) for card in ctx[key]]",
+    ),
 ]
 
 
