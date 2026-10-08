@@ -11,6 +11,7 @@ from django.contrib.auth import authenticate, login, update_session_auth_hash
 from django.db import transaction
 from django.http import HttpRequest
 from django.urls import NoReverseMatch, reverse
+from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 
 from apps.accounts.models import SetPasswordToken, User
@@ -122,6 +123,19 @@ def create_set_password_token(
 ) -> CreatedSetPasswordToken:
     plaintext_key, token = SetPasswordToken.create_for_user(user, ttl_hours=ttl_hours)
     return CreatedSetPasswordToken(key=plaintext_key, token=token)
+
+
+@transaction.atomic
+def reissue_set_password_token(user: User) -> CreatedSetPasswordToken:
+    """A new one-time link; every unused older link stops working (audit M2)."""
+    SetPasswordToken.objects.filter(user=user, used_at__isnull=True).update(
+        used_at=timezone.now()
+    )
+    return create_set_password_token(user)
+
+
+def set_password_path(key: str) -> str:
+    return reverse("accounts:set_password", kwargs={"token": key})
 
 
 def update_profile(

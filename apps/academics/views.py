@@ -22,6 +22,7 @@ from apps.academics.services import (
 )
 from apps.academics.ui import NameListTable, status_dialog
 from apps.core import menus as menu_keys
+from apps.core.query import search_param
 from apps.core.roles import Role
 from apps.ui.components.actions import Button
 from apps.ui.components.data import EmptyState
@@ -62,7 +63,7 @@ class NameListPage(NameListMixin, ListPage):
         return self.plural.capitalize()
 
     def get_search(self) -> str:
-        return self.request.GET.get("q", "").strip()
+        return search_param(self.request.GET.get("q"))
 
     def get_actions(self) -> list[Any]:
         return [Button(f"Add {self.noun}", url=self.url("create"))]

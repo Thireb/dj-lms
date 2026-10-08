@@ -338,3 +338,13 @@ class ChangePasswordView(AccountFormPage):
         )
         messages.success(self.request, "Password changed.")
         return HttpResponseRedirect(self.get_success_url())
+
+
+def root_redirect(request: HttpRequest) -> HttpResponse:
+    """``/``: signed-in users go to their portal, everyone else to sign in (L7).
+
+    The public site (roadmap 11.1) replaces this for anonymous visitors.
+    """
+    if request.user.is_authenticated:
+        return redirect(post_login_redirect_url(request.user))
+    return redirect("accounts:login")

@@ -21,6 +21,7 @@ from django.utils.dateformat import format as format_date
 from apps.academics.models import Batch, ClassLabel
 from apps.core import menus as menu_keys
 from apps.core.menus import user_has_menu
+from apps.core.query import id_param, search_param
 from apps.core.roles import Role
 from apps.people.bulk_upload import (
     RowCheck,
@@ -118,11 +119,14 @@ class PeopleListPage(PeopleAdminMixin, ListPage):
         return [Button(self.create_label, url=self.url("create"))]
 
     def get_filters(self) -> dict[str, str]:
-        return {key: self.request.GET.get(key, "").strip() for key in self.filter_keys}
+        # Every value is shown back in the filter bar, so all are cleaned.
+        return {
+            key: search_param(self.request.GET.get(key)) for key in self.filter_keys
+        }
 
     @staticmethod
     def id_filter(value: str) -> int | None:
-        return int(value) if value.isdigit() else None
+        return id_param(value)
 
     def get_components(self) -> dict[str, Any]:
         filters = self.get_filters()
@@ -634,7 +638,7 @@ class AdminDashboardPage(DashboardPage):
     def get_sections(self) -> list[Any]:
         data = self.data
         people_link = self.can_open(menu_keys.PEOPLE)
-        return [
+        sections = [
             SectionCard(
                 title="Active people",
                 body=BlockStack(
@@ -654,15 +658,21 @@ class AdminDashboardPage(DashboardPage):
                     ]
                 ),
             ),
+        ]
+        if not people_link:
+            # Names of people are People-menu data, not Dashboards data (M9).
+            return sections
+        return [
+            *sections,
             SectionCard(
                 title="Recent students",
                 body=RecentStudentTable(data.recent_students),
-                link_url=reverse("admin:student_list") if people_link else None,
+                link_url=reverse("admin:student_list"),
             ),
             SectionCard(
                 title="Recent teachers",
                 body=RecentTeacherTable(data.recent_teachers),
-                link_url=reverse("admin:teacher_list") if people_link else None,
+                link_url=reverse("admin:teacher_list"),
             ),
         ]
 

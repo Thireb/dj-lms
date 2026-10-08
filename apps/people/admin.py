@@ -10,7 +10,11 @@ from apps.people.models import (
 
 
 class ProfileAdmin(TenantAdmin):
-    """Read and edit only. Profiles get their codes from people.services."""
+    """Read and edit only. Profiles get their codes from people.services.
+
+    Status is read-only: it must change together with User.is_active, which
+    only the people services do (audit L5).
+    """
 
     def has_add_permission(self, request):  # noqa: ANN001
         return False
@@ -19,13 +23,13 @@ class ProfileAdmin(TenantAdmin):
 class StudentProfileAdmin(ProfileAdmin):
     list_display = ("student_code", "user", "institute", "status")
     list_filter = ("status",)
-    readonly_fields = ("student_code", "institute", "user")
+    readonly_fields = ("student_code", "institute", "user", "status")
 
 
 class TeacherProfileAdmin(ProfileAdmin):
     list_display = ("teacher_code", "user", "institute", "status")
     list_filter = ("status",)
-    readonly_fields = ("teacher_code", "institute", "user")
+    readonly_fields = ("teacher_code", "institute", "user", "status")
 
 
 class GuardianProfileAdmin(ProfileAdmin):

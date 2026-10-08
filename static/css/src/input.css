@@ -1,8 +1,13 @@
 @import "tailwindcss";
 
-@source "../../../../templates/**/*.html";
-@source "../../../../apps/**/templates/**/*.html";
+@source "../../../templates/**/*.html";
+@source "../../../apps/**/templates/**/*.html";
 @source inline("bg-primary");
+
+/* Alpine hides x-cloak items until it starts, so they never flash (audit L6). */
+[x-cloak] {
+  display: none !important;
+}
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
