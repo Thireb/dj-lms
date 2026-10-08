@@ -828,6 +828,66 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "ctx[key] = [render_child(card, request) for card in ctx[key]]",
         "ctx[key] = [render_child(card) for card in ctx[key]]",
     ),
+    (
+        "dashboard counts scoped",
+        "apps/people/dashboard.py",
+        "    totals = model.objects.for_user(user).aggregate(",
+        "    totals = model.unscoped.aggregate(",
+    ),
+    (
+        "dashboard active count filter",
+        "apps/people/dashboard.py",
+        'active=Count("pk", filter=Q(status=ProfileStatus.ACTIVE))',
+        'active=Count("pk")',
+    ),
+    (
+        "running batches need active students",
+        "apps/people/dashboard.py",
+        "        student_links__student__status=ProfileStatus.ACTIVE",
+        "        student_links__isnull=False",
+    ),
+    (
+        "running batches distinct",
+        "apps/people/dashboard.py",
+        "    ).distinct()\n",
+        "    )\n",
+    ),
+    (
+        "dashboard batches scoped",
+        "apps/people/dashboard.py",
+        "    batches = Batch.objects.for_user(user)\n",
+        "    batches = Batch.unscoped.all()\n",
+    ),
+    (
+        "quick actions follow menus",
+        "apps/people/views.py",
+        "            if self.can_open(key)\n",
+        "",
+    ),
+    (
+        "menu helper sub-admin keys",
+        "apps/core/menus.py",
+        '        return key in (getattr(user, "allowed_menus", None) or [])',
+        "        return True",
+    ),
+    (
+        "dashboard roles",
+        "apps/people/views.py",
+        "    menu_key = menu_keys.DASHBOARDS\n",
+        "    menu_key = menu_keys.PEOPLE\n",
+    ),
+    (
+        "dashboard hero slot",
+        "apps/ui/templates/ui/layouts/pages/dashboard.html",
+        "  {% if hero %}{{ hero }}{% endif %}\n",
+        "",
+    ),
+    (
+        "badge tone colors",
+        "apps/ui/templates/ui/components/badge.html",
+        "{% if tone == 'success' %}bg-success/10 text-success",
+        "{% if False %}bg-success/10 text-success",
+    ),
 ]
 
 

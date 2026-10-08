@@ -16,10 +16,12 @@ class DashboardPageBody(Component):
         stat_cards=None,
         quick_actions=None,
         sections=None,
+        hero=None,
         **props,
     ):
         super().__init__(
             header=header,
+            hero=hero,
             stat_cards=stat_cards or [],
             quick_actions=quick_actions or [],
             sections=sections or [],
@@ -32,6 +34,7 @@ class DashboardPageBody(Component):
             header = ctx.get("header")
             if header is not None and hasattr(header, "render"):
                 ctx["header"] = header.render(request=request)
+            ctx["hero"] = render_child(ctx["hero"], request)
             for key in ("stat_cards", "quick_actions", "sections"):
                 items = ctx.get(key) or []
                 ctx[key] = [

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from django.urls import reverse
+from django.utils import timezone
+from django.utils.dateformat import format as format_date
 
 from apps.people.models import ProfileStatus, StudentProfile, TeacherProfile
 from apps.ui.components.actions import Button, ConfirmDialog
@@ -110,3 +112,29 @@ class BulkPreviewTable(DataTable):
         Column("result", "Result", _row_result),
     ]
     empty_title = "No rows."
+
+
+def _added_on(profile: Profile) -> str:
+    return format_date(timezone.localtime(profile.created_at), "j M Y")
+
+
+class RecentStudentTable(DataTable):
+    columns = [
+        Column("student_code", "ID"),
+        Column("name", "Name", str),
+        Column("batches", "Batches", _batches),
+        Column("status", "Status", profile_status_badge),
+        Column("added", "Enrolled", _added_on),
+    ]
+    empty_title = "No students yet."
+
+
+class RecentTeacherTable(DataTable):
+    columns = [
+        Column("teacher_code", "ID"),
+        Column("name", "Name", str),
+        Column("subjects", "Subjects", _subjects),
+        Column("status", "Status", profile_status_badge),
+        Column("added", "Added", _added_on),
+    ]
+    empty_title = "No teachers yet."

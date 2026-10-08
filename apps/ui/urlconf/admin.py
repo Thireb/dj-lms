@@ -5,12 +5,12 @@ from django.urls import path
 from apps.academics import views as academics
 from apps.institutes.views import CampusProfilePage, InstituteSettingsPage
 from apps.people import views as people
-from apps.ui.views import portal_home
 
 app_name = "admin"
 
 urlpatterns = [
-    path("", portal_home.AdminPortalHomePage.as_view(), name="home"),
+    path("", people.AdminDashboardPage.as_view(), name="home"),
+    path("dashboard/", people.AdminDashboardPage.as_view(), name="dashboard_main"),
     path("campus/", CampusProfilePage.as_view(), name="campus"),
     path(
         "settings/institute/",

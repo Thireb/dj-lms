@@ -23,10 +23,12 @@ def test_resolve_menu_items_use_hash_when_url_missing() -> None:
         demo_user(role=Role.INSTITUTE_ADMIN),
         fake_institute(),
     )
-    assert groups
-    first_item = groups[0].items[0]
-    assert first_item.url == "#"
-    assert first_item.disabled is True
+    items = {item.url_name: item for group in groups for item in group.items}
+    built = items["admin:dashboard_main"]
+    unbuilt = items["admin:dashboard_salary"]  # Phase 8
+    assert (built.url, built.disabled) == ("/admin/dashboard/", False)
+    assert unbuilt.url == "#"
+    assert unbuilt.disabled is True
 
 
 def test_top_nav_renders_unbuilt_items_without_error() -> None:
