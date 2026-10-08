@@ -47,9 +47,11 @@ Rule: other apps import from `apps.ui`. `apps.ui` never imports from other apps.
 ## 3. Base component
 
 ```python
-# apps/ui/components/base.py
-from django.template.loader import render_to_string
-from django.utils.safestring import mark_safe
+# apps/ui/components/base.py (shortened)
+def render_child(child, request=None):
+    """Render a nested component with the request; keep plain text as is."""
+    return child.render(request=request) if isinstance(child, Component) else child
+
 
 class Component:
     template_name: str = ""
@@ -60,14 +62,16 @@ class Component:
     def get_context(self) -> dict:
         return {"c": self, **self.props}
 
-    def render(self) -> str:
-        return mark_safe(render_to_string(self.template_name, self.get_context()))
+    def render(self, request=None) -> SafeString:
+        return render_component_template(self, self.get_context(), request=request)
 
-    def __html__(self) -> str:   # lets templates write {{ component }}
+    def __html__(self) -> SafeString:   # lets templates write {{ component }}
         return self.render()
 
     __str__ = __html__
 ```
+
+A component that holds other components overrides `render(request)` and passes the request down with `render_child` (`DataTable`, `BlockStack`, `ListPageBody`, `DetailPageBody`, `SectionCard`, the shells). Without the request, a nested `ConfirmDialog` or form has no CSRF token, and its POST fails (backlog S2, S7).
 
 In a template: `{{ page.header }}` or `{{ stat }}`. No custom tag needed.
 
@@ -141,10 +145,15 @@ class PortalPageView(RoleRequiredMixin, TenantRequiredMixin, TemplateView):
 
     def get_context_data(self, **kw):
         ctx = super().get_context_data(**kw)
-        ctx["shell"] = self.shell_class(portal=self.portal, user=self.request.user, active=self.get_active_item())   # TopNavShell for admin, SidebarShell for others
         ctx["header"] = self.get_header()
         ctx.update(self.get_components())
         return ctx
+
+    def render_to_response(self, context, **kw):
+        # get_shell_class(): TopNavShell for admin, SidebarShell for the others.
+        # The page body and the shell are rendered with the request (CSRF).
+        shell = self.get_shell_class()(portal=self.portal, user=self.request.user, active=self.get_active_item(), content=self.build_page_body(context), ...)
+        return HttpResponse(shell.render(request=self.request), **kw)
 
 
 class ListPage(PortalPageView):
@@ -214,7 +223,8 @@ class StudentForm(TenantModelForm):
         )
 ```
 
-- Modal forms: subclass `HtmxModalForm` (same as `BaseForm`, renders inside `Modal`, submits with HTMX).
+- Modal forms: subclass `HtmxModalForm` (same as `BaseForm`, renders inside `Modal`, submits with HTMX). Not used by a page yet.
+- `BaseForm` gives text inputs, selects and textareas the shared full-width classes (`INPUT_CLASSES`), so fields fit a 360px screen. A widget with its own `class` keeps it.
 - Template: `{% crispy form %}` inside the `FormPage` layout. That is the only form tag allowed in templates.
 
 ## 7. Component list
@@ -230,8 +240,8 @@ Every item here is a class. Names are fixed.
 | `HeroBanner` | layout | dashboard welcome banner with chips and actions | `title`, `subtitle`, `chips`, `actions` |
 | `PageHeader` | layout | title, breadcrumb, actions | `title`, `breadcrumb`, `actions` |
 | `SectionCard` | layout | titled card with "View all" | `title`, `body`, `link_url`, `link_label` |
-| `Tabs` | layout | tabs with HTMX swap | `tabs`, `active` |
-| `Modal` | layout | dialog (Alpine + HTMX) | `id`, `title`, `body` |
+| `Tabs` | layout | tabs with HTMX swap (not used by a page yet) | `tabs`, `active` |
+| `Modal` | layout | dialog (Alpine + HTMX; not used by a page yet) | `id`, `title`, `body` |
 | `PublicFormShell` | layout | centered public page (sign-in, set password) | `page_title`, `header`, `content` |
 | `CrispyForm` | forms | crispy form body (`form_tag=False` inside a parent form) | `form` |
 | `PublicPostForm` | forms | `<form method="post">` + CSRF wrapper for public pages | `action`, `body` |
@@ -240,7 +250,7 @@ Every item here is a class. Names are fixed.
 | `BlockStack` | block_stack | vertical stack of text or nested components | `blocks` |
 | `SignOutForm` | actions | POST sign out with CSRF | `logout_url` |
 | `StatCard` | data | number + label + note | `value`, `label`, `note`, `icon`, `tone` |
-| `DataTable` + `Column` | data | table with sort, empty state | `columns`, `rows` |
+| `DataTable` + `Column` | data | table that scrolls sideways inside its box; no sorting yet | `columns`, `rows` |
 | `Badge` | data | status pill | `text`, `tone` |
 | `Avatar` | data | initials circle | `name`, `size` |
 | `ProgressBar` | data | percent bar | `value`, `label`, `tone` |
@@ -262,6 +272,8 @@ Every item here is a class. Names are fixed.
 Form layout objects: `Section`, `Row`, `FormActions`.
 
 Form widgets (not components): `PasswordInput` (show/hide toggle; static `type="password"` for no-JS and tests). `GroupedCheckboxes` (one fieldset per choice group, for example subjects under each batch; `empty_text` when there are no choices).
+
+Built ahead of the pages that need them, and shown only on `/dev/components/` so far: `Modal`, `Tabs`, `ChartCard`, `Avatar`, `CountdownCard`, `LectureRow`, `ScheduleList`, `PdfHeader`, `HtmxModalForm`. Keep them tested; the lecture, chart and PDF phases use them (audit L12).
 
 ## 8. Menus
 
