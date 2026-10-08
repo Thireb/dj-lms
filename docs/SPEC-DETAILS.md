@@ -384,7 +384,11 @@ Landscape. Institute logo, "Certificate of Completion", student name, batch and 
 
 ## 10. Seed / demo data
 
-Built by management command: `uv run python manage.py seed_demo` (Phase 1 stack: plans, Demo Institute, settings row, one user per role). Full volume below is roadmap 2.8, not Phase 1.
+Built by management command: `uv run python manage.py seed_demo` (needs `DEBUG` and `SEED_DEMO_PASSWORD`; `--reset` removes it). Roadmap 2.8 built the people and academics part below. Each later phase adds the rows for its own models.
+
+- Built in 2.8: 3 classes, 4 batches, 6 subjects, 5 teachers, 52 students (30 active, 22 inactive), 20 guardians, 1 admin, 1 sub-admin, 1 blocked and 1 exempt student. Sign-ins: `demo-admin`, `demo-sub`, `demo-super`, `demo-teacher`, `demo-student` and `demo-guardian` `@example.com`.
+- Every student needs a guardian, so "20 guardians (one with two children)" cannot cover 52 students. Decided in 2.8: `demo-guardian` has exactly two children; the other 19 guardians share the other 50 students (2 or 3 each).
+- Waiting for later phases: the sub-admin's Finance and People menus (9.3c), fee plans, challans and defaulters (Phase 7), lectures and attendance (Phases 3 and 4), and the rest of the list.
 
 - 1 institute "Demo Institute" on Premium plan, Asia/Karachi, currency Rs.
 - 3 class labels, 4 batches, 6 subjects, 3 fee plans.
