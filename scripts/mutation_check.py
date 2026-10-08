@@ -957,6 +957,42 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "{% if header %}{{ header }}{% endif %}",
         "{{ header }}",
     ),
+    (
+        "seed guardian has two children",
+        "apps/people/demo.py",
+        "    if student_number <= 2:\n",
+        "    if student_number <= 1:\n",
+    ),
+    (
+        "seed inactive students",
+        "apps/people/demo.py",
+        "    if number > ACTIVE_STUDENTS:\n",
+        "    if False:\n",
+    ),
+    (
+        "seed skips existing students",
+        "apps/people/demo.py",
+        "    if _existing_profile(StudentProfile, email):\n        return\n",
+        "",
+    ),
+    (
+        "seed takes over phase 1 users",
+        "apps/people/demo.py",
+        "    _take_over_user(email)\n    guardian = ",
+        "    guardian = ",
+    ),
+    (
+        "seed reset deletes children first",
+        "apps/people/demo.py",
+        "        PortalAccessRule,\n        StudentBatchSubject,\n",
+        "        StudentBatchSubject,\n",
+    ),
+    (
+        "seed_demo seeds people",
+        "apps/core/management/commands/seed_demo.py",
+        "        seed_people(institute, password)\n",
+        "",
+    ),
 ]
 
 
