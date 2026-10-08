@@ -41,7 +41,7 @@ def _upload(client: Client, rows: list[dict], name: str = "students.xlsx"):
 
 def _payload(response) -> str:
     page = response.content.decode()
-    match = re.search(r'name="rows" value="([^"]+)"', page)
+    match = re.search(r'name="upload" value="([^"]+)"', page)
     return html_lib.unescape(match.group(1))
 
 
@@ -125,7 +125,7 @@ def test_import_from_preview_with_csrf(institute_a, school) -> None:
 
     response = client.post(
         reverse("admin:student_bulk_import"),
-        {"rows": _payload(preview), "csrfmiddlewaretoken": import_token.group(1)},
+        {"upload": _payload(preview), "csrfmiddlewaretoken": import_token.group(1)},
         follow=True,
     )
 
@@ -140,7 +140,7 @@ def test_tampered_payload_imports_nothing(admin_client, school) -> None:
     payload = _payload(_upload(admin_client, [row()]))
 
     response = admin_client.post(
-        reverse("admin:student_bulk_import"), {"rows": payload + "x"}, follow=True
+        reverse("admin:student_bulk_import"), {"upload": payload + "x"}, follow=True
     )
 
     assert "This upload has expired." in response.content.decode()
@@ -155,7 +155,7 @@ def test_payload_only_works_for_the_admin_who_checked_it(
     other_admin = _admin(institute_a, email="admin-two@example.com")
 
     response = other_admin.post(
-        reverse("admin:student_bulk_import"), {"rows": payload}, follow=True
+        reverse("admin:student_bulk_import"), {"upload": payload}, follow=True
     )
 
     assert "This upload has expired." in response.content.decode()

@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import secrets
+import time
 from collections.abc import Callable
 from typing import Any
 from urllib.parse import urlencode
 
 from django.contrib import messages
-from django.core import signing
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
@@ -427,9 +428,34 @@ def _students(count: int) -> str:
     return f"{count} student" if count == 1 else f"{count} students"
 
 
-def _upload_salt(request: HttpRequest) -> str:
-    # The signed rows only work for the same admin in the same institute.
-    return f"people.bulk-upload:{request.user.pk}:{request.user.institute_id}"
+UPLOAD_SESSION_KEY = "people.bulk_upload"
+
+
+def _keep_rows(request: HttpRequest, rows: list[dict[str, Any]]) -> str:
+    """Keep the checked rows (passwords included) on the server, not in the page.
+
+    The session belongs to this signed-in admin; only a random id goes to the
+    browser. A new check replaces the old one.
+    """
+    upload_id = secrets.token_urlsafe(16)
+    request.session[UPLOAD_SESSION_KEY] = {
+        "id": upload_id,
+        "created": time.time(),
+        "rows": rows,
+    }
+    return upload_id
+
+
+def _take_rows(request: HttpRequest, upload_id: str) -> list[dict[str, Any]] | None:
+    """Return and forget the kept rows, or None when missing or too old."""
+    kept = request.session.pop(UPLOAD_SESSION_KEY, None)
+    if not kept or not upload_id:
+        return None
+    if not secrets.compare_digest(str(kept.get("id", "")), upload_id):
+        return None
+    if time.time() - kept.get("created", 0) > UPLOAD_MAX_AGE:
+        return None
+    return kept["rows"]
 
 
 class StudentBulkUploadPage(PeopleAdminMixin, DetailPage):
@@ -489,9 +515,7 @@ class StudentBulkUploadPage(PeopleAdminMixin, DetailPage):
         ]
         if good:
             ready = [{"number": row.number, "values": row.values} for row in good]
-            payload = signing.dumps(
-                ready, salt=_upload_salt(self.request), compress=True
-            )
+            upload_id = _keep_rows(self.request, ready)
             blocks.append(
                 ConfirmDialog(
                     f"Import {_students(len(good))}? Each one gets a student and a "
@@ -499,7 +523,7 @@ class StudentBulkUploadPage(PeopleAdminMixin, DetailPage):
                     f"Import {_students(len(good))}",
                     url=self.url("bulk_import"),
                     variant="primary",
-                    fields=[("rows", payload)],
+                    fields=[("upload", upload_id)],
                 )
             )
         return SectionCard(title="Check the rows", body=BlockStack(blocks=blocks))
@@ -512,13 +536,8 @@ class StudentBulkImportView(PeopleAdminMixin, PortalPageView):
     url_prefix = "student"
 
     def post(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
-        try:
-            rows = signing.loads(
-                request.POST.get("rows", ""),
-                salt=_upload_salt(request),
-                max_age=UPLOAD_MAX_AGE,
-            )
-        except signing.BadSignature:
+        rows = _take_rows(request, request.POST.get("upload", ""))
+        if rows is None:
             messages.error(request, "This upload has expired. Upload the file again.")
             return HttpResponseRedirect(self.url("bulk_upload"))
         result = import_rows(self.get_institute(), rows)
