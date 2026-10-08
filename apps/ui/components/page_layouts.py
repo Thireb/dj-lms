@@ -77,6 +77,13 @@ class DetailPageBody(Component):
             **props,
         )
 
+    def render(self, request=None):
+        ctx = self.get_context()
+        ctx["header"] = render_child(ctx["header"], request)
+        for key in ("primary_cards", "sidebar_cards"):
+            ctx[key] = [render_child(card, request) for card in ctx[key]]
+        return render_component_template(self, ctx, request=request)
+
 
 class FormPageBody(Component):
     template_name = "ui/layouts/pages/form.html"
