@@ -77,4 +77,19 @@ urlpatterns = [
         people.StudentStatusView.as_view(),
         name="student_status",
     ),
+    path(
+        "students/upload/",
+        people.StudentBulkUploadPage.as_view(),
+        name="student_bulk_upload",
+    ),
+    path(
+        "students/upload/import/",
+        people.StudentBulkImportView.as_view(),
+        name="student_bulk_import",
+    ),
+    path(
+        "students/upload/template/",
+        people.StudentBulkTemplateView.as_view(),
+        name="student_bulk_template",
+    ),
 ]

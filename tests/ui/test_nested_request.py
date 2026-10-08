@@ -5,8 +5,8 @@ from __future__ import annotations
 from apps.ui.components.actions import ConfirmDialog
 from apps.ui.components.block_stack import BlockStack
 from apps.ui.components.data import Column, DataTable
-from apps.ui.components.layout import PageHeader
-from apps.ui.components.page_layouts import ListPageBody
+from apps.ui.components.layout import PageHeader, SectionCard
+from apps.ui.components.page_layouts import DetailPageBody, ListPageBody
 from django.middleware.csrf import get_token
 from django.test import RequestFactory
 
@@ -46,3 +46,13 @@ def test_list_page_body_passes_request_to_table() -> None:
     body = ListPageBody(header=PageHeader(title="Batches"), table=table)
 
     assert TOKEN_FIELD in body.render(request=_request())
+
+
+def test_detail_page_body_passes_request_to_cards() -> None:
+    body = DetailPageBody(
+        header=PageHeader(title="Upload"),
+        primary_cards=[SectionCard(title="Card", body=BlockStack(blocks=[_dialog()]))],
+        sidebar_cards=[_dialog()],
+    )
+
+    assert body.render(request=_request()).count(TOKEN_FIELD) == 2

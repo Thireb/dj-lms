@@ -52,7 +52,7 @@ Setup order the reference teaches: Campus, Classes, Batches, Subjects, Fee Plans
 - [x] Student code auto-filled (like `STU-054`).
 - [ ] Edit student: change batches, subjects, fee plans, contacts. Built in 2.5b except fee plans (Phase 7).
 - [x] All Students list with Active/Inactive status.
-- [ ] Bulk upload from an Excel template (one student per row; error rows reported).
+- [x] Bulk upload from an Excel template (one student per row; error rows reported). Fee plan columns come with Phase 7.
 - [ ] Student Attendance History.
 - [ ] **Portal Access:** block a student from the student portal (for example unpaid fees); automatic blocking of fee defaulters can be on or off; single students can be exempted. Blocked student sees a "blocked" page.
 
