@@ -263,3 +263,18 @@ def test_import_needs_tenant_context(school) -> None:
     with pytest.raises(TenantContextError):
         import_rows(school.morning.institute, _read([row()]))
     assert not User.objects.filter(email="alex@example.com").exists()
+
+
+@pytest.mark.django_db
+def test_import_skips_rows_that_only_the_check_rejects(school) -> None:
+    # enrol_student would accept a missing date or crash on a missing name,
+    # so import_rows must skip every row the check marks as bad.
+    institute = school.morning.institute
+    rows = _read([row(dob="01/05/2012"), row(full_name="", student_email="b@x.com")])
+
+    with tenant_context(institute):
+        result = import_rows(institute, rows)
+
+    assert result.codes == []
+    assert [row.number for row in result.failed] == [2, 3]
+    assert not User.objects.filter(email__in=["alex@example.com", "b@x.com"]).exists()
