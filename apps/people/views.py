@@ -43,8 +43,11 @@ from apps.people.services import (
     StudentDetails,
     create_teacher,
     enrol_student,
+    list_portal_access,
     list_students,
     list_teachers,
+    set_portal_blocked,
+    set_portal_exempt,
     set_student_active,
     set_teacher_active,
     update_student,
@@ -52,17 +55,23 @@ from apps.people.services import (
 )
 from apps.people.ui import (
     BulkPreviewTable,
+    PortalAccessTable,
     RecentStudentTable,
     RecentTeacherTable,
     StudentTable,
     TeacherTable,
     profile_status_dialog,
 )
-from apps.ui.components.actions import Button, ConfirmDialog, QuickAction
+from apps.ui.components.actions import (
+    Button,
+    ConfirmDialog,
+    QuickAction,
+    SignOutForm,
+)
 from apps.ui.components.block_stack import BlockStack
 from apps.ui.components.data import EmptyState, ProgressBar, StatCard
 from apps.ui.components.forms import CrispyForm, PortalPostForm
-from apps.ui.components.layout import HeroBanner, SectionCard
+from apps.ui.components.layout import HeroBanner, PublicFormShell, SectionCard
 from apps.ui.components.nav import FilterBar, Pagination
 from apps.ui.views.pages import (
     DashboardPage,
@@ -637,3 +646,99 @@ class AdminDashboardPage(DashboardPage):
                 link_url=reverse("admin:teacher_list") if people_link else None,
             ),
         ]
+
+
+# Portal access (roadmap 2.7, SPEC 3 Portal Access and 6.2)
+
+ACCESS_PAUSED = "Access paused. Please contact the institute office"
+
+
+def access_paused_response(request: HttpRequest) -> HttpResponse:
+    """The full page a blocked student sees instead of the student portal."""
+    institute = getattr(request, "institute", None)
+    phone = getattr(institute, "phone", "")
+    message = f"{ACCESS_PAUSED} at {phone}." if phone else f"{ACCESS_PAUSED}."
+    card = SectionCard(
+        title="Access paused",
+        body=BlockStack(
+            blocks=[message, SignOutForm(logout_url=reverse("accounts:logout"))]
+        ),
+    )
+    shell = PublicFormShell(page_title="Access paused", content=card)
+    return HttpResponse(shell.render(request=request), status=403)
+
+
+YES_NO_OPTIONS = [("", "Any"), ("yes", "Yes"), ("no", "No")]
+
+
+class PortalAccessPage(PeopleListPage):
+    title = "Portal access"
+    url_prefix = "student"
+    plural = "students"
+    filter_keys = ("q", "blocked", "exempt")
+    table_class = PortalAccessTable
+
+    def get_actions(self) -> list[Any]:
+        return []
+
+    def get_rows(self, filters: dict[str, str]) -> Any:
+        return list_portal_access(
+            self.request.user,
+            search=filters["q"],
+            blocked=filters["blocked"],
+            exempt=filters["exempt"],
+        )
+
+    def filter_fields(self, filters: dict[str, str]) -> list[dict[str, Any]]:
+        return [
+            {"name": "q", "label": "Search", "value": filters["q"]},
+            {
+                "name": "blocked",
+                "label": "Blocked",
+                "value": filters["blocked"],
+                "options": YES_NO_OPTIONS,
+            },
+            {
+                "name": "exempt",
+                "label": "Exempt",
+                "value": filters["exempt"],
+                "options": YES_NO_OPTIONS,
+            },
+        ]
+
+    def get_table(self, rows: list[Any], filtered: bool) -> Any:
+        if not rows and not filtered:
+            return EmptyState(
+                "No students yet.",
+                action=Button("Enrol your first student", url=self.url("create")),
+            )
+        return self.table_class(rows)
+
+
+class PortalAccessActionView(ProfileObjectMixin, PortalPageView):
+    """POST-only block, unblock, exempt or remove exemption for one student."""
+
+    http_method_names = ["post"]
+    url_prefix = "student"
+    model = StudentProfile
+    ACTIONS = {
+        "block": (set_portal_blocked, {"blocked": True}, "{name} blocked."),
+        "unblock": (set_portal_blocked, {"blocked": False}, "{name} unblocked."),
+        "exempt": (set_portal_exempt, {"exempt": True}, "{name} is exempt."),
+        "unexempt": (
+            set_portal_exempt,
+            {"exempt": False},
+            "{name} is no longer exempt.",
+        ),
+    }
+
+    def post(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        student = self.get_object()
+        action = self.ACTIONS.get(request.POST.get("action", ""))
+        if action is None:
+            messages.error(request, "Unknown action.")
+        else:
+            setter, values, done = action
+            setter(student, **values)
+            messages.success(request, done.format(name=student))
+        return HttpResponseRedirect(reverse("admin:portal_access"))

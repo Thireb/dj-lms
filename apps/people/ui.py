@@ -6,7 +6,12 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateformat import format as format_date
 
-from apps.people.models import ProfileStatus, StudentProfile, TeacherProfile
+from apps.people.models import (
+    PortalAccessRule,
+    ProfileStatus,
+    StudentProfile,
+    TeacherProfile,
+)
 from apps.ui.components.actions import Button, ConfirmDialog
 from apps.ui.components.block_stack import BlockStack
 from apps.ui.components.data import Badge, Column, DataTable
@@ -138,3 +143,70 @@ class RecentTeacherTable(DataTable):
         Column("added", "Added", _added_on),
     ]
     empty_title = "No teachers yet."
+
+
+def _access(student: StudentProfile) -> tuple[bool, bool]:
+    try:
+        rule = student.access_rule
+    except PortalAccessRule.DoesNotExist:
+        return False, False
+    return rule.blocked, rule.exempt
+
+
+def _yes_no(value: bool, yes_tone: str) -> Badge:
+    return Badge("Yes", tone=yes_tone) if value else Badge("No", tone="neutral")
+
+
+def _access_dialog(student: StudentProfile, action: str, message: str, label: str):
+    url = reverse("admin:portal_access_action", kwargs={"pk": student.pk})
+    variant = "danger" if action == "block" else "primary"
+    return ConfirmDialog(
+        message, label, url=url, variant=variant, fields=[("action", action)]
+    )
+
+
+def _access_actions(student: StudentProfile) -> BlockStack:
+    blocked, exempt = _access(student)
+    name = str(student)
+    if blocked:
+        block = _access_dialog(
+            student, "unblock", f"Unblock {name}? The student portal opens.", "Unblock"
+        )
+    else:
+        block = _access_dialog(
+            student,
+            "block",
+            f"Block {name}? The student portal shows Access paused. "
+            "The guardian portal stays open.",
+            "Block",
+        )
+    if exempt:
+        exemption = _access_dialog(
+            student,
+            "unexempt",
+            f"Remove the exemption for {name}? Automatic blocking can apply again.",
+            "Remove exemption",
+        )
+    else:
+        exemption = _access_dialog(
+            student,
+            "exempt",
+            f"Exempt {name}? Automatic blocking will never block this student.",
+            "Exempt",
+        )
+    return BlockStack(blocks=[block, exemption])
+
+
+class PortalAccessTable(DataTable):
+    """SPEC 3 Portal Access. Fee due comes with Phase 7."""
+
+    columns = [
+        Column("student_code", "ID"),
+        Column("name", "Student", str),
+        Column("class_label", "Class", lambda s: s.class_label or ""),
+        Column("guardian", "Guardian", _guardians),
+        Column("blocked", "Blocked", lambda s: _yes_no(_access(s)[0], "danger")),
+        Column("exempt", "Exempt", lambda s: _yes_no(_access(s)[1], "info")),
+        Column("actions", "", _access_actions),
+    ]
+    empty_title = "No students match these filters."

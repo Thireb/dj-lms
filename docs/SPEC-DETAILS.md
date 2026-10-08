@@ -104,7 +104,7 @@ Menu key `institute`: `institute_admin`, and a `sub_admin` granted Institute.
 | Leave Approval (student / teacher) | Name, From, To, Days, Reason, Status | status | Approve, Reject (teacher leave: shows clashing lectures) |
 | Message Monitor | Date, From, To, Subject, Last message | search, role | Open |
 | Manage Users (sub-admin) | Name, Email, Allowed menus, Status | status | Edit, Deactivate |
-| Portal Access | Student, Class, Guardian, Fee due, Blocked, Exempt | blocked, exempt | Block, Unblock, Exempt |
+| Portal Access | Student, Class, Guardian, Fee due, Blocked, Exempt | blocked, exempt | Block, Unblock, Exempt (2.7 adds search and Remove exemption; Fee due comes with Phase 7) |
 
 ### Teacher
 

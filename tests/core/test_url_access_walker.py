@@ -155,6 +155,7 @@ ROUTE_OBJECTS = {
     "admin:teacher_status": _teacher,
     "admin:student_edit": _student,
     "admin:student_status": _student,
+    "admin:portal_access_action": _student,
 }
 
 

@@ -47,6 +47,7 @@ MIDDLEWARE = [
     "apps.core.middleware.django_admin.DjangoAdminGateMiddleware",
     "apps.core.middleware.tenant.TenantMiddleware",
     "apps.core.middleware.timezone.TimezoneMiddleware",
+    "apps.people.middleware.StudentPortalAccessMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]

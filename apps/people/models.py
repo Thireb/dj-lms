@@ -286,3 +286,49 @@ class GuardianStudentLink(TenantModel):
         # Same reason as ProfileBase.save: the database enforces uniqueness.
         self.full_clean(validate_unique=False, validate_constraints=False)
         super().save(*args, **kwargs)
+
+
+class PortalAccessRuleQuerySet(TenantQuerySet):
+    """Admins see the institute; a student sees only their own rule."""
+
+    def for_user(self, user: Any) -> PortalAccessRuleQuerySet:
+        scoped = super().for_user(user)
+        role = user_role(user)
+        if role in INSTITUTE_WIDE_ROLES:
+            return scoped
+        if role == Role.STUDENT:
+            return scoped.filter(student__user_id=getattr(user, "pk", None))
+        return scoped.none()
+
+
+class PortalAccessRule(TenantModel):
+    """Student portal access (SPEC 6.2). No row means open and not exempt.
+
+    ``blocked`` closes the student portal; the guardian portal is never
+    blocked. ``exempt`` only protects the student from the automatic
+    defaulter rule (roadmap 7.6); a manual block still applies.
+    """
+
+    student = models.OneToOneField(
+        StudentProfile, on_delete=models.PROTECT, related_name="access_rule"
+    )
+    blocked = models.BooleanField(default=False)
+    exempt = models.BooleanField(default=False)
+    changed_at = models.DateTimeField(auto_now=True)
+
+    objects = TenantManager.from_queryset(PortalAccessRuleQuerySet)()
+    unscoped = UnscopedTenantManager.from_queryset(PortalAccessRuleQuerySet)()
+
+    def __str__(self) -> str:
+        return f"Access for {self.student}"
+
+    def clean(self) -> None:
+        super().clean()
+        student = getattr(self, "student", None)
+        if student is not None and student.institute_id != self.institute_id:
+            raise ValidationError({"student": "Must belong to the same institute."})
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        # Same reason as ProfileBase.save: the database enforces uniqueness.
+        self.full_clean(validate_unique=False, validate_constraints=False)
+        super().save(*args, **kwargs)
