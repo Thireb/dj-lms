@@ -4,12 +4,18 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from django.http import HttpRequest, HttpResponse, HttpResponseForbidden
+from django.http import HttpRequest, HttpResponse
 from django.urls import Resolver404, resolve
 
+from apps.core.responses import blocked_account_response
 from apps.core.roles import user_institute_id, user_is_super_admin
 from apps.core.tenancy import clear_current_institute, set_current_institute
 from apps.institutes.models import Institute
+
+NO_INSTITUTE = "Your account has no institute. Contact the institute office."
+INSTITUTE_INACTIVE = (
+    "Your institute is not active. Contact your institute administrator."
+)
 
 
 class TenantMiddleware:
@@ -39,13 +45,13 @@ class TenantMiddleware:
                     return self.get_response(request)
                 institute_id = user_institute_id(user)
                 if institute_id is None:
-                    return HttpResponseForbidden("No institute assigned.")
+                    return blocked_account_response(request, NO_INSTITUTE)
                 try:
                     institute = Institute.objects.get(pk=institute_id)
                 except Institute.DoesNotExist:
-                    return HttpResponseForbidden("Invalid institute.")
+                    return blocked_account_response(request, NO_INSTITUTE)
                 if not institute.is_active:
-                    return HttpResponseForbidden("Institute inactive.")
+                    return blocked_account_response(request, INSTITUTE_INACTIVE)
                 request.institute = institute
                 set_current_institute(institute)
             return self.get_response(request)

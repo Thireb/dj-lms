@@ -160,3 +160,18 @@ def test_widgets_render_expected_types() -> None:
     assert 'type="time"' in time_html
     money_html = MoneyInput().render("amount", Decimal("10.00"), {"id": "id_amount"})
     assert 'type="number"' in money_html
+
+
+def test_layout_forms_show_non_field_errors() -> None:
+    from apps.accounts.forms import SetPasswordForm
+    from crispy_forms.utils import render_crispy_form
+
+    form = SetPasswordForm(
+        data={"password": "fake-Pass-one-1", "confirm_password": "fake-Pass-two-2"}
+    )
+    form.is_valid()
+
+    html = render_crispy_form(form)
+
+    assert "Passwords do not match." in html
+    assert 'role="alert"' in html

@@ -17,6 +17,7 @@ from django.urls import reverse, reverse_lazy
 from django.views import View
 from django.views.generic import TemplateView
 
+from apps.accounts import throttle
 from apps.accounts.forms import (
     ChangePasswordForm,
     ForgotPasswordForm,
@@ -85,7 +86,7 @@ class PublicFormPage(TemplateView):
     def form_valid(self, form: Any) -> HttpResponse:
         raise NotImplementedError
 
-    def render_page(self, form: Any) -> HttpResponse:
+    def render_page(self, form: Any, status: int = 200) -> HttpResponse:
         header = PageHeader(title=self.title)
         card = SectionCard(
             title=self.section_title or self.title,
@@ -95,7 +96,7 @@ class PublicFormPage(TemplateView):
             ),
         )
         shell = PublicFormShell(page_title=self.title, header=header, content=card)
-        return HttpResponse(shell.render(request=self.request))
+        return HttpResponse(shell.render(request=self.request), status=status)
 
     def get_cancel_url(self) -> str | None:
         return None
@@ -114,16 +115,21 @@ class LoginView(PublicFormPage):
         }
 
     def form_valid(self, form: LoginForm) -> HttpResponse:
-        auth = authenticate_user(
-            email=form.cleaned_data["email"],
-            password=form.cleaned_data["password"],
-        )
+        email = form.cleaned_data["email"]
+        ip = throttle.client_ip(self.request)
+        if throttle.is_locked(throttle.LOGIN, email, ip):
+            # Refuse before authenticate(), so no slow password hash runs.
+            form.add_error(None, throttle.LOCKED_MESSAGE)
+            return self.render_page(form, status=429)
+        auth = authenticate_user(email=email, password=form.cleaned_data["password"])
         if auth.error:
             form.add_error("email", auth.error)
             return self.render_page(form)
         if auth.user is None:
+            throttle.record_failure(throttle.LOGIN, email, ip)
             form.add_error("password", "Email or password is incorrect.")
             return self.render_page(form)
+        throttle.reset(throttle.LOGIN, email, ip)
         user = auth.user
         remember = form.cleaned_data.get("remember_me", False)
         login_with_remember_me(self.request, user, remember=remember)
@@ -177,6 +183,10 @@ class SetPasswordView(PublicFormPage):
         lookup = lookup_set_password_token(self.token_key)
         self.token_lookup = lookup
         if lookup.status != TokenStatus.OK:
+            if request.method == "POST":
+                throttle.record_failure(
+                    throttle.SET_PASSWORD, "", throttle.client_ip(request)
+                )
             return self.render_status_page(lookup.status)
         return super().dispatch(request, *args, **kwargs)
 
@@ -192,11 +202,29 @@ class SetPasswordView(PublicFormPage):
         shell = PublicFormShell(page_title=self.title, header=header, content=card)
         return HttpResponse(shell.render(request=self.request))
 
+    def post(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        ip = throttle.client_ip(request)
+        form = self.get_form()
+        if throttle.is_locked(throttle.SET_PASSWORD, "", ip):
+            form.add_error(None, throttle.LOCKED_MESSAGE)
+            return self.render_page(form, status=429)
+        if form.is_valid():
+            return self.form_valid(form)
+        throttle.record_failure(throttle.SET_PASSWORD, "", ip)
+        return self.render_page(form)
+
+    def get_form_kwargs(self) -> dict[str, Any]:
+        return {"user": self.token_lookup.token.user}
+
     def form_valid(self, form: SetPasswordForm) -> HttpResponse:
         token = self.token_lookup.token
         if token is None:
             return self.render_status_page(TokenStatus.MISSING)
-        set_password_from_token(token=token, password=form.cleaned_data["password"])
+        user = set_password_from_token(
+            token=token, password=form.cleaned_data["password"]
+        )
+        if user is None:
+            return self.render_status_page(TokenStatus.USED)
         return redirect("accounts:login")
 
 

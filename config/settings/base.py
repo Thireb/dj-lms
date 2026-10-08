@@ -1,5 +1,6 @@
 """Shared Django settings."""
 
+import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -32,7 +33,14 @@ AUTH_USER_MODEL = "accounts.User"
 LOGIN_URL = "accounts:login"
 LOGOUT_REDIRECT_URL = "accounts:login"
 
-SESSION_COOKIE_AGE = 60 * 60 * 24 * 14
+# Without "remember me" the cookie ends at browser close and the server
+# session after 12 hours; "remember me" keeps it for 14 days (audit L2).
+SESSION_COOKIE_AGE = 60 * 60 * 12
+REMEMBER_ME_SECONDS = 60 * 60 * 24 * 14
+
+# Client IP for sign-in limits: a header your proxy always sets, for example
+# HTTP_X_REAL_IP. Empty means REMOTE_ADDR (no proxy).
+TRUSTED_PROXY_IP_HEADER = os.environ.get("TRUSTED_PROXY_IP_HEADER", "")
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = ("ui/forms",)

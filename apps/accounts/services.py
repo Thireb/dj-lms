@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 from django.conf import settings
 from django.contrib.auth import authenticate, login, update_session_auth_hash
+from django.db import transaction
 from django.http import HttpRequest
 from django.urls import NoReverseMatch, reverse
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -65,7 +66,7 @@ def authenticate_user(*, email: str, password: str) -> AuthenticateResult:
 
 def apply_session_remember_me(request: HttpRequest, *, remember: bool) -> None:
     if remember:
-        request.session.set_expiry(settings.SESSION_COOKIE_AGE)
+        request.session.set_expiry(settings.REMEMBER_ME_SECONDS)
     else:
         request.session.set_expiry(0)
 
@@ -92,14 +93,19 @@ def lookup_set_password_token(key: str) -> TokenLookup:
     return TokenLookup(status=TokenStatus.OK, token=token)
 
 
-def set_password_from_token(*, token: SetPasswordToken, password: str) -> User:
-    user = token.user
+@transaction.atomic
+def set_password_from_token(*, token: SetPasswordToken, password: str) -> User | None:
+    """Use the token once. Returns None when another request used it first."""
+    locked = SetPasswordToken.objects.select_for_update().get(pk=token.pk)
+    if not locked.is_valid():
+        return None
+    user = locked.user
     user.set_password(password)
     user.save(update_fields=["password"])
-    token.mark_used()
+    locked.mark_used()
     SetPasswordToken.objects.filter(user=user, used_at__isnull=True).exclude(
-        pk=token.pk
-    ).update(used_at=token.used_at)
+        pk=locked.pk
+    ).update(used_at=locked.used_at)
     return user
 
 

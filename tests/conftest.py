@@ -9,6 +9,7 @@ import pytest
 from apps.accounts.models import User
 from apps.core.roles import Role
 from apps.institutes.models import Institute, Plan
+from django.core.cache import cache
 
 from tests.testapp.models import TenantProbe
 
@@ -44,6 +45,12 @@ class FakeUser:
     @property
     def pk(self) -> None:
         return None
+
+
+@pytest.fixture(autouse=True)
+def _clear_cache() -> None:
+    # Sign-in limits live in the cache; counts must not leak between tests.
+    cache.clear()
 
 
 @pytest.fixture
