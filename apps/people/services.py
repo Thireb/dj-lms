@@ -25,6 +25,7 @@ from apps.people.models import (
     CodeSequence,
     GuardianProfile,
     GuardianStudentLink,
+    PortalAccessRule,
     ProfileStatus,
     StudentProfile,
     TeacherProfile,
@@ -444,3 +445,51 @@ def set_student_active(student: StudentProfile, *, is_active: bool) -> StudentPr
     """The guardian account is not changed: it may have other children."""
     _set_active(student, is_active=is_active)
     return student
+
+
+# Portal access (roadmap 2.7, SPEC 6.2). The automatic rule is roadmap 7.6.
+
+
+def _access_rule(student: StudentProfile) -> PortalAccessRule:
+    require_tenant_context(student.institute)
+    rule, _ = PortalAccessRule.objects.get_or_create(
+        institute=student.institute, student=student
+    )
+    return rule
+
+
+@transaction.atomic
+def set_portal_blocked(student: StudentProfile, *, blocked: bool) -> PortalAccessRule:
+    """Manual block or unblock; it wins until the next automatic run (7.6)."""
+    rule = _access_rule(student)
+    rule.blocked = blocked
+    rule.save(update_fields=["blocked", "changed_at"])
+    return rule
+
+
+@transaction.atomic
+def set_portal_exempt(student: StudentProfile, *, exempt: bool) -> PortalAccessRule:
+    rule = _access_rule(student)
+    rule.exempt = exempt
+    rule.save(update_fields=["exempt", "changed_at"])
+    return rule
+
+
+def student_portal_blocked(user: object) -> bool:
+    """True when a signed-in student's own portal is blocked."""
+    return PortalAccessRule.objects.for_user(user).filter(blocked=True).exists()
+
+
+def list_portal_access(
+    user: object, *, search: str = "", blocked: str = "", exempt: str = ""
+) -> QuerySet[StudentProfile]:
+    """Students with their access rule; "yes"/"no" filter blocked and exempt."""
+    students = list_students(user, search=search).select_related("access_rule")
+    for name, value in (("blocked", blocked), ("exempt", exempt)):
+        if value == "yes":
+            students = students.filter(**{f"access_rule__{name}": True})
+        elif value == "no":
+            students = students.filter(
+                Q(access_rule__isnull=True) | Q(**{f"access_rule__{name}": False})
+            )
+    return students

@@ -888,6 +888,75 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "{% if tone == 'success' %}bg-success/10 text-success",
         "{% if False %}bg-success/10 text-success",
     ),
+    (
+        "blocked student sees access paused",
+        "apps/people/middleware.py",
+        "            and student_portal_blocked(user)\n",
+        "            and False\n",
+    ),
+    (
+        "block only the student portal",
+        "apps/people/middleware.py",
+        "return resolve(request.path_info).namespace == STUDENT_NAMESPACE",
+        "return True",
+    ),
+    (
+        "access middleware installed",
+        "config/settings/base.py",
+        '    "apps.people.middleware.StudentPortalAccessMiddleware",\n',
+        "",
+    ),
+    (
+        "access rule own student only",
+        "apps/people/models.py",
+        'return scoped.filter(student__user_id=getattr(user, "pk", None))\n'
+        "        return scoped.none()\n",
+        "return scoped\n        return scoped.none()\n",
+    ),
+    (
+        "access rule other roles none",
+        "apps/people/models.py",
+        'return scoped.filter(student__user_id=getattr(user, "pk", None))\n'
+        "        return scoped.none()\n",
+        'return scoped.filter(student__user_id=getattr(user, "pk", None))\n'
+        "        return scoped\n",
+    ),
+    (
+        "access rule institute check",
+        "apps/people/models.py",
+        "if student is not None and student.institute_id != self.institute_id:",
+        "if False:",
+    ),
+    (
+        "access list yes filter",
+        "apps/people/services.py",
+        'students = students.filter(**{f"access_rule__{name}": True})',
+        "students = students",
+    ),
+    (
+        "access no rule counts as no",
+        "apps/people/services.py",
+        'Q(access_rule__isnull=True) | Q(**{f"access_rule__{name}": False})',
+        'Q(**{f"access_rule__{name}": False})',
+    ),
+    (
+        "access services need context",
+        "apps/people/services.py",
+        "    require_tenant_context(student.institute)\n    rule, _ = ",
+        "    rule, _ = ",
+    ),
+    (
+        "access action checked",
+        "apps/people/views.py",
+        "        if action is None:\n",
+        "        if False:\n",
+    ),
+    (
+        "public header optional",
+        "apps/ui/templates/ui/layouts/public.html",
+        "{% if header %}{{ header }}{% endif %}",
+        "{{ header }}",
+    ),
 ]
 
 

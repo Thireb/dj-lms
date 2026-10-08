@@ -54,7 +54,7 @@ Setup order the reference teaches: Campus, Classes, Batches, Subjects, Fee Plans
 - [x] All Students list with Active/Inactive status.
 - [x] Bulk upload from an Excel template (one student per row; error rows reported). Fee plan columns come with Phase 7.
 - [ ] Student Attendance History.
-- [ ] **Portal Access:** block a student from the student portal (for example unpaid fees); automatic blocking of fee defaulters can be on or off; single students can be exempted. Blocked student sees a "blocked" page.
+- [ ] **Portal Access:** block a student from the student portal (for example unpaid fees); automatic blocking of fee defaulters can be on or off; single students can be exempted. Blocked student sees a "blocked" page. Built in 2.7: manual block and unblock, exemptions, the Access paused page. Automatic blocking of defaulters comes with roadmap 7.6 (backlog S9).
 
 ## 4. Teachers (Admin)
 

@@ -92,4 +92,10 @@ urlpatterns = [
         people.StudentBulkTemplateView.as_view(),
         name="student_bulk_template",
     ),
+    path("portal-access/", people.PortalAccessPage.as_view(), name="portal_access"),
+    path(
+        "portal-access/<int:pk>/",
+        people.PortalAccessActionView.as_view(),
+        name="portal_access_action",
+    ),
 ]
