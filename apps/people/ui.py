@@ -1,25 +1,31 @@
-"""Teacher list table (SPEC section 3: All Teachers)."""
+"""Teacher and student list tables (SPEC section 3)."""
 
 from __future__ import annotations
 
 from django.urls import reverse
 
-from apps.people.models import ProfileStatus, TeacherProfile
+from apps.people.models import ProfileStatus, StudentProfile, TeacherProfile
 from apps.ui.components.actions import Button, ConfirmDialog
 from apps.ui.components.block_stack import BlockStack
 from apps.ui.components.data import Badge, Column, DataTable
 
+Profile = StudentProfile | TeacherProfile
 
-def profile_status_badge(profile: TeacherProfile) -> Badge:
+
+def _url_prefix(profile: Profile) -> str:
+    return "student" if isinstance(profile, StudentProfile) else "teacher"
+
+
+def profile_status_badge(profile: Profile) -> Badge:
     if profile.status == ProfileStatus.ACTIVE:
         return Badge("Active", tone="success")
     return Badge("Inactive", tone="danger")
 
 
-def teacher_status_dialog(teacher: TeacherProfile) -> ConfirmDialog:
-    url = reverse("admin:teacher_status", kwargs={"pk": teacher.pk})
-    name = str(teacher)
-    if teacher.status == ProfileStatus.ACTIVE:
+def profile_status_dialog(profile: Profile) -> ConfirmDialog:
+    url = reverse(f"admin:{_url_prefix(profile)}_status", kwargs={"pk": profile.pk})
+    name = str(profile)
+    if profile.status == ProfileStatus.ACTIVE:
         return ConfirmDialog(
             f"Deactivate {name}? They will not be able to sign in.",
             "Deactivate",
@@ -35,24 +41,26 @@ def teacher_status_dialog(teacher: TeacherProfile) -> ConfirmDialog:
     )
 
 
-def _pairs(teacher: TeacherProfile) -> list:
-    return list(teacher.batch_subjects.all())
+def _batches(profile: Profile) -> str:
+    return ", ".join(sorted({link.batch.name for link in profile.batch_subjects.all()}))
 
 
-def _batches(teacher: TeacherProfile) -> str:
-    return ", ".join(sorted({link.batch.name for link in _pairs(teacher)}))
+def _subjects(profile: Profile) -> str:
+    names = {link.subject.name for link in profile.batch_subjects.all()}
+    return ", ".join(sorted(names))
 
 
-def _subjects(teacher: TeacherProfile) -> str:
-    return ", ".join(sorted({link.subject.name for link in _pairs(teacher)}))
+def _guardians(student: StudentProfile) -> str:
+    return ", ".join(str(link.guardian) for link in student.guardian_links.all())
 
 
-def _actions(teacher: TeacherProfile) -> BlockStack:
-    edit_url = reverse("admin:teacher_edit", kwargs={"pk": teacher.pk})
+def _actions(profile: Profile) -> BlockStack:
+    prefix = _url_prefix(profile)
+    edit_url = reverse(f"admin:{prefix}_edit", kwargs={"pk": profile.pk})
     return BlockStack(
         blocks=[
             Button("Edit", url=edit_url, variant="secondary"),
-            teacher_status_dialog(teacher),
+            profile_status_dialog(profile),
         ]
     )
 
@@ -68,3 +76,17 @@ class TeacherTable(DataTable):
         Column("actions", "", _actions),
     ]
     empty_title = "No teachers match these filters."
+
+
+class StudentTable(DataTable):
+    columns = [
+        Column("student_code", "ID"),
+        Column("name", "Name", str),
+        Column("class_label", "Class", lambda s: s.class_label or ""),
+        Column("batches", "Batches", _batches),
+        Column("guardian", "Guardian", _guardians),
+        Column("phone", "Phone", lambda student: student.user.phone),
+        Column("status", "Status", profile_status_badge),
+        Column("actions", "", _actions),
+    ]
+    empty_title = "No students match these filters."

@@ -11,8 +11,12 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Prefetch, Q, QuerySet
 
-from apps.academics.models import TeacherBatchSubject
-from apps.academics.services import Selections, set_teacher_batch_subjects
+from apps.academics.models import ClassLabel, StudentBatchSubject, TeacherBatchSubject
+from apps.academics.services import (
+    Selections,
+    set_student_batch_subjects,
+    set_teacher_batch_subjects,
+)
 from apps.accounts.models import User
 from apps.core.roles import Role
 from apps.core.tenancy import require_tenant_context
@@ -66,6 +70,8 @@ def create_guardian_profile(user: User) -> GuardianProfile:
 
 
 EMAIL_TAKEN = "This email is already used by another account."
+NEW_GUARDIAN_PASSWORD = "Enter a password for the new guardian."
+SAME_EMAILS = "The student and guardian emails must be different."
 
 
 @dataclass(frozen=True)
@@ -125,6 +131,8 @@ def _is_guardian_of(user: User, institute: Institute) -> bool:
 def _create_guardian(
     institute: Institute, *, email: str, password: str, **fields: str
 ) -> GuardianProfile:
+    if not password:
+        raise ValidationError({"guardian_password": NEW_GUARDIAN_PASSWORD})
     user = User(email=email, role=Role.GUARDIAN, institute=institute, **fields)
     try:
         validate_password(password, user)
@@ -186,11 +194,56 @@ def _check_email_free(email: str, field: str, user: User | None = None) -> str:
     return email
 
 
-def _set_pairs(teacher: TeacherProfile, selections: Selections) -> None:
+def _new_user(
+    institute: Institute,
+    role: str,
+    *,
+    email: str,
+    password: str,
+    full_name: str,
+    phone: str,
+) -> User:
+    """A new account with a free email and a password that passes the rules."""
+    email = _check_email_free(email, "email")
+    first_name, last_name = split_full_name(full_name)
+    user = User(
+        email=email,
+        role=role,
+        institute=institute,
+        first_name=first_name,
+        last_name=last_name,
+        phone=phone.strip(),
+    )
     try:
-        set_teacher_batch_subjects(teacher, selections)
+        validate_password(password, user)
+    except ValidationError as error:
+        raise ValidationError({"password": error.messages}) from error
+    user.set_password(password)
+    user.save()
+    return user
+
+
+def _set_pairs(
+    profile: StudentProfile | TeacherProfile, selections: Selections
+) -> None:
+    setter = (
+        set_student_batch_subjects
+        if isinstance(profile, StudentProfile)
+        else set_teacher_batch_subjects
+    )
+    try:
+        setter(profile, selections)
     except ValidationError as error:
         raise ValidationError({"batch_subjects": error.messages}) from error
+
+
+def _set_active(profile: StudentProfile | TeacherProfile, *, is_active: bool) -> None:
+    """Status and sign-in change together: an inactive person cannot sign in."""
+    require_tenant_context(profile.institute)
+    profile.status = ProfileStatus.ACTIVE if is_active else ProfileStatus.INACTIVE
+    profile.save(update_fields=["status"])
+    profile.user.is_active = is_active
+    profile.user.save(update_fields=["is_active"])
 
 
 @transaction.atomic
@@ -207,22 +260,14 @@ def create_teacher(
     joining_date: date | None = None,
 ) -> TeacherProfile:
     require_tenant_context(institute)
-    email = _check_email_free(email, "email")
-    first_name, last_name = split_full_name(full_name)
-    user = User(
+    user = _new_user(
+        institute,
+        Role.TEACHER,
         email=email,
-        role=Role.TEACHER,
-        institute=institute,
-        first_name=first_name,
-        last_name=last_name,
-        phone=phone.strip(),
+        password=password,
+        full_name=full_name,
+        phone=phone,
     )
-    try:
-        validate_password(password, user)
-    except ValidationError as error:
-        raise ValidationError({"password": error.messages}) from error
-    user.set_password(password)
-    user.save()
     teacher = create_teacher_profile(
         user, cnic=cnic.strip(), address=address.strip(), joining_date=joining_date
     )
@@ -258,10 +303,144 @@ def update_teacher(
 
 @transaction.atomic
 def set_teacher_active(teacher: TeacherProfile, *, is_active: bool) -> TeacherProfile:
-    """Status and sign-in change together: an inactive teacher cannot sign in."""
-    require_tenant_context(teacher.institute)
-    teacher.status = ProfileStatus.ACTIVE if is_active else ProfileStatus.INACTIVE
-    teacher.save(update_fields=["status"])
-    teacher.user.is_active = is_active
-    teacher.user.save(update_fields=["is_active"])
+    _set_active(teacher, is_active=is_active)
     return teacher
+
+
+# Students (roadmap 2.5b, SPEC 4.1). Fee plans wait for Phase 7.
+
+
+@dataclass(frozen=True)
+class StudentDetails:
+    """Profile fields shared by enrol and edit (SPEC 4.1 personal and contact)."""
+
+    full_name: str
+    phone: str
+    guardian_phone: str
+    father_name: str = ""
+    cnic: str = ""
+    date_of_birth: date | None = None
+    gender: str = ""
+    class_label: ClassLabel | None = None
+    address: str = ""
+    city: str = ""
+
+
+def list_students(
+    user: object,
+    *,
+    search: str = "",
+    batch_id: int | None = None,
+    class_label_id: int | None = None,
+    status: str = "",
+) -> QuerySet[StudentProfile]:
+    """The user's students, newest first, with links prefetched for the table."""
+    students = StudentProfile.objects.for_user(user).select_related(
+        "user", "class_label"
+    )
+    for term in search.split():
+        students = students.filter(
+            Q(user__first_name__icontains=term)
+            | Q(user__last_name__icontains=term)
+            | Q(user__email__icontains=term)
+            | Q(user__phone__icontains=term)
+            | Q(guardian_phone__icontains=term)
+            | Q(student_code__icontains=term)
+        )
+    if batch_id is not None:
+        students = students.filter(batch_subjects__batch_id=batch_id).distinct()
+    if class_label_id is not None:
+        students = students.filter(class_label_id=class_label_id)
+    if status in ProfileStatus.values:
+        students = students.filter(status=status)
+    links = StudentBatchSubject.objects.select_related("batch", "subject")
+    guardians = GuardianStudentLink.objects.select_related("guardian__user")
+    return students.prefetch_related(
+        Prefetch("batch_subjects", queryset=links),
+        Prefetch("guardian_links", queryset=guardians),
+    ).order_by("-created_at", "-pk")
+
+
+def _apply_details(student: StudentProfile, details: StudentDetails) -> None:
+    # StudentProfile.clean() rejects a class label of another institute.
+    student.father_name = details.father_name.strip()
+    student.cnic = details.cnic.strip()
+    student.date_of_birth = details.date_of_birth
+    student.gender = details.gender
+    student.class_label = details.class_label
+    student.guardian_phone = details.guardian_phone.strip()
+    student.address = details.address.strip()
+    student.city = details.city.strip()
+
+
+@transaction.atomic
+def enrol_student(
+    institute: Institute,
+    details: StudentDetails,
+    *,
+    email: str,
+    password: str,
+    selections: Selections,
+    guardian_name: str,
+    guardian_email: str,
+    guardian_password: str,
+) -> StudentProfile:
+    """Create the student account, profile, links and guardian in one step.
+
+    The guardian follows ``enrol_guardian``: an existing guardian of this
+    institute is linked, a new one is created with the name and password.
+    """
+    require_tenant_context(institute)
+    if email.strip().lower() == guardian_email.strip().lower():
+        raise ValidationError({"guardian_email": SAME_EMAILS})
+    user = _new_user(
+        institute,
+        Role.STUDENT,
+        email=email,
+        password=password,
+        full_name=details.full_name,
+        phone=details.phone,
+    )
+    student = StudentProfile(institute=institute, user=user)
+    _apply_details(student, details)
+    student.student_code = next_code(institute, STUDENT_CODE_PREFIX)
+    student.save()
+    _set_pairs(student, selections)
+    first_name, last_name = split_full_name(guardian_name)
+    enrol_guardian(
+        student,
+        email=guardian_email,
+        password=guardian_password,
+        first_name=first_name,
+        last_name=last_name,
+        phone=details.guardian_phone,
+    )
+    return student
+
+
+@transaction.atomic
+def update_student(
+    student: StudentProfile,
+    details: StudentDetails,
+    *,
+    email: str,
+    selections: Selections,
+) -> StudentProfile:
+    """Edit details, sign-in email and batches. The guardian link stays."""
+    require_tenant_context(student.institute)
+    user = student.user
+    user.email = _check_email_free(email, "email", user=user)
+    user.first_name, user.last_name = split_full_name(details.full_name)
+    user.phone = details.phone.strip()
+    user.save()
+    _apply_details(student, details)
+    student.save()
+    _set_pairs(student, selections)
+    return student
+
+
+@transaction.atomic
+def set_student_active(student: StudentProfile, *, is_active: bool) -> StudentProfile:
+    """The guardian account is not changed: it may have other children."""
+    _set_active(student, is_active=is_active)
+    return student

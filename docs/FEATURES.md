@@ -47,11 +47,11 @@ Setup order the reference teaches: Campus, Classes, Batches, Subjects, Fee Plans
 
 ## 3. Students (Admin)
 
-- [ ] Enrol student form: name*, father name, CNIC, date of birth, gender, class label, batches*, subjects for each chosen batch*, fee plans* with optional discount, read-only monthly fee summary, phones, address, city, status (Active).
-- [ ] Student login (email + password) and guardian login (email + password) created at enrolment. Emails must differ.
-- [ ] Student code auto-filled (like `STU-054`).
-- [ ] Edit student: change batches, subjects, fee plans, contacts.
-- [ ] All Students list with Active/Inactive status.
+- [ ] Enrol student form: name*, father name, CNIC, date of birth, gender, class label, batches*, subjects for each chosen batch*, fee plans* with optional discount, read-only monthly fee summary, phones, address, city, status (Active). Built in 2.5b except fee plans (Phase 7, `fees` feature).
+- [x] Student login (email + password) and guardian login (email + password) created at enrolment. Emails must differ.
+- [x] Student code auto-filled (like `STU-054`).
+- [ ] Edit student: change batches, subjects, fee plans, contacts. Built in 2.5b except fee plans (Phase 7).
+- [x] All Students list with Active/Inactive status.
 - [ ] Bulk upload from an Excel template (one student per row; error rows reported).
 - [ ] Student Attendance History.
 - [ ] **Portal Access:** block a student from the student portal (for example unpaid fees); automatic blocking of fee defaulters can be on or off; single students can be exempted. Blocked student sees a "blocked" page.

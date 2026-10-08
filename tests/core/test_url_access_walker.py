@@ -17,8 +17,8 @@ from apps.academics.models import Batch, ClassLabel, Subject
 from apps.accounts.models import User
 from apps.core.roles import Role
 from apps.core.tenancy import tenant_context
-from apps.people.models import TeacherProfile
-from apps.people.services import create_teacher_profile
+from apps.people.models import StudentProfile, TeacherProfile
+from apps.people.services import create_student_profile, create_teacher_profile
 from apps.ui.views.pages import PortalPageView
 from django.test import Client
 from django.urls import URLPattern, URLResolver, get_resolver, reverse
@@ -84,6 +84,8 @@ def test_walker_finds_the_product_urls() -> None:
         "admin:batch_edit",
         "admin:teacher_list",
         "admin:teacher_edit",
+        "admin:student_list",
+        "admin:student_edit",
     } <= names
 
 
@@ -125,6 +127,20 @@ def _teacher(institute) -> int:
         return create_teacher_profile(user).pk
 
 
+def _student(institute) -> int:
+    # unscoped: test setup outside a tenant context.
+    existing = StudentProfile.unscoped.filter(institute=institute).first()
+    if existing is not None:
+        return existing.pk
+    user = make_user(
+        email="student-row-walker@example.com",
+        role=Role.STUDENT,
+        institute=institute,
+    )
+    with tenant_context(institute):
+        return create_student_profile(user, guardian_phone="0300-0000000").pk
+
+
 ROUTE_OBJECTS = {
     **{
         f"admin:{prefix}_{action}": _name_row(model)
@@ -137,6 +153,8 @@ ROUTE_OBJECTS = {
     },
     "admin:teacher_edit": _teacher,
     "admin:teacher_status": _teacher,
+    "admin:student_edit": _student,
+    "admin:student_status": _student,
 }
 
 
