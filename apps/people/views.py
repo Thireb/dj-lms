@@ -13,10 +13,13 @@ from django.core.paginator import Paginator
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.cache import patch_cache_control
+from django.utils.dateformat import format as format_date
 
 from apps.academics.models import Batch, ClassLabel
 from apps.core import menus as menu_keys
+from apps.core.menus import user_has_menu
 from apps.core.roles import Role
 from apps.people.bulk_upload import (
     RowCheck,
@@ -26,6 +29,7 @@ from apps.people.bulk_upload import (
     import_rows,
     read_rows,
 )
+from apps.people.dashboard import admin_dashboard
 from apps.people.forms import (
     PersonForm,
     StudentEnrolForm,
@@ -48,17 +52,25 @@ from apps.people.services import (
 )
 from apps.people.ui import (
     BulkPreviewTable,
+    RecentStudentTable,
+    RecentTeacherTable,
     StudentTable,
     TeacherTable,
     profile_status_dialog,
 )
-from apps.ui.components.actions import Button, ConfirmDialog
+from apps.ui.components.actions import Button, ConfirmDialog, QuickAction
 from apps.ui.components.block_stack import BlockStack
-from apps.ui.components.data import EmptyState
+from apps.ui.components.data import EmptyState, ProgressBar, StatCard
 from apps.ui.components.forms import CrispyForm, PortalPostForm
-from apps.ui.components.layout import SectionCard
+from apps.ui.components.layout import HeroBanner, SectionCard
 from apps.ui.components.nav import FilterBar, Pagination
-from apps.ui.views.pages import DetailPage, FormPage, ListPage, PortalPageView
+from apps.ui.views.pages import (
+    DashboardPage,
+    DetailPage,
+    FormPage,
+    ListPage,
+    PortalPageView,
+)
 
 PAGE_SIZE = 25
 STATUS_OPTIONS = [("", "Any status"), *ProfileStatus.choices]
@@ -528,3 +540,100 @@ class StudentBulkTemplateView(PeopleAdminMixin, PortalPageView):
             'attachment; filename="student-upload-template.xlsx"'
         )
         return response
+
+
+# Admin main dashboard (roadmap 2.4, SPEC 8)
+
+
+class AdminDashboardPage(DashboardPage):
+    """Counts and recent people. Later phases add lectures, fees and approvals."""
+
+    portal = "admin"
+    menu_key = menu_keys.DASHBOARDS
+    allowed_roles = [Role.INSTITUTE_ADMIN, Role.SUB_ADMIN]
+    title = "Main dashboard"
+
+    # (label, icon, url name, menu key the link needs)
+    QUICK_ACTIONS = [
+        ("Enrol student", "user-plus", "admin:student_create", menu_keys.PEOPLE),
+        ("Add teacher", "chalkboard-user", "admin:teacher_create", menu_keys.PEOPLE),
+        ("Bulk upload", "upload", "admin:student_bulk_upload", menu_keys.PEOPLE),
+        ("Add batch", "users", "admin:batch_create", menu_keys.INSTITUTE),
+    ]
+
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        self.data = admin_dashboard(self.request.user)
+        return super().get_context_data(**kwargs)
+
+    def can_open(self, key: str) -> bool:
+        return user_has_menu(self.request.user, key)
+
+    def get_hero(self) -> HeroBanner:
+        today = format_date(timezone.localdate(), "l, j M Y")
+        return HeroBanner(title=self.get_institute().name, subtitle=today)
+
+    def get_stat_cards(self) -> list[Any]:
+        data = self.data
+        students, teachers = data.students, data.teachers
+        return [
+            StatCard(
+                students.total,
+                "Students",
+                note=f"{students.active} active, {students.inactive} inactive",
+                icon="user-graduate",
+            ),
+            StatCard(
+                teachers.total,
+                "Teachers",
+                note=f"{teachers.active} active, {teachers.inactive} inactive",
+                icon="chalkboard-user",
+            ),
+            StatCard(
+                data.batches_running,
+                "Running batches",
+                note=f"With active students, of {data.batches_total} batches",
+                icon="users",
+            ),
+        ]
+
+    def get_quick_actions(self) -> list[Any]:
+        return [
+            QuickAction(label, icon, reverse(url_name))
+            for label, icon, url_name, key in self.QUICK_ACTIONS
+            if self.can_open(key)
+        ]
+
+    def get_sections(self) -> list[Any]:
+        data = self.data
+        people_link = self.can_open(menu_keys.PEOPLE)
+        return [
+            SectionCard(
+                title="Active people",
+                body=BlockStack(
+                    blocks=[
+                        ProgressBar(
+                            data.students.active_percent,
+                            label=f"Students active: {data.students.active} "
+                            f"of {data.students.total}",
+                            tone="success",
+                        ),
+                        ProgressBar(
+                            data.teachers.active_percent,
+                            label=f"Teachers active: {data.teachers.active} "
+                            f"of {data.teachers.total}",
+                            tone="success",
+                        ),
+                    ]
+                ),
+            ),
+            SectionCard(
+                title="Recent students",
+                body=RecentStudentTable(data.recent_students),
+                link_url=reverse("admin:student_list") if people_link else None,
+            ),
+            SectionCard(
+                title="Recent teachers",
+                body=RecentTeacherTable(data.recent_teachers),
+                link_url=reverse("admin:teacher_list") if people_link else None,
+            ),
+        ]

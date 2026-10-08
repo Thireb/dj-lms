@@ -30,16 +30,6 @@ class PortalHomePage(DashboardPage):
         return [SignOutForm(logout_url=reverse("accounts:logout"))]
 
 
-class AdminPortalHomePage(PortalHomePage):
-    portal = "admin"
-    title = "Admin home"
-    allowed_roles = [Role.INSTITUTE_ADMIN, Role.SUB_ADMIN]
-    menu_key = "dashboards"
-    home_message = (
-        "Admin portal home. Menus and dashboards arrive in later roadmap items."
-    )
-
-
 class TeacherPortalHomePage(PortalHomePage):
     portal = "teacher"
     title = "Teacher home"

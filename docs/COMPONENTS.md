@@ -168,7 +168,7 @@ class StudentListPage(ListPage):
         return [Button("Enrol student", url=reverse("admin:student_create"), icon="plus")]
 ```
 
-Base page types: `DashboardPage`, `ListPage`, `DetailPage`, `FormPage`. They match the page patterns in `UI-GUIDELINES.md`.
+Base page types: `DashboardPage`, `ListPage`, `DetailPage`, `FormPage`. They match the page patterns in `UI-GUIDELINES.md`. `DashboardPage` has an optional `get_hero()` slot (for example a `HeroBanner`) shown above the stat cards.
 
 ## 6. Forms with crispy-forms
 

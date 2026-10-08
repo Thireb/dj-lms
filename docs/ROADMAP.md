@@ -36,13 +36,14 @@ From 2.8 on, every phase that adds a model also extends `seed_demo` with that mo
 - [x] 2.3 `academics`: ClassLabel, Batch, Subject (independent lists), StudentBatchSubject, TeacherBatchSubject.
   - [x] 2.3a Models, link services (`set_student_batch_subjects`, `set_teacher_batch_subjects`), `for_user` scopes through batches, `StudentProfile.class_label`.
   - [x] 2.3b Admin pages for Classes, Batches and Subjects (Institute menu): list, add, edit, deactivate (SPEC 3 and 4.3).
-- [ ] 2.4 Admin dashboard with counts and recent enrolments.
+- [x] 2.4 Admin dashboard with counts and recent enrolments. Lectures today, the fee strip, approvals and receipts are added by Phases 3, 7 and 9.
 - [x] 2.5 Student and teacher list, create, edit, activate/deactivate.
   - [x] 2.5a Teachers: list (search, batch and status filters), add, edit, activate/deactivate.
   - [x] 2.5b Students: list, enrol (with guardian), edit, activate/deactivate. Fee plans wait for Phase 7.
 - [x] 2.6 Bulk student upload from Excel template with error report.
-- [ ] 2.7 Portal Access: block/unblock, auto-block defaulters, exemptions, blocked page.
+- [ ] 2.7 Portal Access: manual block/unblock, exemptions, blocked page. The automatic defaulter rule (nightly auto-block and auto-unblock, SPEC 6.2) needs challans, so it moves to Phase 7 as 7.6 (backlog S9).
 - [ ] 2.8 Demo data at scale: extend `seed_demo` with bulk students per SPEC section 10. Build last in Phase 2, after 2.1 to 2.3 add the people and academics models.
+- [ ] 2.9 Phase 2 audit: full review of everything built in Phase 2 (CLAUDE.md PR review procedure on the whole phase, every open backlog item re-checked, findings added to BACKLOG.md). Phase 3 does not start until it is done.
 
 ## Phase 3: Lectures
 
@@ -81,6 +82,7 @@ From 2.8 on, every phase that adds a model also extends `seed_demo` with that mo
 - [ ] 7.3c Reports: daily, monthly, yearly, defaulters, print/export.
 - [ ] 7.4 Reminders.
 - [ ] 7.5 Student and guardian fee pages.
+- [ ] 7.6 Automatic defaulter blocking from 2.7: nightly job blocks defaulters that are not exempt and unblocks them when nothing is overdue beyond grace (SPEC 6.2, setting `auto_block_defaulters`).
 
 ## Phase 8: Payroll (Premium)
 

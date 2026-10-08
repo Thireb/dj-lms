@@ -149,12 +149,13 @@ Status: `[ ]` open, `[x]` done. Priority: **High** = fix before merge or before 
 |---|---|---|---|---|
 | S1 | Flash messages were never shown: no template rendered `messages`, so "Campus profile updated.", "Institute saved." and every other `messages.success` call was lost. Fixed: both shells render one `Toast` per message; toast tones use theme colors. | 2.3b build | Medium | [x] |
 | S2 | `ListPageBody`, `DataTable` and `BlockStack` rendered nested components without `request`, so a `ConfirmDialog` in a table row had no CSRF token and its POST got 403. Fixed with `render_child`; test posts with `enforce_csrf_checks=True`. | 2.3b build | High | [x] |
-| S3 | `badge-tone-*` classes (used by `Badge`) have no CSS, so status badges show no color. Map each tone to theme token classes in `badge.html`, as `toast.html` now does. | 2.3b build | Low | [ ] |
+| S3 | `badge-tone-*` classes (used by `Badge`) have no CSS, so status badges show no color. Map each tone to theme token classes in `badge.html`, as `toast.html` now does. | 2.3b build | Low | [x] fixed in 2.4 |
 | S4 | `static/css/src/input.css` `@source` paths start with `../../../../`, which is outside the repo. Classes are still found by Tailwind's automatic detection. Fix the paths to `../../../`. | 2.3b build | Low | [ ] |
 | S5 | `apps/institutes/urls/admin.py` is not included anywhere; admin URLs live in `apps/ui/urlconf/admin.py`. Delete it or include it. | 2.3b build | Low | [ ] |
 | S6 | The URL walker only checked roles outside `allowed_roles`, so adding `Role.TEACHER` to an admin page passed every test (found by the 2.5a mutation check). Fixed: the walker now asserts admin portal views allow only `institute_admin` and `sub_admin`. | 2.5a build | Medium | [x] |
 | S7 | `DetailPageBody` rendered its cards without `request`, so a form inside a card had no CSRF token (same cause as S2). Fixed with `render_child`; test added. | 2.6 build | Medium | [x] |
 | S8 | Bulk upload runs in the web request: about 0.55 s of password hashing per row, so files are capped at 50 rows. Move the import to a Celery task when Celery arrives (roadmap 3.2), then raise the cap. | 2.6 build | Low | [ ] |
+| S9 | Automatic defaulter blocking (SPEC 6.2) is not part of 2.7: it needs challans and overdue data from Phase 7. Build it as roadmap 7.6 on top of the 2.7 block and exempt fields; manual block and unblock must still win until the next run. | 2.4 planning | High | [ ] |
 
 ## Later (deployment hardening, Phase 12)
 

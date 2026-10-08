@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from apps.core.roles import Role, user_role
+
 # Grantable top-level admin menu groups (sub-admin access).
 DASHBOARDS = "dashboards"
 INSTITUTE = "institute"
@@ -22,3 +24,17 @@ ADMIN_MENU_KEYS: tuple[str, ...] = (
     ACADEMIC,
     MESSAGES,
 )
+
+
+def user_has_menu(user: object, key: str) -> bool:
+    """Whether to show links into an admin menu group (views still check access).
+
+    Same rule as ``MenuRequiredMixin``: an institute admin has every key, a
+    sub-admin only the keys in ``allowed_menus``.
+    """
+    role = user_role(user)
+    if role == Role.INSTITUTE_ADMIN:
+        return True
+    if role == Role.SUB_ADMIN:
+        return key in (getattr(user, "allowed_menus", None) or [])
+    return False
