@@ -116,7 +116,8 @@ def test_sign_in_is_a_split_page_with_the_band() -> None:
         r'href="/accounts/forgot-password/"[^>]*class="[^"]*text-primary', page
     ) or ('class="-mt-' in page and "Forgot password?" in page)
     assert "btn btn-primary btn-lg w-full" in page
-    assert "section-card" not in page  # no box around the form
+    assert "section-card" not in page
+    assert "[&_.section]:border-0" in page  # the form section has no box
 
 
 @pytest.mark.django_db

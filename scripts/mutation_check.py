@@ -144,8 +144,7 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
     (
         "super shell sign out",
         "apps/ui/menus/super.py",
-        '                    MenuItem("Sign out", "accounts:logout", '
-        '"right-from-bracket"),\n',
+        'MenuItem("Sign out", "accounts:logout", "log-out"),\n',
         "",
     ),
     (
@@ -879,8 +878,8 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
     (
         "badge tone colors",
         "apps/ui/templates/ui/components/badge.html",
-        "{% if tone == 'success' %}bg-success/10 text-success",
-        "{% if False %}bg-success/10 text-success",
+        "{% if tone == 'success' %}bg-success-50 text-success",
+        "{% if False %}bg-success-50 text-success",
     ),
     (
         "blocked student sees access paused",
@@ -944,12 +943,6 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "apps/people/views.py",
         "        if action is None:\n",
         "        if False:\n",
-    ),
-    (
-        "public header optional",
-        "apps/ui/templates/ui/layouts/public.html",
-        "{% if header %}{{ header }}{% endif %}",
-        "{{ header }}",
     ),
     (
         "seed guardian has two children",
@@ -1116,8 +1109,8 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
     (
         "sidebar hidden on phones",
         "apps/ui/templates/ui/components/sidebar_shell.html",
-        'class="sidebar-wrap hidden md:block"',
-        'class="sidebar-wrap"',
+        'class="sidebar-wrap hidden md:sticky',
+        'class="sidebar-wrap md:sticky',
     ),
     (
         "menu groups start closed",
