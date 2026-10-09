@@ -1351,12 +1351,12 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "apps/ui/templates/ui/components/profile_menu.html",
         '{% if badge.role %}<span class="block text-xs text-muted">{{ badge.role }}</span>{% endif %}',
         "",
-        (
-            "bell is an icon button",
-            "apps/ui/templates/ui/components/notification_bell.html",
-            'class="notification-bell icon-btn"',
-            'class="notification-bell text-surface"',
-        ),
+    ),
+    (
+        "bell is an icon button",
+        "apps/ui/templates/ui/components/notification_bell.html",
+        'class="notification-bell icon-btn"',
+        'class="notification-bell text-surface"',
     ),
 ]
 
