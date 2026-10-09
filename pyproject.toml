@@ -28,6 +28,8 @@ package = false
 line-length = 88
 target-version = "py312"
 src = ["apps", "config", "tests"]
+# Third-party Claude Code skills (see CLAUDE.md); not our code.
+extend-exclude = [".claude"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]

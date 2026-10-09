@@ -56,7 +56,8 @@ The product owner did not accept the current look (navigation, tables, forms, si
   - Lexicon (measured in a browser): royal `#002DA8`, indigo `#130C8E`, sky `#1273EB`, near-white `#FAFAFA`, ink `#1C1B1B`; font Familjen Grotesk 400-700; 5px corners, soft shadows; logo is a 200px JPEG (ask for SVG).
   - Reference patterns: light top bar with dropdown groups and a role chip (admin); dark grouped sidebar (other portals); campus hero with stats and actions; people cards with ring and recent list; up-next countdown; split-screen sign-in.
   - Proposal for R2 review: https://claude.ai/artifact/EeJ9dKpEKbsJX5jehZurga (private to the owner).
-- [ ] R2 Design system for approval: tokens (colour, type, spacing, radius, shadow, motion) and every component with previews, for the four portals, super admin and the public pages (sign-in, set password, forgot password, access paused). The owner approves before any template changes.
+- [x] R2 Design system for approval: tokens (colour, type, spacing, radius, shadow, motion) and every component with previews, for the four portals, super admin and the public pages (sign-in, set password, forgot password, access paused). The owner approves before any template changes.
+  - Approved by the owner on 2026-10-09 (proposal artifact above). Decisions: one Lexicon look for every portal (no per-portal colours); light only, no dark mode; the "LEX" mark stands in until an SVG logo arrives; "sign-up pages" means the sign-in and set-password pages (there is no self-registration).
 - [ ] R3 Docs: rewrite `UI-GUIDELINES.md` and `COMPONENTS.md` to the approved system.
 - [ ] R4 Build: tokens, shells (top menu, sidebar), public pages, tables, forms, dashboards and every Phase 1-2 page; checked at 360px and desktop in a browser; new walkthrough video.
 - [ ] R5 Owner sign-off. Then Phase 3 resumes.
