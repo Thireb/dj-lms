@@ -6,7 +6,9 @@ from datetime import datetime
 
 import pytest
 from apps.core.roles import Role
+from apps.core.tenancy import tenant_context
 from apps.people.home import greeting, guardian_home, student_home, teacher_home
+from apps.people.services import set_student_active
 from django.test import Client
 from django.urls import reverse
 
@@ -39,6 +41,14 @@ def test_teacher_home_counts_own_batches_subjects_and_students(school) -> None:
     assert data.pairs == ["Morning: Math", "Morning: Physics"]
     assert (data.batch_count, data.subject_count) == (1, 2)
     assert data.student_count == 1  # student_1 only; Evening is not theirs
+
+
+@pytest.mark.django_db
+def test_teacher_student_count_skips_inactive_students(school) -> None:
+    with tenant_context(school.student_1.institute):
+        set_student_active(school.student_1, is_active=False)
+
+    assert teacher_home(school.teacher_1.user).student_count == 0
 
 
 @pytest.mark.django_db
