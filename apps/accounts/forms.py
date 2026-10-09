@@ -112,7 +112,14 @@ class ProfileForm(BaseForm, forms.ModelForm):
 
     def get_layout(self):
         return Layout(
-            Section(None, "first_name", "last_name", "phone", "timezone"),
+            Section(
+                "Your details",
+                "first_name",
+                "last_name",
+                "phone",
+                "timezone",
+                description="Times on every page use this time zone.",
+            ),
             FormActions(self.save_label, self.cancel_url),
         )
 
@@ -165,7 +172,13 @@ class ChangePasswordForm(BaseForm):
 
     def get_layout(self):
         return Layout(
-            Section(None, "current_password", "new_password", "confirm_password"),
+            Section(
+                "Password",
+                "current_password",
+                "new_password",
+                "confirm_password",
+                description="Use at least 8 characters.",
+            ),
             FormActions(self.save_label, self.cancel_url),
         )
 

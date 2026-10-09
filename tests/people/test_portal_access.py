@@ -22,7 +22,7 @@ from django.core.exceptions import ValidationError
 from django.test import Client
 from django.urls import reverse
 
-from tests.conftest import FakeUser, make_user
+from tests.conftest import FakeUser, make_user, table_row
 from tests.people.conftest import account
 
 
@@ -208,10 +208,10 @@ def test_admin_page_lists_students_with_access(school, institute_a) -> None:
     page = _admin_client(institute_a).get(reverse("admin:portal_access"))
     html = page.content.decode()
 
-    row = re.search(r">STU-001</td>(.*?)</tr>", html, re.S).group(1)
+    row = table_row(html, "STU-001")
     assert "g1-a@example.com" in row
     assert ">Yes<" in row and 'value="unblock"' in row and 'value="exempt"' in row
-    row_2 = re.search(r">STU-002</td>(.*?)</tr>", html, re.S).group(1)
+    row_2 = table_row(html, "STU-002")
     assert 'value="block"' in row_2 and 'value="unexempt"' in row_2
     assert ">STU-001<" in html and html.count(">STU-001<") == 1  # not institute B
 

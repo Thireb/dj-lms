@@ -75,8 +75,17 @@ class TeacherForm(PersonForm):
 
     def get_layout(self):
         return Layout(
-            Section("Personal and sign-in", *self.personal_fields()),
-            Section("Teaching", "batch_subjects"),
+            Section(
+                "Personal and sign-in",
+                *self.personal_fields(),
+                description="The email is the sign-in name for the teacher portal.",
+                columns=2,
+            ),
+            Section(
+                "Teaching",
+                "batch_subjects",
+                description="The batches and subjects this teacher takes.",
+            ),
             FormActions(self.save_label, self.cancel_url),
         )
 
@@ -134,10 +143,28 @@ class StudentForm(PersonForm):
                 "date_of_birth",
                 "gender",
                 "class_label",
+                description="As written on official documents.",
+                columns=2,
             ),
-            Section("Contact", "phone", "guardian_phone", "address", "city"),
-            Section("Academic", "batch_subjects"),
-            Section("Sign-in", *self.login_fields()),
+            Section(
+                "Contact",
+                "phone",
+                "guardian_phone",
+                "address",
+                "city",
+                description="How the institute reaches the student and family.",
+                columns=2,
+            ),
+            Section(
+                "Academic",
+                "batch_subjects",
+                description="The batches and subjects this student studies.",
+            ),
+            Section(
+                "Sign-in",
+                *self.login_fields(),
+                description="Portal sign-in for the student and the guardian.",
+            ),
             FormActions(self.save_label, self.cancel_url),
         )
 

@@ -186,3 +186,14 @@ def test_notice_pages_are_full_band_pages(school, institute_a) -> None:
         assert '<main class="band' in page
         assert 'class="band-waves"' in page
         assert "btn btn-light" in page  # Sign out on the band
+
+
+def test_templates_use_theme_tokens_not_raw_hex() -> None:
+    """UI-GUIDELINES section 2: colours come from tokens, never raw hex."""
+    raw_hex = re.compile(r"\[#[0-9a-fA-F]{3,8}\b|#[0-9a-fA-F]{6}\b")
+    offenders = [
+        str(path)
+        for path in Path("apps").glob("*/templates/**/*.html")
+        if raw_hex.search(path.read_text())
+    ]
+    assert offenders == []

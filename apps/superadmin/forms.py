@@ -63,9 +63,20 @@ class CreateInstituteForm(InstituteFieldsForm):
 
     def get_layout(self):
         return Layout(
-            Section("Institute", "name", "plan", "timezone", "currency_code"),
             Section(
-                "First admin", "admin_first_name", "admin_last_name", "admin_email"
+                "Institute",
+                "name",
+                "plan",
+                "timezone",
+                "currency_code",
+                description="The plan sets the limits for students and storage.",
+            ),
+            Section(
+                "First admin",
+                "admin_first_name",
+                "admin_last_name",
+                "admin_email",
+                description="This person gets an email to set a password.",
             ),
             FormActions(self.save_label, self.cancel_url),
         )

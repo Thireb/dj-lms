@@ -58,8 +58,11 @@ The product owner did not accept the current look (navigation, tables, forms, si
   - Proposal for R2 review: https://claude.ai/artifact/EeJ9dKpEKbsJX5jehZurga (private to the owner).
 - [x] R2 Design system for approval: tokens (colour, type, spacing, radius, shadow, motion) and every component with previews, for the four portals, super admin and the public pages (sign-in, set password, forgot password, access paused). The owner approves before any template changes.
   - Approved by the owner on 2026-10-09 (proposal artifact above). Decisions: one Lexicon look for every portal (no per-portal colours); light only, no dark mode; the "LEX" mark stands in until an SVG logo arrives; "sign-up pages" means the sign-in and set-password pages (there is no self-registration).
-- [ ] R3 Docs: rewrite `UI-GUIDELINES.md` and `COMPONENTS.md` to the approved system.
+- [x] R3 Docs: rewrite `UI-GUIDELINES.md` and `COMPONENTS.md` to the approved system.
 - [ ] R4 Build: tokens, shells (top menu, sidebar), public pages, tables, forms, dashboards and every Phase 1-2 page; checked at 360px and desktop in a browser; new walkthrough video.
+  - [x] R4a Foundation: tokens, font, Lucide icons, shells, public pages, base components.
+  - [x] R4b Tables (people as avatar cards, cards on phones), filters, pagination, form sections with explanations.
+  - [ ] R4c Dashboards and portal home pages; walkthrough video.
 - [ ] R5 Owner sign-off. Then Phase 3 resumes.
 
 ## Phase 3: Lectures (on hold until R5)

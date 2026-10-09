@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -147,3 +148,18 @@ def institute_admin_user(institute_a: Institute) -> User:
         role=Role.INSTITUTE_ADMIN,
         institute=institute_a,
     )
+
+
+def table_row(html: str, text: str) -> str:
+    """The <tr> of a list table that contains ``text`` (a code or a name)."""
+    for row in re.findall(r"<tr\b.*?</tr>", html, re.S):
+        if f">{text}<" in row:
+            return row
+    raise AssertionError(f"no table row with {text!r}")
+
+
+def cell(row: str, key: str) -> str:
+    """Text of the cell for column ``key`` (DataTable adds cell-<key>)."""
+    match = re.search(rf'class="[^"]*cell-{key}[^"]*"[^>]*>(.*?)</td>', row, re.S)
+    assert match, f"no cell-{key}"
+    return re.sub(r"<[^>]+>", " ", match.group(1)).split()

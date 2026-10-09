@@ -1,15 +1,21 @@
 from crispy_forms.layout import LayoutObject
 from crispy_forms.utils import render_field
 from django.template.loader import render_to_string
+from django.utils.text import slugify
 
 
 class Section(LayoutObject):
+    """Form section: title and a one-line explanation on the left, fields on
+    the right (stacked on phones). ``columns=2`` puts fields in two columns."""
+
     template = "ui/forms/layout/section.html"
 
-    def __init__(self, legend, *fields, css_class=None):
+    def __init__(self, legend, *fields, css_class=None, description="", columns=1):
         self.legend = legend
         self.fields = list(fields)
         self.css_class = css_class or ""
+        self.description = description
+        self.columns = columns
 
     def render(self, form, context, template_pack=None, **kwargs):
         field_parts = [
@@ -22,6 +28,9 @@ class Section(LayoutObject):
                 "legend": self.legend,
                 "field_parts": field_parts,
                 "css_class": self.css_class,
+                "description": self.description,
+                "columns": self.columns,
+                "section_id": f"section-{slugify(self.legend)}" if self.legend else "",
             },
         )
 

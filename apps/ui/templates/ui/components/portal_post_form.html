@@ -1,4 +1,4 @@
-<form method="post" action="{{ action }}" enctype="multipart/form-data" class="space-y-4" novalidate>
+<form method="post" action="{{ action }}" enctype="multipart/form-data" novalidate class="portal-form min-w-0 {% if framed %}overflow-hidden rounded-[18px] border border-border bg-surface [&_.crispy-form>[role=alert]]:m-5 [&_.section]:border-b [&_.section]:border-border [&_.section]:px-5 [&_.section]:py-6 md:[&_.section]:px-6 [&_.form-actions]:border-0 [&_.form-actions]:bg-page [&_.form-actions]:px-5 [&_.form-actions]:py-4 md:[&_.form-actions]:px-6{% else %}[&_.form-actions]:pt-2{% endif %} [&_.crispy-form]:space-y-0">
   {% csrf_token %}
   {{ body }}
 </form>

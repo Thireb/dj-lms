@@ -507,7 +507,9 @@ class StudentBulkUploadPage(PeopleAdminMixin, DetailPage):
             SectionCard(
                 title="Upload a file",
                 body=PortalPostForm(
-                    action=self.url("bulk_upload"), body=CrispyForm(form=form)
+                    action=self.url("bulk_upload"),
+                    body=CrispyForm(form=form),
+                    framed=False,
                 ),
             )
         ]

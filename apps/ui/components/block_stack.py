@@ -23,3 +23,17 @@ class BlockStack(Component):
             for block in ctx["blocks"]
         ]
         return render_component_template(self, ctx, request=request)
+
+
+class ButtonRow(Component):
+    """Actions side by side (wraps on narrow screens), right-aligned in tables."""
+
+    template_name = "ui/components/button_row.html"
+
+    def __init__(self, items=None, **props):
+        super().__init__(items=items or [], **props)
+
+    def render(self, request=None):
+        ctx = self.get_context()
+        ctx["items"] = [render_child(item, request) for item in ctx["items"]]
+        return render_component_template(self, ctx, request=request)

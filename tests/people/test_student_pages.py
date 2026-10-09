@@ -12,7 +12,12 @@ from apps.people.models import GuardianStudentLink, StudentProfile
 from django.test import Client
 from django.urls import reverse
 
-from tests.conftest import TEST_LOGIN_PASSWORD, TEST_NEW_PASSWORD, make_user
+from tests.conftest import (
+    TEST_LOGIN_PASSWORD,
+    TEST_NEW_PASSWORD,
+    make_user,
+    table_row,
+)
 from tests.school import make_lists
 
 
@@ -71,7 +76,7 @@ def test_list_shows_class_batches_and_guardian(admin_client, school) -> None:
 
     html = admin_client.get(_url("list")).content.decode()
 
-    row = re.search(r">STU-001</td>(.*?)</tr>", html, re.S).group(1)
+    row = table_row(html, "STU-001")
     assert ">Grade 9<" in row
     assert ">Morning<" in row
     assert "g1-a@example.com" in row
