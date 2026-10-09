@@ -12,7 +12,7 @@ from apps.core.roles import Role
 from django.test import Client, RequestFactory
 from django.urls import reverse
 
-from tests.conftest import make_user
+from tests.conftest import cell, make_user, table_row
 from tests.school import make_lists
 
 KINDS = [
@@ -98,10 +98,10 @@ def test_list_pages_25_rows(admin_client, institute_a) -> None:
 def test_student_count_counts_each_student_once(admin_client, school) -> None:
     html = admin_client.get(_url("batch", "list")).content.decode()
 
-    morning = re.search(r">Morning</td><td[^>]*>(\d+)</td>", html)
-    evening = re.search(r">Evening</td><td[^>]*>(\d+)</td>", html)
-    assert morning.group(1) == "1"  # one student with two subjects
-    assert evening.group(1) == "1"
+    morning = cell(table_row(html, "Morning"), "student_count")
+    evening = cell(table_row(html, "Evening"), "student_count")
+    assert morning == ["1"]  # one student with two subjects
+    assert evening == ["1"]
 
 
 @pytest.mark.django_db
@@ -112,7 +112,7 @@ def test_class_student_count_uses_class_label(admin_client, school) -> None:
 
     html = admin_client.get(_url("class", "list")).content.decode()
 
-    assert re.search(r">Grade 9</td><td[^>]*>1</td>", html)
+    assert cell(table_row(html, "Grade 9"), "student_count") == ["1"]
 
 
 @pytest.mark.django_db

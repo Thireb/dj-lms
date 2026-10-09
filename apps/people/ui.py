@@ -12,9 +12,9 @@ from apps.people.models import (
     StudentProfile,
     TeacherProfile,
 )
-from apps.ui.components.actions import Button, ConfirmDialog
-from apps.ui.components.block_stack import BlockStack
-from apps.ui.components.data import Badge, Column, DataTable
+from apps.ui.components.actions import ConfirmDialog, IconButton
+from apps.ui.components.block_stack import BlockStack, ButtonRow
+from apps.ui.components.data import Badge, Column, DataTable, PersonCell
 
 Profile = StudentProfile | TeacherProfile
 
@@ -61,12 +61,21 @@ def _guardians(student: StudentProfile) -> str:
     return ", ".join(str(link.guardian) for link in student.guardian_links.all())
 
 
-def _actions(profile: Profile) -> BlockStack:
+def _code(profile: Profile) -> str:
+    return getattr(profile, "student_code", "") or getattr(profile, "teacher_code", "")
+
+
+def person(profile: Profile) -> PersonCell:
+    """Avatar, name and the student or teacher code, for every people table."""
+    return PersonCell(str(profile), detail=_code(profile))
+
+
+def _actions(profile: Profile) -> ButtonRow:
     prefix = _url_prefix(profile)
     edit_url = reverse(f"admin:{prefix}_edit", kwargs={"pk": profile.pk})
-    return BlockStack(
-        blocks=[
-            Button("Edit", url=edit_url, variant="secondary"),
+    return ButtonRow(
+        items=[
+            IconButton("square-pen", f"Edit {profile}", url=edit_url),
             profile_status_dialog(profile),
         ]
     )
@@ -74,8 +83,7 @@ def _actions(profile: Profile) -> BlockStack:
 
 class TeacherTable(DataTable):
     columns = [
-        Column("teacher_code", "ID"),
-        Column("name", "Name", str),
+        Column("name", "Teacher", person),
         Column("batches", "Batches", _batches),
         Column("subjects", "Subjects", _subjects),
         Column("phone", "Phone", lambda teacher: teacher.user.phone),
@@ -87,8 +95,7 @@ class TeacherTable(DataTable):
 
 class StudentTable(DataTable):
     columns = [
-        Column("student_code", "ID"),
-        Column("name", "Name", str),
+        Column("name", "Student", person),
         Column("class_label", "Class", lambda s: s.class_label or ""),
         Column("batches", "Batches", _batches),
         Column("guardian", "Guardian", _guardians),
@@ -125,8 +132,7 @@ def _added_on(profile: Profile) -> str:
 
 class RecentStudentTable(DataTable):
     columns = [
-        Column("student_code", "ID"),
-        Column("name", "Name", str),
+        Column("name", "Student", person),
         Column("batches", "Batches", _batches),
         Column("status", "Status", profile_status_badge),
         Column("added", "Enrolled", _added_on),
@@ -136,8 +142,7 @@ class RecentStudentTable(DataTable):
 
 class RecentTeacherTable(DataTable):
     columns = [
-        Column("teacher_code", "ID"),
-        Column("name", "Name", str),
+        Column("name", "Teacher", person),
         Column("subjects", "Subjects", _subjects),
         Column("status", "Status", profile_status_badge),
         Column("added", "Added", _added_on),
@@ -165,7 +170,7 @@ def _access_dialog(student: StudentProfile, action: str, message: str, label: st
     )
 
 
-def _access_actions(student: StudentProfile) -> BlockStack:
+def _access_actions(student: StudentProfile) -> ButtonRow:
     blocked, exempt = _access(student)
     name = str(student)
     if blocked:
@@ -194,15 +199,14 @@ def _access_actions(student: StudentProfile) -> BlockStack:
             f"Exempt {name}? Automatic blocking will never block this student.",
             "Exempt",
         )
-    return BlockStack(blocks=[block, exemption])
+    return ButtonRow(items=[block, exemption])
 
 
 class PortalAccessTable(DataTable):
     """SPEC 3 Portal Access. Fee due comes with Phase 7."""
 
     columns = [
-        Column("student_code", "ID"),
-        Column("name", "Student", str),
+        Column("name", "Student", person),
         Column("class_label", "Class", lambda s: s.class_label or ""),
         Column("guardian", "Guardian", _guardians),
         Column("blocked", "Blocked", lambda s: _yes_no(_access(s)[0], "danger")),

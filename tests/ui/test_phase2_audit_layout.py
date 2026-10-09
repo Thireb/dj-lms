@@ -62,7 +62,7 @@ def test_main_column_and_fieldsets_can_shrink(institute_a) -> None:
     page = _page(admin, "admin:campus")
 
     assert '<main class="min-w-0 flex-1' in page
-    assert '<fieldset class="section min-w-0' in page
+    assert '<section class="section min-w-0' in page
 
 
 def test_base_form_styles_text_widgets_only() -> None:

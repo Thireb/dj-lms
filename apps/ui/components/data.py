@@ -78,7 +78,30 @@ class DataTable(Component):
         ctx["cells"] = [
             [render_child(cell, request) for cell in row] for row in ctx["cells"]
         ]
+        # Each cell keeps its column label: below md, rows become cards that
+        # show "label: value" pairs (UI-GUIDELINES tables).
+        ctx["table_rows"] = [
+            [
+                (col.label, col.key, cell)
+                for col, cell in zip(ctx["columns"], row, strict=True)
+            ]
+            for row in ctx["cells"]
+        ]
         return render_component_template(self, ctx, request=request)
+
+
+class PersonCell(Component):
+    """Avatar, name and a small second line (code, batch) for people tables."""
+
+    template_name = "ui/components/person_cell.html"
+
+    def __init__(self, name, detail="", **props):
+        super().__init__(name=name, detail=detail, **props)
+
+    def get_context(self):
+        ctx = super().get_context()
+        ctx["avatar"] = Avatar(self.props["name"])
+        return ctx
 
 
 class Badge(Component):

@@ -2,7 +2,7 @@
 
 Rules for building screens. AI agents must follow this file exactly. Do not invent new components, colors, or spacing.
 
-Design system: **Lexicon**, approved by the owner on 2026-10-09 (roadmap Phase R, proposal linked in `ROADMAP.md` R1). Built so far: R4a (tokens, font, icons, shells, public pages, base components). R4b (tables, filters, forms layout) and R4c (dashboards) follow; until then those parts keep their older markup with the new colours.
+Design system: **Lexicon**, approved by the owner on 2026-10-09 (roadmap Phase R, proposal linked in `ROADMAP.md` R1). Built so far: R4a (tokens, font, icons, shells, public pages, base components) and R4b (tables, filters, pagination, forms layout). R4c (dashboards) follows; until then the dashboards keep their older markup with the new colours.
 
 ## 1. UI stack
 
@@ -38,8 +38,9 @@ From Lexicon's own site (lexicon.edu.pk), measured in a browser. **One look for 
 | `success` on `success-50` | `#0E7A55` on `#E3F5EE` | active, paid, present |
 | `warning` on `warning-50` | `#9A5B00` on `#FDF1DC` | pending, blocked, due soon |
 | `danger` on `danger-50` | `#B4233F` on `#FBE7EB` | inactive, overdue, errors, destructive |
+| `tone-indigo-50`, `tone-teal` on `tone-teal-50`, `tone-clay` on `tone-clay-50` | `#EAE6FB`; `#0B5E86` on `#E2F2F8`; `#8A3B12` on `#FCEBE3` | avatar tints only |
 
-- Never raw hex in templates; use the Tailwind token classes (`bg-primary`, `text-muted`, ...).
+- Never raw hex in templates; use the Tailwind token classes (`bg-primary`, `text-muted`, ...). A test fails if a template has one.
 - Status colours always come with a text label (chips have a dot and a word).
 - **The band** (`.band` + `_waves.html`): royal-to-indigo gradient with fine wave lines, from Lexicon's homepage. It is the one bold element: sign-in panel, dashboard heroes, Access paused and other full-page notices only. Everything else stays white and quiet.
 - Light only. No dark mode (owner decision, R2).
@@ -91,21 +92,25 @@ Each pattern is a base page class in `apps/ui/views/pages.py`. Subclass it.
 
 - **`ListPage`:** `PageHeader` -> `FilterBar` -> `DataTable` -> `Pagination`. Empty list shows `EmptyState`.
 - **`DetailPage`:** `PageHeader` -> two-column cards (info left, related lists right).
-- **`FormPage`:** `PageHeader` -> crispy form in sections (R4b: section title and explanation on the left, fields on the right; stacked on phones).
+- **`FormPage`:** `PageHeader` -> one card (max width 1024px) with the crispy sections split by hairlines: section title and explanation on the left, fields on the right (stacked on phones). Short fields go in two columns (`Section(columns=2)`). Buttons sit in a footer bar.
 - **`DashboardPage`:** `PageHeader` -> row of `StatCard` -> row of `QuickAction` -> `SectionCard`s.
 - **Modal forms:** use `HtmxModalForm` for short forms (under 6 fields). Longer forms get their own page.
 
 ## 7. Tables
 
-- (R4b) Table in a card with a light header row (13px semibold muted), 14px rows, people shown as avatar, name and code.
+- Table in a card with a light header row (13px semibold muted), 14px rows. People are one column: avatar, name and code (`PersonCell`); no separate ID column.
 - Status columns always use `badge`.
 - Actions column on the right: small icon buttons with an `aria-label`, max 3; destructive ones open a `ConfirmDialog` (a real modal).
-- (R4b) On phones each row becomes a card with label and value pairs. Never let the page scroll sideways.
+- On phones each row becomes a card with label and value pairs; the person is the card title. Never let the page scroll sideways.
+- Filters above the table: search with an icon, selects, "Apply filters", and "Clear" when a filter is set. Pagination below: "Showing 1 to 25 of 52" and page numbers.
 
 ## 8. Forms
 
 - Forms are crispy-forms classes (`BaseForm`, `TenantModelForm`). Layout is set in `get_layout()`, never in the template.
 - Labels above inputs, never placeholder-only.
+- Every titled section has a one-line explanation of what it is for.
+- Many-to-many choices (for example subjects per batch) are chip toggles that show a check when selected.
+- File fields are a dashed drop area with a "Choose file" button (base style in `input.css`).
 - Required fields marked with `*`.
 - Errors appear under the field in `danger` text and say how to fix it.
 - Primary action on the right, "Cancel" on the left of it. On public pages the submit button is full width (`FormActions(stacked=True)`).

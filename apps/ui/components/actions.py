@@ -16,6 +16,20 @@ class Button(Component):
         )
 
 
+class IconButton(Component):
+    """Icon-only link or button; ``label`` becomes its aria-label and tooltip."""
+
+    template_name = "ui/components/icon_button.html"
+
+    def __init__(self, icon, label, url=None, **props):
+        super().__init__(
+            icon=icon,
+            label=label,
+            url=safe_url(url) if url is not None else None,
+            **props,
+        )
+
+
 class QuickAction(Component):
     template_name = "ui/components/quick_action.html"
 

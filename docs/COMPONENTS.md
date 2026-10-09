@@ -1,6 +1,6 @@
 # COMPONENTS
 
-> **Lexicon redesign (roadmap Phase R).** Looks follow `UI-GUIDELINES.md`. R4a restyled the shells, public pages and base components below; R4b (tables, filters, forms layout) and R4c (dashboards) follow.
+> **Lexicon redesign (roadmap Phase R).** Looks follow `UI-GUIDELINES.md`. R4a restyled the shells, public pages and base components below. R4b restyled tables, filters, pagination and the form layout. R4c (dashboards) follows.
 
 How UI is built in Python. Components are classes. Pages and forms assemble them. New screens are made by subclassing, not by copying templates.
 
@@ -24,11 +24,11 @@ apps/ui/
     base.py        # Component base class
     layout.py      # TopNavShell, SidebarShell, Sidebar, TopNav, HeroBanner, PageHeader,
                    # SectionCard, Tabs, Modal, PublicFormShell
-    forms.py       # CrispyForm, PublicPostForm
-    block_stack.py # BlockStack
+    forms.py       # CrispyForm, PublicPostForm, PortalPostForm
+    block_stack.py # BlockStack, ButtonRow
     data.py        # StatCard, DataTable, Column, Badge, StatusBadge, Avatar,
-                   # ProgressBar, ChartCard, EmptyState
-    actions.py     # Button, QuickAction, ConfirmDialog, CopyField, Toast
+                   # PersonCell, ProgressBar, ChartCard, EmptyState
+    actions.py     # Button, IconButton, QuickAction, ConfirmDialog, CopyField, Toast
     lectures.py    # CountdownCard, LectureRow, ScheduleList
     nav.py         # NotificationBell, FilterBar, Pagination
     pdf.py         # PdfHeader
@@ -247,17 +247,20 @@ Every item here is a class. Names are fixed.
 | `PublicFormShell` | layout | public page: `split` (form left, band right; short band on phones) or `notice` (whole page is the band, centred message with an icon) | `page_title`, `header`, `content`, `variant`, `icon` |
 | `CrispyForm` | forms | crispy form body (`form_tag=False` inside a parent form) | `form` |
 | `PublicPostForm` | forms | `<form method="post">` + CSRF wrapper for public pages | `action`, `body` |
-| `PortalPostForm` | forms | Portal `FormPage` POST wrapper (CSRF, multipart, crispy body) | `action`, `body` |
+| `PortalPostForm` | forms | Portal `FormPage` POST wrapper (CSRF, multipart, crispy body). `framed` puts the sections in one card with dividers and a footer bar for the buttons; the bulk upload sets `framed=False` because its form sits in a `SectionCard` | `action`, `body`, `framed` |
 | `ProfileMenu` | layout | Admin top-bar profile dropdown (C11 items, admin_only hiding) | `items` |
 | `BlockStack` | block_stack | vertical stack of text or nested components | `blocks` |
+| `ButtonRow` | block_stack | actions side by side; wraps on phones, right-aligned from md (table action cells) | `items` |
 | `SignOutForm` | actions | POST sign out with CSRF; `variant="light"` on the band | `logout_url`, `variant` |
 | `StatCard` | data | stat tile with an icon tile; `tone="lead"` is the solid royal tile | `value`, `label`, `note`, `icon`, `tone` |
-| `DataTable` + `Column` | data | table that scrolls sideways inside its box; no sorting yet | `columns`, `rows` |
+| `DataTable` + `Column` | data | table in a card with a light header row; each cell has `data-label` (its column label) and `cell-<key>`. Below md each row becomes a card of label and value pairs; a `PersonCell` becomes the card title. From md the table scrolls sideways inside its box. No sorting yet | `columns`, `rows`, `empty_title` |
+| `PersonCell` | data | `Avatar`, name and a small second line (code) for people columns | `name`, `detail` |
 | `Badge` | data | status chip with a dot (`success`, `danger`, `warning`), or plain (`info`, `neutral`) | `text`, `tone` |
 | `Avatar` | data | initials (first letters of the first two words, or of the email's local part) in a soft circle; the tint is stable per name; full name in `title` | `name`, `size` (`sm`, `md`, `lg`) |
 | `ProgressBar` | data | percent bar | `value`, `label`, `tone` |
 | `ChartCard` | data | Chart.js card | `title`, `chart_id`, `data_url` |
 | `EmptyState` | data | icon tile, message and one action | `title`, `text`, `action`, `icon` |
+| `IconButton` | actions | icon-only link (with `url`) or button; `label` is the `aria-label` and tooltip | `icon`, `label`, `url` |
 | `Button` | actions | `primary`, `secondary`, `danger`, `ghost`, `light`, `glass` (the last two on the band); Lucide icon before the label | `label`, `variant`, `url`, `icon` |
 | `QuickAction` | actions | dashboard tile | `label`, `icon`, `url` |
 | `ConfirmDialog` | actions | confirm actions in a centred modal (`role="alertdialog"`, backdrop, Escape and click outside close it); renders a POST form with CSRF (when rendered with `request`) and Cancel | `message`, `confirm_label`, `url`, `trigger_label`, `variant` (`danger`/`primary`), `fields` (hidden name/value pairs) |
@@ -267,17 +270,17 @@ Every item here is a class. Names are fixed.
 | `LectureRow` | lectures | one lecture in a list | `lecture`, `viewer` |
 | `ScheduleList` | lectures | lectures grouped by day | `lectures`, `viewer` |
 | `NotificationBell` | nav | bell + unread count | `user` |
-| `FilterBar` | nav | search + selects; each filter has `name`, `label`, optional `value`, `placeholder`; a filter with `options` (list of value, label) renders a select | `filters` |
-| `Pagination` | nav | page links; `query` keeps the current filters | `page_obj`, `query` |
+| `FilterBar` | nav | search field with an icon + selects and "Apply filters"; "Clear" shows when a filter has a value. Each filter (dict or object) has `name`, `label`, optional `value`, `placeholder`; a filter with `options` (list of value, label) renders a select | `filters` |
+| `Pagination` | nav | "Showing X to Y of N", then previous, page numbers (elided when long) and next; `query` keeps the current filters | `page_obj`, `query` |
 | `PdfHeader` | pdf | institute header for PDFs | `institute` |
 
 | `Icon` | icon | one Lucide icon from the self-hosted sprite (`{% icon "name" %}` in templates); unknown names render nothing; always `aria-hidden` | `name`, `css_class` |
 
-Form layout objects: `Section`, `Row`, `FormActions` (`stacked=True`: cancel becomes a text link and the submit button is full width, for public pages).
+Form layout objects: `Section(legend, *fields, description="", columns=1)` (title and a one-line explanation on the left, fields on the right from md; `columns=2` puts the fields in two columns; with no legend the fields take the full width), `Row`, `FormActions` (`stacked=True`: cancel becomes a text link and the submit button is full width, for public pages).
 
 Form widgets (not components): `PasswordInput` (show/hide toggle; static `type="password"` for no-JS and tests). `GroupedCheckboxes` (one fieldset per choice group, for example subjects under each batch; `empty_text` when there are no choices).
 
-Built ahead of the pages that need them, and shown only on `/dev/components/` so far: `Modal`, `Tabs`, `ChartCard`, `Avatar`, `CountdownCard`, `LectureRow`, `ScheduleList`, `PdfHeader`, `HtmxModalForm`. Keep them tested; the lecture, chart and PDF phases use them (audit L12).
+Built ahead of the pages that need them, and shown only on `/dev/components/` so far: `Modal`, `Tabs`, `ChartCard`, `CountdownCard`, `LectureRow`, `ScheduleList`, `PdfHeader`, `HtmxModalForm`. Keep them tested; the lecture, chart and PDF phases use them (audit L12).
 
 ## 8. Menus
 

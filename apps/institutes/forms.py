@@ -24,7 +24,14 @@ class CampusProfileForm(BaseForm, forms.ModelForm):
 
     def get_layout(self):
         return Layout(
-            Section(None, "name", "address", "phone", "email"),
+            Section(
+                "Campus details",
+                "name",
+                "address",
+                "phone",
+                "email",
+                description="Shown on challans, reports and the sign-in page.",
+            ),
             FormActions(self.save_label, self.cancel_url),
         )
 
@@ -90,6 +97,8 @@ class InstituteSettingsForm(TenantModelForm, forms.ModelForm):
                 "Regional",
                 "timezone",
                 "currency_code",
+                description="Time zone for lecture times and currency for fees.",
+                columns=2,
             ),
             Section(
                 "Fees and portal",
@@ -98,12 +107,15 @@ class InstituteSettingsForm(TenantModelForm, forms.ModelForm):
                 "grace_days_after_due",
                 "auto_block_defaulters",
                 "auto_approve_guardian_receipts",
+                description="When fees fall due and how the portal reacts.",
+                columns=2,
             ),
             Section(
                 "Approvals",
                 "require_admin_approval_homework",
                 "require_admin_approval_lesson_plans",
                 "require_admin_approval_daily_reports",
+                description="Teacher work that needs your approval first.",
             ),
             Section(
                 "Attendance and content",
@@ -113,6 +125,8 @@ class InstituteSettingsForm(TenantModelForm, forms.ModelForm):
                 "attendance_late_after_minutes",
                 "lock_course_document_downloads",
                 "recurring_lecture_horizon_weeks",
+                description="Attendance marks, course files and the lecture plan.",
+                columns=2,
             ),
             FormActions(self.save_label, self.cancel_url),
         )

@@ -12,7 +12,7 @@ from apps.people.models import TeacherProfile
 from django.test import Client
 from django.urls import reverse
 
-from tests.conftest import TEST_LOGIN_PASSWORD, make_user
+from tests.conftest import TEST_LOGIN_PASSWORD, cell, make_user, table_row
 from tests.people.conftest import teacher
 from tests.school import link_teacher, make_lists
 
@@ -71,7 +71,9 @@ def test_empty_list_shows_one_action(admin_client) -> None:
 def test_list_shows_own_teachers_with_batches(admin_client, school) -> None:
     html = admin_client.get(_url("list")).content.decode()
 
-    assert re.search(r">TCH-001</td>.*?>Morning</td><td[^>]*>Math</td>", html, re.S)
+    row = table_row(html, "TCH-001")
+    assert cell(row, "batches") == ["Morning"]
+    assert cell(row, "subjects") == ["Math"]
     assert "TCH-002" in html
     assert school.teacher_b.teacher_code == "TCH-001"
     assert html.count(">TCH-001<") == 1  # institute B's TCH-001 is hidden
