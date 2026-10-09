@@ -13,9 +13,9 @@ class AdminMenu:
                 menu_key=menu_keys.DASHBOARDS,
                 items=(
                     MenuItem("Main", "admin:dashboard_main", "gauge"),
-                    MenuItem("Salary", "admin:dashboard_salary", "money-bill"),
+                    MenuItem("Salary", "admin:dashboard_salary", "banknote"),
                     MenuItem("Lectures", "admin:dashboard_lectures", "video"),
-                    MenuItem("Challan", "admin:dashboard_challan", "file-invoice"),
+                    MenuItem("Challan", "admin:dashboard_challan", "receipt"),
                 ),
             ),
             MenuGroup(
@@ -23,7 +23,7 @@ class AdminMenu:
                 menu_key=menu_keys.INSTITUTE,
                 items=(
                     MenuItem("Campus", "admin:campus", "school"),
-                    MenuItem("Classes", "admin:class_list", "layer-group"),
+                    MenuItem("Classes", "admin:class_list", "layers"),
                     MenuItem("Batches", "admin:batch_list", "users"),
                     MenuItem("Subjects", "admin:subject_list", "book"),
                     MenuItem(
@@ -38,7 +38,7 @@ class AdminMenu:
                 label="People",
                 menu_key=menu_keys.PEOPLE,
                 items=(
-                    MenuItem("All students", "admin:student_list", "user-graduate"),
+                    MenuItem("All students", "admin:student_list", "graduation-cap"),
                     MenuItem("Enrol student", "admin:student_create", "user-plus"),
                     MenuItem("Bulk upload", "admin:student_bulk_upload", "upload"),
                     MenuItem(
@@ -47,12 +47,12 @@ class AdminMenu:
                         "clipboard-list",
                     ),
                     MenuItem("Portal access", "admin:portal_access", "lock"),
-                    MenuItem("All teachers", "admin:teacher_list", "chalkboard-user"),
+                    MenuItem("All teachers", "admin:teacher_list", "presentation"),
                     MenuItem("Add teacher", "admin:teacher_create", "user-plus"),
                     MenuItem(
                         "Teacher lecture history",
                         "admin:teacher_lecture_history",
-                        "clock-rotate-left",
+                        "history",
                     ),
                 ),
             ),
@@ -77,19 +77,19 @@ class AdminMenu:
                     MenuItem(
                         "Generate challan",
                         "admin:challan_generate",
-                        "file-circle-plus",
+                        "file-plus",
                         feature="fees",
                     ),
                     MenuItem(
                         "Challan records",
                         "admin:challan_list",
-                        "file-invoice-dollar",
+                        "receipt-text",
                         feature="fees",
                     ),
                     MenuItem(
                         "Process payment",
                         "admin:payment_process",
-                        "cash-register",
+                        "banknote",
                         feature="fees",
                     ),
                     MenuItem(
@@ -119,7 +119,7 @@ class AdminMenu:
                     MenuItem(
                         "Fee defaulters",
                         "admin:fee_defaulters",
-                        "triangle-exclamation",
+                        "triangle-alert",
                         feature="fees",
                     ),
                 ),
@@ -131,13 +131,13 @@ class AdminMenu:
                     MenuItem(
                         "Salary plans",
                         "admin:salary_plan_list",
-                        "file-contract",
+                        "file-pen-line",
                         feature="payroll",
                     ),
                     MenuItem(
                         "Plan assignments",
                         "admin:salary_plan_assignments",
-                        "user-tag",
+                        "user-check",
                         feature="payroll",
                     ),
                     MenuItem(
@@ -155,13 +155,13 @@ class AdminMenu:
                     MenuItem(
                         "Payment history",
                         "admin:salary_payment_history",
-                        "clock-rotate-left",
+                        "history",
                         feature="payroll",
                     ),
                     MenuItem(
                         "Advance salary",
                         "admin:salary_advance",
-                        "hand-holding-dollar",
+                        "hand-coins",
                         feature="payroll",
                     ),
                     MenuItem(
@@ -193,11 +193,11 @@ class AdminMenu:
                         "clipboard",
                         feature="lesson_plans",
                     ),
-                    MenuItem("Quizzes and exams", "admin:quiz_list", "pen-to-square"),
+                    MenuItem("Quizzes and exams", "admin:quiz_list", "square-pen"),
                     MenuItem(
                         "Reports received",
                         "admin:reports_received",
-                        "file-lines",
+                        "file-text",
                     ),
                     MenuItem(
                         "Student leave approval",
@@ -226,7 +226,7 @@ class AdminMenu:
                     MenuItem(
                         "Send message",
                         "admin:message_compose",
-                        "paper-plane",
+                        "send",
                         feature="messaging",
                     ),
                     MenuItem(

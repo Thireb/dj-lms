@@ -12,7 +12,7 @@ class GuardianMenu:
                 items=(
                     MenuItem(
                         "Dashboard",
-                        "guardian:dashboard",
+                        "guardian:home",
                         "gauge",
                         menu_key="dashboard",
                     ),
@@ -41,7 +41,7 @@ class GuardianMenu:
                     MenuItem(
                         "Quizzes and exams",
                         "guardian:quiz_list",
-                        "pen-to-square",
+                        "square-pen",
                     ),
                     MenuItem(
                         "Class attendance",
@@ -56,7 +56,7 @@ class GuardianMenu:
                     MenuItem(
                         "Fee and challans",
                         "guardian:fee_list",
-                        "file-invoice",
+                        "receipt",
                         feature="fees",
                     ),
                     MenuItem(
@@ -73,7 +73,7 @@ class GuardianMenu:
                     MenuItem(
                         "Messages",
                         "guardian:message_inbox",
-                        "envelope",
+                        "mail",
                         feature="messaging",
                     ),
                 ),
@@ -83,8 +83,8 @@ class GuardianMenu:
                 items=(
                     MenuItem("Student profile", "guardian:student_profile", "user"),
                     MenuItem("My account", "accounts:profile", "user"),
-                    MenuItem("Account settings", "guardian:settings", "gear"),
-                    MenuItem("Sign out", "accounts:logout", "right-from-bracket"),
+                    MenuItem("Account settings", "guardian:settings", "settings"),
+                    MenuItem("Sign out", "accounts:logout", "log-out"),
                 ),
             ),
         )

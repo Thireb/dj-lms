@@ -1,14 +1,14 @@
-<div class="form-group mb-4{% if field.errors %} has-error{% endif %}">
+{% if field.widget_type == "checkbox" %}<div class="form-group mb-4 flex items-start gap-2.5{% if field.errors %} field-error has-error{% endif %}"><span class="mt-0.5 [&>input]:h-5 [&>input]:w-5 [&>input]:accent-primary">{{ field }}</span><label for="{{ field.id_for_label }}" class="text-sm text-text">{{ field.label }}</label>{% for error in field.errors %}<p class="mt-1 text-[13px] text-danger">{{ error }}</p>{% endfor %}</div>{% else %}<div class="form-group mb-4 grid gap-1.5{% if field.errors %} field-error has-error{% endif %}">
   {% if field.label %}
-    <label for="{{ field.id_for_label }}" class="mb-1 block text-sm font-medium text-text">
-      {{ field.label }}{% if field.field.required %}<span class="text-danger"> *</span>{% endif %}
+    <label for="{{ field.id_for_label }}" class="text-sm font-semibold text-text">
+      {{ field.label }}{% if field.field.required %}<span class="text-danger" aria-hidden="true"> *</span>{% endif %}
     </label>
   {% endif %}
   {{ field }}
   {% if field.help_text %}
-    <p class="mt-1 text-xs text-muted">{{ field.help_text }}</p>
+    <p class="text-[13px] text-muted">{{ field.help_text }}</p>
   {% endif %}
   {% for error in field.errors %}
-    <p class="mt-1 text-xs text-danger">{{ error }}</p>
+    <p class="text-[13px] font-medium text-danger">{{ error }}</p>
   {% endfor %}
-</div>
+</div>{% endif %}

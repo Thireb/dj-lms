@@ -46,6 +46,7 @@ class LoginForm(BaseForm):
                 self.save_label,
                 self.cancel_url,
                 cancel_label="Forgot password?",
+                stacked=True,
             ),
         )
 
@@ -86,7 +87,7 @@ class SetPasswordForm(BaseForm):
     def get_layout(self):
         return Layout(
             Section(None, "password", "confirm_password"),
-            FormActions(self.save_label, self.cancel_url),
+            FormActions(self.save_label, self.cancel_url, stacked=True),
         )
 
 

@@ -19,10 +19,7 @@ __all__ = [
 
 # Same look as DatePicker and PasswordInput; w-full keeps fields inside a
 # 360px screen (a default textarea is about 412px wide).
-INPUT_CLASSES = (
-    "mt-1 block w-full rounded-lg border border-border px-3 py-2 text-sm "
-    "focus-visible:ring-2 focus-visible:ring-primary"
-)
+INPUT_CLASSES = "field-control"  # 48px, soft fill, full width (input.css)
 _STYLED_WIDGETS = (forms.widgets.Input, forms.Textarea, forms.Select)
 _UNSTYLED_WIDGETS = (
     forms.CheckboxInput,

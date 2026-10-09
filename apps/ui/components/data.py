@@ -90,11 +90,21 @@ class Badge(Component):
 
 
 class Avatar(Component):
+    """Initials in a soft circle; the tint is stable per name."""
+
     template_name = "ui/components/avatar.html"
     size = "md"
 
     def __init__(self, name, size=None, **props):
         super().__init__(name=name, size=size or self.size, **props)
+
+    def get_context(self):
+        from apps.ui.brand import avatar_tone, initials
+
+        ctx = super().get_context()
+        ctx["initials"] = initials(str(self.props["name"]))
+        ctx["tone"] = avatar_tone(str(self.props["name"]))
+        return ctx
 
 
 class ProgressBar(Component):
@@ -125,5 +135,5 @@ class ChartCard(Component):
 class EmptyState(Component):
     template_name = "ui/components/empty_state.html"
 
-    def __init__(self, title, text="", action=None, **props):
-        super().__init__(title=title, text=text, action=action, **props)
+    def __init__(self, title, text="", action=None, icon="inbox", **props):
+        super().__init__(title=title, text=text, action=action, icon=icon, **props)

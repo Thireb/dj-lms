@@ -5,10 +5,11 @@
 | HTMX | 2.0.4 | `static/vendor/htmx/htmx.min.js` |
 | Alpine.js | 3.14.8 | `static/vendor/alpine/alpine.min.js` |
 | Chart.js | 4.4.7 | `static/vendor/chart.js/chart.umd.min.js` |
-| Font Awesome Free | 6.7.2 | `static/vendor/fontawesome/` |
+| Lucide icons (sprite of the icons in `apps/ui/icons.py`) | 1.53.0 | `static/vendor/lucide/` |
+| Familjen Grotesk (variable, latin and latin-ext) | Google Fonts v11 | `static/vendor/familjen-grotesk/` |
 
-Font Awesome Free is licensed under the SIL OFL 1.1 and MIT (see `static/vendor/fontawesome/LICENSE.txt`).
+Lucide is licensed under ISC (`static/vendor/lucide/LICENSE`). Rebuild the sprite with `python scripts/build_icon_sprite.py <lucide-static package>`.
 
-Font Awesome **icons** (SVG/icon glyphs) are also available under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); keep attribution in this file when updating the vendored bundle.
+Familjen Grotesk is licensed under the SIL Open Font License 1.1 (`static/vendor/familjen-grotesk/OFL.txt`).
 
 Tailwind CSS standalone CLI version is pinned in `static/css/TAILWIND_VERSION`.

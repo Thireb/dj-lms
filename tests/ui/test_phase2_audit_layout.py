@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import re
+from pathlib import Path
 
 import pytest
 from apps.core.roles import Role
@@ -26,7 +27,8 @@ def test_sidebar_is_hidden_on_phones_with_a_menu_button(institute_a) -> None:
 
     page = _page(teacher, "teacher:home")
 
-    assert re.search(r'id="portal-sidebar" class="[^"]*\bhidden md:block', page)
+    classes = re.search(r'id="portal-sidebar" class="([^"]*)"', page).group(1).split()
+    assert "hidden" in classes and "md:block" in classes
     assert "max-md:fixed max-md:inset-0" in page  # opened as a full panel
     assert 'aria-controls="portal-sidebar"' in page
     assert 'x-data="{ navOpen: false }"' in page
@@ -79,27 +81,22 @@ def test_base_form_styles_text_widgets_only() -> None:
     assert fields["kind"].widget.attrs["class"] == INPUT_CLASSES
     assert "class" not in fields["agree"].widget.attrs
     assert fields["custom"].widget.attrs["class"] == "own"
-    assert "w-full" in INPUT_CLASSES
+    assert INPUT_CLASSES == "field-control"
+    css = (Path(__file__).resolve().parents[2] / "static/css/src/input.css").read_text()
+    rule = css[css.index(".field-control {") :].split("}", 1)[0]
+    assert "w-full" in rule  # fields fit a 360px screen
 
 
 @pytest.mark.django_db
-def test_bell_is_light_on_the_dark_admin_bar(institute_a) -> None:
-    # Measured in Chromium: the icon was rgb(12,27,31) on the rgb(0,48,61) bar.
+def test_bell_is_dark_ink_on_the_white_admin_bar(institute_a) -> None:
+    # S18: the bell was a dark icon on the old dark bar. Since R4a the bar is
+    # white and the bell is an icon-btn (ink-2 icon on a white tile).
     admin = make_user(
         email="a@example.com", role=Role.INSTITUTE_ADMIN, institute=institute_a
     )
 
     page = _page(admin, "admin:home")
 
-    group = re.search(r'<div class="([^"]*)">\s*<div class="profile-menu', page)
-    assert group and "text-surface" in group.group(1).split()
-    assert 'class="notification-bell' in page
-
-
-def test_bell_hover_works_on_dark_and_light_bars() -> None:
-    from apps.ui.components.nav import NotificationBell
-
-    html = str(NotificationBell(user=None))
-
-    assert "hover:bg-primary/20" in html
-    assert "hover:bg-page" not in html  # a light hover hid the light icon
+    header = re.search(r'<header class="(top-nav-shell[^"]*)"', page).group(1)
+    assert "bg-surface" in header.split()
+    assert 'class="notification-bell icon-btn"' in page

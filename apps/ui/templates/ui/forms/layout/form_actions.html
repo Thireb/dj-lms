@@ -1,8 +1,11 @@
-<div class="form-actions flex flex-wrap items-center justify-end gap-3 pt-2 {{ css_class }}">
+{% if stacked %}<div class="form-actions grid gap-4 pt-1 {{ css_class }}">
+  {% if cancel_url %}<a href="{{ cancel_url }}" class="-mt-[3.95rem] justify-self-end text-sm font-semibold text-primary hover:underline">{{ cancel_label }}</a>{% endif %}
+  <button type="submit" class="btn btn-primary btn-lg w-full">{{ save_label }}</button>
+</div>{% else %}<div class="form-actions flex flex-wrap items-center justify-end gap-2.5 pt-2 {{ css_class }}">
   {% if cancel_url %}
-    <a href="{{ cancel_url }}" class="rounded-lg border border-border px-4 py-2 text-sm text-text">{{ cancel_label }}</a>
+    <a href="{{ cancel_url }}" class="btn btn-secondary">{{ cancel_label }}</a>
   {% endif %}
-  <button type="submit" class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-surface">
+  <button type="submit" class="btn btn-primary">
     {{ save_label }}
   </button>
-</div>
+</div>{% endif %}

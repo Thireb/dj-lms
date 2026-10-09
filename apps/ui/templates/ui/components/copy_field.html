@@ -1,8 +1,8 @@
-<div class="copy-field" x-data="{ copied: false }">
-  <label class="text-sm"><span class="text-muted">{{ label }}</span>
-    <input type="text" readonly x-ref="value" value="{{ value }}" class="mt-1 block w-full rounded-lg border border-border px-3 py-1.5 font-mono text-xs" @focus="$event.target.select()">
+<div class="copy-field grid gap-2" x-data="{ copied: false }">
+  <label class="grid gap-1.5 text-sm font-semibold text-text">{{ label }}
+    <input type="text" readonly x-ref="value" value="{{ value }}" class="field-control text-sm font-normal" @focus="$event.target.select()">
   </label>
-  <button type="button" class="mt-2 rounded-lg bg-primary px-3 py-1.5 text-sm text-surface" @click="navigator.clipboard.writeText($refs.value.value); copied = true">
+  <button type="button" class="btn btn-primary justify-self-start" @click="navigator.clipboard.writeText($refs.value.value).then(() => copied = true, () => $refs.value.select())">
     <span x-show="!copied">Copy link</span><span x-show="copied" x-cloak>Copied</span>
   </button>
 </div>

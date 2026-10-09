@@ -52,7 +52,12 @@ class PortalPageView(
             title=self.title,
             breadcrumb=self.breadcrumb,
             actions=self.get_actions(),
+            subtitle=self.get_subtitle(),
+            clock=True,
         )
+
+    def get_subtitle(self) -> str:
+        return ""
 
     def get_actions(self) -> list[Any]:
         return []

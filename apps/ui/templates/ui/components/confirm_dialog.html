@@ -1,12 +1,14 @@
-<div class="confirm-dialog" x-data="{ open: false }" data-confirm-url="{{ url }}">
-  <button type="button" @click="open = true" class="{% if variant == 'primary' %}bg-primary{% else %}bg-danger{% endif %} rounded-lg px-3 py-1.5 text-sm text-surface">{{ trigger_label|default:confirm_label }}</button>
-  <div x-show="open" x-cloak role="alertdialog" class="mt-3 rounded-lg border border-border bg-surface p-4">
-    <p class="text-sm text-text">{{ message }}</p>
-    <form method="post" action="{{ url }}" class="mt-3 flex flex-wrap gap-2">
-      {% if csrf_token %}{% csrf_token %}{% endif %}
-      {% for name, value in fields %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
-      <button type="submit" class="{% if variant == 'primary' %}bg-primary{% else %}bg-danger{% endif %} rounded-lg px-3 py-1.5 text-sm text-surface">{{ confirm_label }}</button>
-      <button type="button" @click="open = false" class="rounded-lg border border-border px-3 py-1.5 text-sm text-text">Cancel</button>
-    </form>
+<div class="confirm-dialog inline-block" x-data="{ open: false }" data-confirm-url="{{ url }}" @keydown.escape.window="open = false">
+  <button type="button" @click="open = true" class="btn {% if variant == 'primary' %}btn-primary{% else %}btn-danger{% endif %} h-9 px-3.5">{{ trigger_label|default:confirm_label }}</button>
+  <div x-show="open" x-cloak class="fixed inset-0 z-50 grid place-items-center bg-[#16182b]/45 p-4">
+    <div role="alertdialog" aria-modal="true" class="w-full max-w-md rounded-2xl border border-border bg-surface p-5 text-left shadow-[var(--shadow-pop)]" @click.outside="open = false">
+      <p class="text-[15px] font-semibold text-text">{{ message }}</p>
+      <form method="post" action="{{ url }}" class="mt-5 flex flex-wrap justify-end gap-2">
+        {% if csrf_token %}{% csrf_token %}{% endif %}
+        {% for name, value in fields %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
+        <button type="button" @click="open = false" class="btn btn-secondary">Cancel</button>
+        <button type="submit" class="btn {% if variant == 'primary' %}btn-primary{% else %}btn-danger{% endif %}">{{ confirm_label }}</button>
+      </form>
+    </div>
   </div>
 </div>

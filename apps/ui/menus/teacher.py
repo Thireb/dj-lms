@@ -12,7 +12,7 @@ class TeacherMenu:
                 items=(
                     MenuItem(
                         "Dashboard",
-                        "teacher:dashboard",
+                        "teacher:home",
                         "gauge",
                         menu_key="dashboard",
                     ),
@@ -32,7 +32,7 @@ class TeacherMenu:
                     MenuItem(
                         "Lecture history",
                         "teacher:lecture_history",
-                        "clock-rotate-left",
+                        "history",
                     ),
                     MenuItem("Documents", "teacher:documents", "folder-open"),
                 ),
@@ -52,19 +52,19 @@ class TeacherMenu:
                         "book-open",
                         feature="homework",
                     ),
-                    MenuItem("Submit report", "teacher:report_submit", "file-lines"),
+                    MenuItem("Submit report", "teacher:report_submit", "file-text"),
                 ),
             ),
             MenuGroup(
                 label="Assignments",
                 items=(
-                    MenuItem("Assignments", "teacher:assignment_list", "list-check"),
+                    MenuItem("Assignments", "teacher:assignment_list", "list-checks"),
                 ),
             ),
             MenuGroup(
                 label="Quizzes and exams",
                 items=(
-                    MenuItem("Quizzes and exams", "teacher:quiz_list", "pen-to-square"),
+                    MenuItem("Quizzes and exams", "teacher:quiz_list", "square-pen"),
                 ),
             ),
             MenuGroup(
@@ -73,7 +73,7 @@ class TeacherMenu:
                     MenuItem(
                         "Messages",
                         "teacher:message_inbox",
-                        "envelope",
+                        "mail",
                         feature="messaging",
                     ),
                 ),
@@ -81,7 +81,7 @@ class TeacherMenu:
             MenuGroup(
                 label="People",
                 items=(
-                    MenuItem("My students", "teacher:student_list", "user-graduate"),
+                    MenuItem("My students", "teacher:student_list", "graduation-cap"),
                 ),
             ),
             MenuGroup(
@@ -101,7 +101,7 @@ class TeacherMenu:
                     MenuItem(
                         "My salary",
                         "teacher:salary",
-                        "money-bill",
+                        "banknote",
                         feature="payroll",
                     ),
                 ),
@@ -110,8 +110,8 @@ class TeacherMenu:
                 label="Account",
                 items=(
                     MenuItem("My profile", "accounts:profile", "user"),
-                    MenuItem("Account settings", "teacher:settings", "gear"),
-                    MenuItem("Sign out", "accounts:logout", "right-from-bracket"),
+                    MenuItem("Account settings", "teacher:settings", "settings"),
+                    MenuItem("Sign out", "accounts:logout", "log-out"),
                 ),
             ),
         )

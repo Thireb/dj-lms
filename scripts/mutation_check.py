@@ -144,8 +144,7 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
     (
         "super shell sign out",
         "apps/ui/menus/super.py",
-        '                    MenuItem("Sign out", "accounts:logout", '
-        '"right-from-bracket"),\n',
+        'MenuItem("Sign out", "accounts:logout", "log-out"),\n',
         "",
     ),
     (
@@ -879,8 +878,8 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
     (
         "badge tone colors",
         "apps/ui/templates/ui/components/badge.html",
-        "{% if tone == 'success' %}bg-success/10 text-success",
-        "{% if False %}bg-success/10 text-success",
+        "{% if tone == 'success' %}bg-success-50 text-success",
+        "{% if False %}bg-success-50 text-success",
     ),
     (
         "blocked student sees access paused",
@@ -944,12 +943,6 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "apps/people/views.py",
         "        if action is None:\n",
         "        if False:\n",
-    ),
-    (
-        "public header optional",
-        "apps/ui/templates/ui/layouts/public.html",
-        "{% if header %}{{ header }}{% endif %}",
-        "{{ header }}",
     ),
     (
         "seed guardian has two children",
@@ -1116,8 +1109,8 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
     (
         "sidebar hidden on phones",
         "apps/ui/templates/ui/components/sidebar_shell.html",
-        'class="sidebar-wrap hidden md:block"',
-        'class="sidebar-wrap"',
+        'class="sidebar-wrap hidden md:sticky',
+        'class="sidebar-wrap md:sticky',
     ),
     (
         "menu groups start closed",
@@ -1282,16 +1275,88 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "    if False:\n        return redirect(post_login_redirect_url(request.user))",
     ),
     (
-        "bell light on admin bar",
-        "apps/ui/templates/ui/components/top_nav_shell.html",
-        '<div class="flex items-center gap-2 text-surface">',
-        '<div class="flex items-center gap-2">',
+        "unknown icons render nothing",
+        "apps/ui/components/icon.py",
+        'ctx["href"] = f"{static(ICON_SPRITE)}#{name}" if name in ICON_NAMES else ""',
+        'ctx["href"] = f"{static(ICON_SPRITE)}#{name}"',
     ),
     (
-        "bell hover tint",
+        "portal pages show the clock",
+        "apps/ui/views/pages.py",
+        "            clock=True,\n",
+        "            clock=False,\n",
+    ),
+    (
+        "sign-in band panel",
+        "apps/ui/templates/ui/layouts/public.html",
+        '<aside class="band hidden',
+        '<aside class="hidden',
+    ),
+    (
+        "notice pages are the band",
+        "apps/ui/templates/ui/layouts/public.html",
+        '<main class="band grid',
+        '<main class="grid',
+    ),
+    (
+        "public forms have no box",
+        "apps/ui/templates/ui/layouts/public.html",
+        "[&_.section]:border-0 ",
+        "",
+    ),
+    (
+        "sign-in submit full width",
+        "apps/accounts/forms.py",
+        'cancel_label="Forgot password?",\n                stacked=True,',
+        'cancel_label="Forgot password?",',
+    ),
+    (
+        "access paused uses notice",
+        "apps/people/views.py",
+        '        variant="notice",\n        icon="circle-pause",',
+        '        icon="circle-pause",',
+    ),
+    (
+        "refusal uses notice",
+        "apps/core/responses.py",
+        '        variant="notice",\n',
+        "\n",
+    ),
+    (
+        "teacher dashboard link",
+        "apps/ui/menus/teacher.py",
+        '"teacher:home"',
+        '"teacher:dashboard"',
+    ),
+    (
+        "initials use email local part",
+        "apps/ui/brand.py",
+        '    local = name.split("@", 1)[0]\n',
+        "    local = name\n",
+    ),
+    (
+        "dialog is a modal",
+        "apps/ui/templates/ui/components/confirm_dialog.html",
+        'role="alertdialog" aria-modal="true"',
+        'role="alertdialog"',
+    ),
+    (
+        "font preloaded",
+        "templates/base.html",
+        "familjen-grotesk-latin.woff2",
+        "missing-font.woff2",
+    ),
+    (
+        "role shown in user chip",
+        "apps/ui/templates/ui/components/profile_menu.html",
+        '{% if badge.role %}<span class="block text-xs text-muted">{{ badge.role }}</span>{% endif %}',
+        "",
+    ),
+    (
+        "bell is an icon button",
         "apps/ui/templates/ui/components/notification_bell.html",
-        "hover:bg-primary/20",
-        "hover:bg-page",
+        'class="notification-bell icon-btn"',
+        'class="notification-bell text-surface"',
     ),
 ]
 

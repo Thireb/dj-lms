@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from django.contrib.messages import get_messages
 
+from apps.ui.brand import BRAND_MARK, BRAND_NAME, user_badge
 from apps.ui.components.actions import Toast
 from apps.ui.components.base import Component, render_component_template
 from apps.ui.components.nav import NotificationBell
@@ -40,6 +41,11 @@ class Sidebar(Component):
             groups=groups or [],
             **props,
         )
+
+    def get_context(self):
+        ctx = super().get_context()
+        ctx.update(brand_mark=BRAND_MARK, brand_name=BRAND_NAME)
+        return ctx
 
 
 class TopNavShell(Component):
@@ -89,7 +95,10 @@ class TopNavShell(Component):
             self.props["user"], "institute", None
         )
         profile_items = build_profile_menu_items(self.props["user"], inst)
-        ctx["profile_menu"] = ProfileMenu(items=profile_items)
+        ctx["profile_menu"] = ProfileMenu(
+            items=profile_items, badge=user_badge(self.props["user"])
+        )
+        ctx.update(brand_mark=BRAND_MARK, brand_name=BRAND_NAME)
         return ctx
 
     def render(self, request=None):
@@ -145,6 +154,8 @@ class SidebarShell(Component):
             user=self.props["user"],
             unread_count=self.props.get("unread_count", 0),
         )
+        ctx["badge"] = user_badge(self.props["user"])
+        ctx.update(brand_mark=BRAND_MARK, brand_name=BRAND_NAME)
         return ctx
 
     def render(self, request=None):
@@ -182,11 +193,15 @@ class HeroBanner(Component):
 class PageHeader(Component):
     template_name = "ui/components/page_header.html"
 
-    def __init__(self, title, breadcrumb=None, actions=None, **props):
+    def __init__(
+        self, title, breadcrumb=None, actions=None, subtitle="", clock=False, **props
+    ):
         super().__init__(
             title=title,
             breadcrumb=breadcrumb or [],
             actions=actions or [],
+            subtitle=subtitle,
+            clock=clock,
             **props,
         )
 
@@ -254,17 +269,41 @@ class Modal(Component):
 
 
 class PublicFormShell(Component):
-    """Minimal centered layout for sign-in and other public forms."""
+    """Public pages (sign-in, set password, notices) in the Lexicon look.
+
+    ``variant="split"``: form on the left, the Lexicon band on the right
+    (a short band above the form on phones). ``variant="notice"``: the whole
+    page is the band with a centred message, for Access paused and refusals.
+    """
 
     template_name = "ui/layouts/public.html"
 
-    def __init__(self, page_title="", header=None, content=None, **props):
+    def __init__(
+        self,
+        page_title="",
+        header=None,
+        content=None,
+        variant="split",
+        icon="",
+        **props,
+    ):
         super().__init__(
             page_title=page_title,
             header=header,
             content=content,
+            variant=variant,
+            icon=icon,
             **props,
         )
+
+    def get_context(self):
+        from apps.ui.brand import BRAND_LONG_NAME
+
+        ctx = super().get_context()
+        ctx.update(
+            brand_mark=BRAND_MARK, brand_name=BRAND_NAME, brand_long=BRAND_LONG_NAME
+        )
+        return ctx
 
     def render(self, request=None):
         ctx = self.get_context()

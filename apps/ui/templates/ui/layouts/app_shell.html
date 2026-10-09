@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ page_title|default:"LMS" }}{% endblock %}
+{% block title %}{{ page_title|default:"Lexicon" }}{% endblock %}
 
 {% block body_extra_attrs %}
   data-portal="{{ portal|default:'admin' }}"
@@ -13,8 +13,8 @@
     {% block shell_header %}{% endblock %}
     <div class="flex flex-1">
       {% block shell_sidebar %}{% endblock %}
-      <main class="min-w-0 flex-1 p-4 md:p-6">
-        <div class="mx-auto max-w-7xl">
+      <main class="min-w-0 flex-1 px-4 py-5 md:px-7 md:py-6" id="main">
+        <div class="mx-auto max-w-[1240px]">
           {% block shell_content %}{% endblock %}
         </div>
       </main>
