@@ -1352,6 +1352,72 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         '{% if badge.role %}<span class="block text-xs text-muted">{{ badge.role }}</span>{% endif %}',
         "",
     ),
+    (
+        "table cells carry column label",
+        "apps/ui/templates/ui/components/data_table.html",
+        ' data-label="{{ label }}"',
+        "",
+    ),
+    (
+        "phone table rules outside layer",
+        "static/css/src/input.css",
+        "/* Tables become cards on phones",
+        "/* Cards on phones",
+    ),
+    (
+        "people tables show person cell",
+        "apps/people/ui.py",
+        '        Column("name", "Student", person),\n        Column("class_label", "Class", lambda s: s.class_label or ""),\n        Column("batches", "Batches", _batches),',
+        '        Column("name", "Student", str),\n        Column("class_label", "Class", lambda s: s.class_label or ""),\n        Column("batches", "Batches", _batches),',
+    ),
+    (
+        "icon button has aria label",
+        "apps/ui/templates/ui/components/icon_button.html",
+        '<a href="{{ url }}" class="icon-btn h-9 w-9" aria-label="{{ label }}"',
+        '<a href="{{ url }}" class="icon-btn h-9 w-9"',
+    ),
+    (
+        "filter bar clear only when active",
+        "apps/ui/templates/ui/components/filter_bar.html",
+        '{% if active %}<a href="?"',
+        '{% if True %}<a href="?"',
+    ),
+    (
+        "filter value read from objects",
+        "apps/ui/components/nav.py",
+        '    return getattr(field, "value", "")',
+        "    return field.value",
+    ),
+    (
+        "pagination shows page numbers",
+        "apps/ui/components/nav.py",
+        "paginator.get_elided_page_range(page.number, on_each_side=1, on_ends=1)",
+        "[page.number]",
+    ),
+    (
+        "section fieldset labelled by title",
+        "apps/ui/templates/ui/forms/layout/section.html",
+        '{% if legend %}aria-labelledby="{{ section_id }}"{% endif %}',
+        "",
+    ),
+    (
+        "section two columns",
+        "apps/ui/templates/ui/forms/layout/section.html",
+        "{% if columns == 2 %}",
+        "{% if columns == 3 %}",
+    ),
+    (
+        "portal form framed",
+        "apps/ui/templates/ui/components/portal_post_form.html",
+        "{% if framed %}overflow-hidden",
+        "{% if not framed %}overflow-hidden",
+    ),
+    (
+        "avatar uses tone tokens",
+        "apps/ui/templates/ui/components/avatar.html",
+        "bg-tone-clay-50 text-tone-clay",
+        "bg-[#fcebe3] text-tone-clay",
+    ),
 ]
 
 
