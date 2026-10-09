@@ -47,9 +47,9 @@ def test_admin_menu_groups_are_closed_dropdowns(institute_a) -> None:
     assert len(groups) >= 5  # Basic plan hides the fee and payroll groups
     assert page.count('class="nav-group-items') == len(groups)
     assert re.search(
-        r'class="nav-group-items[^"]*md:absolute[^"]*" x-show="open" x-cloak', page
+        r'class="nav-group-items[^"]*xl:absolute[^"]*" x-show="open" x-cloak', page
     )
-    assert re.search(r'id="top-nav-groups" class="hidden[^"]*md:flex', page)
+    assert re.search(r'id="top-nav-groups" class="hidden[^"]*xl:flex', page)
     assert 'aria-controls="top-nav-groups"' in page
 
 

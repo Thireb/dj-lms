@@ -85,3 +85,11 @@ def test_section_card_icon_is_optional() -> None:
 def test_empty_state_can_drop_its_frame() -> None:
     assert "border-dashed" in str(EmptyState("Nothing"))
     assert "border-dashed" not in str(EmptyState("Nothing", framed=False))
+
+
+def test_admin_top_menu_needs_xl_and_never_wraps() -> None:
+    """8 groups need about 870px; at 768-1279px the Menu button is used."""
+    template = open("apps/ui/templates/ui/components/top_nav.html").read()
+    assert "nav-group flex h-10 w-full items-center whitespace-nowrap" in template
+    assert "menu-toggle icon-btn xl:hidden" in template
+    assert "md:" not in template

@@ -60,7 +60,7 @@ From Lexicon's own site (lexicon.edu.pk), measured in a browser. **One look for 
 - **Admin portal:** white top bar (sticky): brand on the left, menu groups as closed dropdowns (each item has an icon tile; items of later phases are shown dimmed), bell and the user chip (initials, name, role) on the right. Page header below: breadcrumb and live clock chip, then title, subtitle and actions.
 - **Teacher, Student, Guardian portals:** deep indigo sidebar (gradient to `indigo-deep`) with the brand, sentence-case group labels and a white-on-glass active item (`aria-current`); a white top bar with the bell and the user chip.
 - Guardian top bar has the institute name and a **child switcher**.
-- Sidebar collapses to a drawer on mobile. Admin top menu becomes a hamburger drawer on mobile. Built in the Phase 2 audit: below md, a "Menu" button opens either one. Desktop admin groups are closed dropdowns.
+- Sidebar collapses to a drawer on mobile. Admin top menu becomes a hamburger drawer on mobile. Built in the Phase 2 audit: a "Menu" button opens either one (sidebar below md; admin top menu below xl, because its 8 groups need about 870px). Desktop admin groups are closed dropdowns, and the user chip shows the name from 1400px.
 - Wide tables scroll sideways inside their own box, never the page. The main column and form fieldsets use `min-w-0`, and form fields are full width, so nothing pushes a 360px page wider.
 - Content: max width 1240px, `px-7 py-6` on desktop, `px-4 py-5` on mobile.
 - Dashboard grid: hero, then one feature card ("Up next"), then stat cards, then quick actions, then sections (2 columns on the admin dashboard and the guardian home).

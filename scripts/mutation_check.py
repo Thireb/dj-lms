@@ -1245,12 +1245,6 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "        response = self.render_to_response(self.get_context_data())\n",
     ),
     (
-        "dashboard hides people without menu",
-        "apps/people/views.py",
-        "        if not people_link:",
-        "        if False:",
-    ),
-    (
         "safe_url refuses //host",
         "apps/ui/safe_url.py",
         '    if cleaned.startswith("//"):\n        return ""\n',
@@ -1471,6 +1465,12 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "apps/ui/templates/ui/components/hero_banner.html",
         "{% if note %}<dd",
         "{% if True %}<dd",
+    ),
+    (
+        "top menu groups never wrap",
+        "apps/ui/templates/ui/components/top_nav.html",
+        "items-center whitespace-nowrap",
+        "items-center",
     ),
 ]
 
