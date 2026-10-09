@@ -2,71 +2,70 @@
 
 Rules for building screens. AI agents must follow this file exactly. Do not invent new components, colors, or spacing.
 
-> **Redesign in progress (roadmap Phase R).** This file describes the old look, which the owner did not accept. It stays in force only until R3 rewrites it to the approved Lexicon design system. Do not start new screens in the old style; Phase 3 is on hold.
-
-Status: values marked **(proposed)** are our picks. Replace them after we see the demo.
+Design system: **Lexicon**, approved by the owner on 2026-10-09 (roadmap Phase R, proposal linked in `ROADMAP.md` R1). Built so far: R4a (tokens, font, icons, shells, public pages, base components). R4b (tables, filters, forms layout) and R4c (dashboards) follow; until then those parts keep their older markup with the new colours.
 
 ## 1. UI stack
 
 - Django templates + Python component classes (see `COMPONENTS.md`). No React/Vue unless approved.
 - Forms: django-crispy-forms with form classes that inherit our base forms.
-- Tailwind CSS for all styling. No custom CSS files except `static/css/app.css` for tokens.
+- Tailwind CSS for all styling. Tokens and a few component classes (`btn`, `chip`, `field-control`, `band`) live in `static/css/src/input.css`, compiled to `static/css/app.css`.
 - HTMX for partial updates (forms, tables, modals, tabs).
-- Alpine.js for small client state (dropdowns, modals, countdown).
+- Alpine.js for small client state (dropdowns, dialogs, menus, clock, countdown).
 - Chart.js for charts.
-- Font Awesome Free icons (solid + regular), as inline SVG or the free webfont. The reference uses Font Awesome. One icon set only.
+- Icons: **Lucide** only (ISC), self-hosted as one SVG sprite (`static/vendor/lucide/icons.svg`). Use the `Icon` component or `{% icon "name" %}`. To add an icon, list it in `apps/ui/icons.py` and run `scripts/build_icon_sprite.py`. Unknown names render nothing.
+- Font: **Familjen Grotesk** (Lexicon's typeface, OFL), self-hosted woff2 in `static/vendor/familjen-grotesk/`. No CDN.
 - Every reusable piece is a class in `apps/ui/components/` with a template in `apps/ui/templates/ui/components/`.
 
 ## 2. Colors
 
-Taken from the reference product's captured CSS (public). Each portal has its own accent, with one shared system.
-
-| Portal | Primary | Secondary / accent | Sidebar or nav dark | Page bg |
-|---|---|---|---|---|
-| Admin | `#005E78` | `#0B7F9C` | `#00303D` (nav), `#002530` (sidebar) | `#F0F3F5` |
-| Teacher | `#005E78` family, accent `#00A2CF` | `#00475B` (dark) | `#00303D` | `#F3F7F9` |
-| Student | `#0D9488` | `#0F766E`, accent `#34D399` | `#115E59` | `#F0FDFA` |
-| Guardian | `#0EA5E9` | `#0284C7`, accent `#6366F1` | `#0F172A` | `#F0F4F8` |
-
-Shared tokens (all portals):
+From Lexicon's own site (lexicon.edu.pk), measured in a browser. **One look for every portal**; the role shows in the user chip, not in the colours.
 
 | Token | Hex | Use |
 |---|---|---|
-| `success` | `#059669` / `#10B981` | paid, active, present |
-| `warning` | `#D97706` | pending, due soon |
-| `danger` | `#E11D48` / `#EF4444` | overdue, inactive, absent |
-| `info` | `#2563EB` | notices |
-| `violet` | `#7C3AED` | occasional highlight (admin) |
-| `text` | `#0C1B1F` (admin) / `#0F172A` | main text |
-| `muted` | `#5D6E73` | secondary text |
-| `border` | `#E2E8EA` | lines and card borders |
-| `surface` | `#FFFFFF` | cards |
+| `primary` (royal) | `#002DA8` | buttons, links, active states, focus |
+| `primary-dark` | `#00238A` | primary hover |
+| `primary-50` / `primary-100` | `#EEF2FC` / `#DCE4F8` | soft fills, icon tiles, active menu item |
+| `accent` (sky) | `#1273EB` | gradient end, focus ring |
+| `indigo` | `#130C8E` | sidebar, band start, brand mark |
+| `indigo-deep` | `#0B0766` | sidebar gradient end |
+| `page` | `#F7F8FB` | page background |
+| `surface` | `#FFFFFF` | cards, top bar |
+| `field` | `#F2F4F9` | input fill |
+| `text` | `#16182B` | main text |
+| `ink-2` | `#4A5068` | secondary text in controls |
+| `muted` | `#636A85` | captions, labels (5.1:1 on white) |
+| `border` / `border-strong` | `#E6E8F0` / `#C9CEDD` | hairlines, hover borders |
+| `success` on `success-50` | `#0E7A55` on `#E3F5EE` | active, paid, present |
+| `warning` on `warning-50` | `#9A5B00` on `#FDF1DC` | pending, blocked, due soon |
+| `danger` on `danger-50` | `#B4233F` on `#FBE7EB` | inactive, overdue, errors, destructive |
 
-- Implement as CSS variables set per portal (`<body data-portal="admin">`), mapped to Tailwind theme colors. Never raw hex in templates.
-- Status colors always come with a text label.
-- These values are PREVIEW from public CSS. Compare with the logged-in demo before locking.
+- Never raw hex in templates; use the Tailwind token classes (`bg-primary`, `text-muted`, ...).
+- Status colours always come with a text label (chips have a dot and a word).
+- **The band** (`.band` + `_waves.html`): royal-to-indigo gradient with fine wave lines, from Lexicon's homepage. It is the one bold element: sign-in panel, dashboard heroes, Access paused and other full-page notices only. Everything else stays white and quiet.
+- Light only. No dark mode (owner decision, R2).
 
 ## 3. Type, spacing, shape
 
-- Fonts seen in the reference: Sora (admin headings), Plus Jakarta Sans, Poppins, Inter, JetBrains Mono (codes and numbers). Our pick: Plus Jakarta Sans for headings and Inter for body, JetBrains Mono for IDs and amounts. System fallback on all.
-- Sizes: page title `text-2xl font-semibold`, section title `text-lg font-semibold`, body `text-sm`, caption `text-xs text-muted`.
-- Spacing: use the 4px scale (`p-2`, `p-4`, `p-6`). Card padding is `p-5`. Gap between cards is `gap-4`.
-- Radius: `rounded-lg` for cards and inputs, `rounded-full` for badges and avatars.
-- Shadow: cards use `border` only. Only modals and dropdowns get `shadow-lg`.
-- Line length for text blocks: max 70 characters (`max-w-prose`).
+- One family: Familjen Grotesk 400 to 700, tabular digits everywhere (`font-variant-numeric: tabular-nums` on `body`).
+- Sizes: display 32-40 bold (sign-in, heroes), page title 26 bold, section title 16-18 semibold, body 15, label 14 semibold, caption 13. No all-caps labels.
+- Spacing: 4px scale. Cards `p-5`, gaps `gap-4` to `gap-5`, content padding `px-4 py-5` (phone) and `px-7 py-6` (desktop), content max width 1240px.
+- Radius: controls 10px, fields 12px, cards 18px, heroes 24px, chips and avatars full.
+- Shadow: cards use a hairline border only. Floating things get the tinted shadows: `--shadow-float` (primary buttons), `--shadow-pop` (menus, dropdowns, dialogs, toasts).
+- Controls: buttons 40px (`btn-lg` 48px), fields 48px, icon buttons 40px square. Touch targets at least 40px.
+- Line length for text blocks: under 70 characters.
 
 ## 4. Layout
 
-- **Admin portal:** top horizontal menu bar with grouped dropdowns (Dashboards, Institute, People, Online Lectures, Finance, Teacher Salary, Academic, Messages), brand on the left, bell and user menu on the right, breadcrumb and live clock below, then a campus hero banner on the dashboard.
-- **Teacher, Student, Guardian portals:** dark left sidebar with labelled groups, top bar with clock, bell, theme toggle and avatar, then a hero banner on the dashboard.
+- **Admin portal:** white top bar (sticky): brand on the left, menu groups as closed dropdowns (each item has an icon tile; items of later phases are shown dimmed), bell and the user chip (initials, name, role) on the right. Page header below: breadcrumb and live clock chip, then title, subtitle and actions.
+- **Teacher, Student, Guardian portals:** deep indigo sidebar (gradient to `indigo-deep`) with the brand, sentence-case group labels and a white-on-glass active item (`aria-current`); a white top bar with the bell and the user chip.
 - Guardian top bar has the institute name and a **child switcher**.
 - Sidebar collapses to a drawer on mobile. Admin top menu becomes a hamburger drawer on mobile. Built in the Phase 2 audit: below md, a "Menu" button opens either one. Desktop admin groups are closed dropdowns.
 - Wide tables scroll sideways inside their own box, never the page. The main column and form fieldsets use `min-w-0`, and form fields are full width, so nothing pushes a 360px page wider.
-- Content: `max-w-7xl`, `p-6` on desktop, `p-4` on mobile.
+- Content: max width 1240px, `px-7 py-6` on desktop, `px-4 py-5` on mobile.
 - Dashboard grid: hero, then stat cards, then quick actions, then 2-column sections.
 - Mobile first. Every page must work at 360px width.
 - Menu items per portal are in `FEATURES.md` section 13. Do not add or rename items without asking.
-- Public site uses `layouts/public.html`.
+- Public pages use `PublicFormShell` (`layouts/public.html`): `split` (form left, band right; a short band on top on phones) for sign-in, set password and forgot password; `notice` (whole page is the band) for Access paused and refusals.
 
 ## 5. Components (exact list)
 
@@ -92,16 +91,16 @@ Each pattern is a base page class in `apps/ui/views/pages.py`. Subclass it.
 
 - **`ListPage`:** `PageHeader` -> `FilterBar` -> `DataTable` -> `Pagination`. Empty list shows `EmptyState`.
 - **`DetailPage`:** `PageHeader` -> two-column cards (info left, related lists right).
-- **`FormPage`:** `PageHeader` -> one `SectionCard` holding a crispy form (`{% crispy form %}`). Max width `max-w-2xl`.
+- **`FormPage`:** `PageHeader` -> crispy form in sections (R4b: section title and explanation on the left, fields on the right; stacked on phones).
 - **`DashboardPage`:** `PageHeader` -> row of `StatCard` -> row of `QuickAction` -> `SectionCard`s.
 - **Modal forms:** use `HtmxModalForm` for short forms (under 6 fields). Longer forms get their own page.
 
 ## 7. Tables
 
-- Header row `bg-page`, text `text-xs text-muted`, rows `text-sm`, row hover `bg-page`.
+- (R4b) Table in a card with a light header row (13px semibold muted), 14px rows, people shown as avatar, name and code.
 - Status columns always use `badge`.
-- Actions column on the right: icon buttons with tooltips, max 3.
-- On mobile, tables scroll horizontally inside `overflow-x-auto`. Never let the page scroll sideways.
+- Actions column on the right: small icon buttons with an `aria-label`, max 3; destructive ones open a `ConfirmDialog` (a real modal).
+- (R4b) On phones each row becomes a card with label and value pairs. Never let the page scroll sideways.
 
 ## 8. Forms
 
@@ -109,7 +108,7 @@ Each pattern is a base page class in `apps/ui/views/pages.py`. Subclass it.
 - Labels above inputs, never placeholder-only.
 - Required fields marked with `*`.
 - Errors appear under the field in `danger` text and say how to fix it.
-- Primary action on the right, "Cancel" on the left of it.
+- Primary action on the right, "Cancel" on the left of it. On public pages the submit button is full width (`FormActions(stacked=True)`).
 - Disable the submit button while the request runs.
 
 ## 9. Words on screen
@@ -128,7 +127,7 @@ Each pattern is a base page class in `apps/ui/views/pages.py`. Subclass it.
 - Loading states use a spinner on the button or a skeleton row. No full-page spinners.
 - Motion only in response to a click (open modal, expand, toast). No decorative animation.
 - Respect `prefers-reduced-motion`.
-- Visible keyboard focus on every control (`focus-visible:ring-2`).
+- Visible keyboard focus on every control (3px sky outline from `:focus-visible` in `input.css`).
 - Contrast at least 4.5:1 for text.
 - Every icon-only button has an `aria-label`.
 - Money: `Rs 4,000` format using the institute currency. Right-aligned in tables.
@@ -136,7 +135,7 @@ Each pattern is a base page class in `apps/ui/views/pages.py`. Subclass it.
 
 ## 11. PWA
 
-- `manifest.json` with name, icons (192 and 512), `theme_color: #005E78`, `display: standalone`.
+- `manifest.json` with name, icons (192 and 512), `theme_color: #002DA8`, `display: standalone`.
 - Service worker caches the app shell and static files only. Never cache API or personal data pages.
 - "Install app" button appears when the browser allows it.
 

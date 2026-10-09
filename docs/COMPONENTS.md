@@ -1,6 +1,6 @@
 # COMPONENTS
 
-> **Redesign in progress (roadmap Phase R).** The component list and API stay; their look changes with the approved Lexicon design system (R3 updates this file).
+> **Lexicon redesign (roadmap Phase R).** Looks follow `UI-GUIDELINES.md`. R4a restyled the shells, public pages and base components below; R4b (tables, filters, forms layout) and R4c (dashboards) follow.
 
 How UI is built in Python. Components are classes. Pages and forms assemble them. New screens are made by subclassing, not by copying templates.
 
@@ -239,28 +239,28 @@ Every item here is a class. Names are fixed.
 | `SidebarShell` | layout | teacher/student/guardian shell: sidebar + top bar; below md the sidebar is hidden and a Menu button opens it as a full-screen panel (Escape or a tap outside closes it) | `portal`, `user`, `active` |
 | `TopNav` | layout | grouped dropdown menu from a menu config | `portal`, `active` |
 | `Sidebar` | layout | grouped sidebar menu from a menu config | `portal`, `active` |
-| `HeroBanner` | layout | dashboard welcome banner with chips and actions | `title`, `subtitle`, `chips`, `actions` |
-| `PageHeader` | layout | title, breadcrumb, actions | `title`, `breadcrumb`, `actions` |
+| `HeroBanner` | layout | dashboard welcome banner on the Lexicon band (gradient + waves) with chips and actions | `title`, `subtitle`, `chips`, `actions` |
+| `PageHeader` | layout | breadcrumb (chevrons), optional live clock chip in the viewer's time zone, title, subtitle, actions; portal pages turn the clock on | `title`, `breadcrumb`, `actions`, `subtitle`, `clock` |
 | `SectionCard` | layout | titled card with "View all" | `title`, `body`, `link_url`, `link_label` |
 | `Tabs` | layout | tabs with HTMX swap (not used by a page yet) | `tabs`, `active` |
 | `Modal` | layout | dialog (Alpine + HTMX; not used by a page yet) | `id`, `title`, `body` |
-| `PublicFormShell` | layout | centered public page (sign-in, set password) | `page_title`, `header`, `content` |
+| `PublicFormShell` | layout | public page: `split` (form left, band right; short band on phones) or `notice` (whole page is the band, centred message with an icon) | `page_title`, `header`, `content`, `variant`, `icon` |
 | `CrispyForm` | forms | crispy form body (`form_tag=False` inside a parent form) | `form` |
 | `PublicPostForm` | forms | `<form method="post">` + CSRF wrapper for public pages | `action`, `body` |
 | `PortalPostForm` | forms | Portal `FormPage` POST wrapper (CSRF, multipart, crispy body) | `action`, `body` |
 | `ProfileMenu` | layout | Admin top-bar profile dropdown (C11 items, admin_only hiding) | `items` |
 | `BlockStack` | block_stack | vertical stack of text or nested components | `blocks` |
-| `SignOutForm` | actions | POST sign out with CSRF | `logout_url` |
-| `StatCard` | data | number + label + note | `value`, `label`, `note`, `icon`, `tone` |
+| `SignOutForm` | actions | POST sign out with CSRF; `variant="light"` on the band | `logout_url`, `variant` |
+| `StatCard` | data | stat tile with an icon tile; `tone="lead"` is the solid royal tile | `value`, `label`, `note`, `icon`, `tone` |
 | `DataTable` + `Column` | data | table that scrolls sideways inside its box; no sorting yet | `columns`, `rows` |
-| `Badge` | data | status pill | `text`, `tone` |
-| `Avatar` | data | initials circle | `name`, `size` |
+| `Badge` | data | status chip with a dot (`success`, `danger`, `warning`), or plain (`info`, `neutral`) | `text`, `tone` |
+| `Avatar` | data | initials (first letters of the first two words, or of the email's local part) in a soft circle; the tint is stable per name; full name in `title` | `name`, `size` (`sm`, `md`, `lg`) |
 | `ProgressBar` | data | percent bar | `value`, `label`, `tone` |
 | `ChartCard` | data | Chart.js card | `title`, `chart_id`, `data_url` |
-| `EmptyState` | data | message + one action | `title`, `text`, `action` |
-| `Button` | actions | primary, secondary, danger, ghost | `label`, `variant`, `url`, `icon` |
+| `EmptyState` | data | icon tile, message and one action | `title`, `text`, `action`, `icon` |
+| `Button` | actions | `primary`, `secondary`, `danger`, `ghost`, `light`, `glass` (the last two on the band); Lucide icon before the label | `label`, `variant`, `url`, `icon` |
 | `QuickAction` | actions | dashboard tile | `label`, `icon`, `url` |
-| `ConfirmDialog` | actions | confirm destructive actions; renders a POST form with CSRF (when rendered with `request`) and a cancel button | `message`, `confirm_label`, `url`, `trigger_label`, `variant` (`danger`/`primary`), `fields` (hidden name/value pairs) |
+| `ConfirmDialog` | actions | confirm actions in a centred modal (`role="alertdialog"`, backdrop, Escape and click outside close it); renders a POST form with CSRF (when rendered with `request`) and Cancel | `message`, `confirm_label`, `url`, `trigger_label`, `variant` (`danger`/`primary`), `fields` (hidden name/value pairs) |
 | `CopyField` | actions | read-only value with a copy button (one-time links) | `label`, `value` |
 | `Toast` | actions | success/error message | `message`, `tone` |
 | `CountdownCard` | lectures | "Up next" with live timer + Join | `lecture`, `viewer`; `scheduled_at` is validated to a UTC ISO string in `data-scheduled-at`, read by `countdownCard` in `static/js/app.js` |
@@ -271,7 +271,9 @@ Every item here is a class. Names are fixed.
 | `Pagination` | nav | page links; `query` keeps the current filters | `page_obj`, `query` |
 | `PdfHeader` | pdf | institute header for PDFs | `institute` |
 
-Form layout objects: `Section`, `Row`, `FormActions`.
+| `Icon` | icon | one Lucide icon from the self-hosted sprite (`{% icon "name" %}` in templates); unknown names render nothing; always `aria-hidden` | `name`, `css_class` |
+
+Form layout objects: `Section`, `Row`, `FormActions` (`stacked=True`: cancel becomes a text link and the submit button is full width, for public pages).
 
 Form widgets (not components): `PasswordInput` (show/hide toggle; static `type="password"` for no-JS and tests). `GroupedCheckboxes` (one fieldset per choice group, for example subjects under each batch; `empty_text` when there are no choices).
 
