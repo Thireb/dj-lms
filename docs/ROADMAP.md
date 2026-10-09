@@ -45,7 +45,20 @@ From 2.8 on, every phase that adds a model also extends `seed_demo` with that mo
 - [x] 2.8 Demo data at scale: extend `seed_demo` with bulk students per SPEC section 10. Build last in Phase 2, after 2.1 to 2.3 add the people and academics models.
 - [x] 2.9 Phase 2 audit (external review; findings and fixes in BACKLOG.md "Phase 2 audit"): full review of everything built in Phase 2 (CLAUDE.md PR review procedure on the whole phase, every open backlog item re-checked, findings added to BACKLOG.md). Phase 3 does not start until it is done.
 
-## Phase 3: Lectures
+## Phase R: Redesign (current priority, decided 2026-10-09)
+
+The product owner did not accept the current look (navigation, tables, forms, sign-in, all of it). The whole website is redesigned before new features. **Phase 3 is on hold until R5 is signed off.**
+
+- Brand: Lexicon (https://lexicon.edu.pk), the institute this LMS is for. Use its colours, type and theme.
+- UI/UX: modelled on IgnisLMS, the reference product: layout, navigation and interaction patterns only. `AGENTS.md` still applies: never copy its name, logo, text or images.
+
+- [ ] R1 Research: extract Lexicon's palette, fonts and logo use; study the reference's public screens for layout and interaction patterns. Write a short style brief.
+- [ ] R2 Design system for approval: tokens (colour, type, spacing, radius, shadow, motion) and every component with previews, for the four portals, super admin and the public pages (sign-in, set password, forgot password, access paused). The owner approves before any template changes.
+- [ ] R3 Docs: rewrite `UI-GUIDELINES.md` and `COMPONENTS.md` to the approved system.
+- [ ] R4 Build: tokens, shells (top menu, sidebar), public pages, tables, forms, dashboards and every Phase 1-2 page; checked at 360px and desktop in a browser; new walkthrough video.
+- [ ] R5 Owner sign-off. Then Phase 3 resumes.
+
+## Phase 3: Lectures (on hold until R5)
 
 - [ ] 3.1 Lecture CRUD with manual meeting link.
 - [ ] 3.2 Recurring schedule builder (Celery task generates lectures).
