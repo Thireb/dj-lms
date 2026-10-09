@@ -21,4 +21,9 @@ urlpatterns = [
         views.InstituteStatusView.as_view(),
         name="institute_status",
     ),
+    path(
+        "institutes/<int:pk>/admin-link/",
+        views.InstituteAdminLinkPage.as_view(),
+        name="institute_admin_link",
+    ),
 ]

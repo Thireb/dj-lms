@@ -94,3 +94,14 @@ def list_institutes(search: str = "") -> QuerySet[Institute]:
     if search:
         queryset = queryset.filter(Q(name__icontains=search))
     return queryset.order_by("name")
+
+
+def first_institute_admin(institute: Institute) -> User | None:
+    """The oldest active institute admin, who gets a new sign-in link (M2)."""
+    return (
+        User.objects.filter(
+            institute=institute, role=Role.INSTITUTE_ADMIN, is_active=True
+        )
+        .order_by("pk")
+        .first()
+    )

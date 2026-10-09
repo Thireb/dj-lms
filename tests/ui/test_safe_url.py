@@ -91,3 +91,23 @@ def test_button_calls_safe_url(monkeypatch) -> None:
     monkeypatch.setattr(actions, "safe_url", _record)
     Button("Go", url="https://example.com")
     assert calls == ["https://example.com"]
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "//evil.example/path",
+        "/\\evil.example",
+        "\\\\evil.example",
+        "https://ex ample.com",
+        "https://example.com/a b",
+        "https://example.com/\x00x",
+        "https:\\\\evil.example",
+    ],
+)
+def test_safe_url_refuses_inner_spaces_and_protocol_relative(url: str) -> None:
+    assert safe_url(url) == ""
+
+
+def test_safe_url_only_trims_the_ends() -> None:
+    assert safe_url("  https://meet.example/room-1\n") == "https://meet.example/room-1"

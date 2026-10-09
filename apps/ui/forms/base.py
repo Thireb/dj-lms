@@ -17,6 +17,35 @@ __all__ = [
 ]
 
 
+# Same look as DatePicker and PasswordInput; w-full keeps fields inside a
+# 360px screen (a default textarea is about 412px wide).
+INPUT_CLASSES = (
+    "mt-1 block w-full rounded-lg border border-border px-3 py-2 text-sm "
+    "focus-visible:ring-2 focus-visible:ring-primary"
+)
+_STYLED_WIDGETS = (forms.widgets.Input, forms.Textarea, forms.Select)
+_UNSTYLED_WIDGETS = (
+    forms.CheckboxInput,
+    forms.CheckboxSelectMultiple,
+    forms.RadioSelect,
+    forms.HiddenInput,
+    forms.FileInput,
+)
+
+
+def style_widgets(form: forms.BaseForm) -> None:
+    """Give text inputs, selects and textareas the shared classes."""
+    for field in form.fields.values():
+        widget = field.widget
+        if not isinstance(widget, _STYLED_WIDGETS):
+            continue
+        if isinstance(widget, _UNSTYLED_WIDGETS) or widget.attrs.get("class"):
+            continue
+        widget.attrs["class"] = INPUT_CLASSES
+        if isinstance(widget, forms.Textarea) and widget.attrs.get("rows") == "10":
+            widget.attrs["rows"] = 3  # Django's default of 10 is too tall
+
+
 class BaseForm(forms.Form):
     form_method = "post"
     save_label = "Save changes"
@@ -24,6 +53,7 @@ class BaseForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        style_widgets(self)
         self.helper = FormHelper(self)
         self.helper.form_tag = False
         self.helper.layout = self.get_layout()

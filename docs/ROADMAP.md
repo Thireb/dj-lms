@@ -43,7 +43,7 @@ From 2.8 on, every phase that adds a model also extends `seed_demo` with that mo
 - [x] 2.6 Bulk student upload from Excel template with error report.
 - [x] 2.7 Portal Access: manual block/unblock, exemptions, blocked page. The automatic defaulter rule (nightly auto-block and auto-unblock, SPEC 6.2) needs challans, so it moves to Phase 7 as 7.6 (backlog S9).
 - [x] 2.8 Demo data at scale: extend `seed_demo` with bulk students per SPEC section 10. Build last in Phase 2, after 2.1 to 2.3 add the people and academics models.
-- [ ] 2.9 Phase 2 audit: full review of everything built in Phase 2 (CLAUDE.md PR review procedure on the whole phase, every open backlog item re-checked, findings added to BACKLOG.md). Phase 3 does not start until it is done.
+- [x] 2.9 Phase 2 audit (external review; findings and fixes in BACKLOG.md "Phase 2 audit"): full review of everything built in Phase 2 (CLAUDE.md PR review procedure on the whole phase, every open backlog item re-checked, findings added to BACKLOG.md). Phase 3 does not start until it is done.
 
 ## Phase 3: Lectures
 

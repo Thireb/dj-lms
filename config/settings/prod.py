@@ -25,6 +25,15 @@ DATABASES = {  # noqa: F405
 }
 
 REDIS_URL = os.environ.get("REDIS_URL", "")
+# Sign-in limits need one cache shared by every worker (audit H1). Django's
+# Redis backend needs the "redis" package, added with deployment (Phase 12).
+if REDIS_URL:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.redis.RedisCache",
+            "LOCATION": REDIS_URL,
+        }
+    }
 EMAIL_HOST = os.environ.get("EMAIL_HOST", "")
 EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
 EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")

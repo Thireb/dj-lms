@@ -11,13 +11,17 @@ from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.cache import patch_cache_control
 from django.utils.dateformat import format as format_date
 
+from apps.accounts.services import reissue_set_password_token, set_password_path
+from apps.core.query import search_param
 from apps.core.roles import Role
 from apps.institutes.models import Institute
 from apps.superadmin.forms import CreateInstituteForm, EditInstituteForm
 from apps.superadmin.services import (
     create_institute,
+    first_institute_admin,
     list_institutes,
     set_institute_active,
     update_institute,
@@ -27,7 +31,7 @@ from apps.ui.components.block_stack import BlockStack
 from apps.ui.components.data import Badge, Column, DataTable
 from apps.ui.components.layout import SectionCard
 from apps.ui.components.nav import FilterBar, Pagination
-from apps.ui.views.pages import FormPage, ListPage, PortalPageView
+from apps.ui.views.pages import DetailPage, FormPage, ListPage, PortalPageView
 
 PAGE_SIZE = 25
 
@@ -56,7 +60,7 @@ class InstituteListPage(SuperAdminPageMixin, ListPage):
     active_item = "institutes"
 
     def get_search(self) -> str:
-        return self.request.GET.get("q", "").strip()
+        return search_param(self.request.GET.get("q"))
 
     def get_actions(self) -> list[Any]:
         return [Button("Create institute", url=reverse("super:institute_create"))]
@@ -128,7 +132,10 @@ class CreateInstitutePage(SuperAdminPageMixin, FormPage):
                 ]
             ),
         )
-        return self.render_to_response(context, status=200)
+        response = self.render_to_response(context, status=200)
+        # The one-time link must not stay in a browser or proxy cache (M8).
+        patch_cache_control(response, no_store=True, private=True)
+        return response
 
 
 class InstituteObjectMixin:
@@ -168,27 +175,34 @@ class EditInstitutePage(SuperAdminPageMixin, InstituteObjectMixin, FormPage):
         }
 
     def get_actions(self) -> list[Any]:
+        return [self.status_action(), self.link_action()]
+
+    def link_action(self) -> ConfirmDialog:
+        return ConfirmDialog(
+            "Make a new sign-in link for this institute's admin? Older unused "
+            "links stop working.",
+            "New sign-in link",
+            url=reverse("super:institute_admin_link", kwargs={"pk": self.institute.pk}),
+            variant="primary",
+        )
+
+    def status_action(self) -> ConfirmDialog:
         institute = self.institute
         url = reverse("super:institute_status", kwargs={"pk": institute.pk})
         if institute.is_active:
-            return [
-                ConfirmDialog(
-                    f"Deactivate {institute.name}? Its users will not be able "
-                    "to sign in.",
-                    "Deactivate",
-                    url=url,
-                    fields=[("action", "deactivate")],
-                )
-            ]
-        return [
-            ConfirmDialog(
-                f"Activate {institute.name}? Its users can sign in again.",
-                "Activate",
+            return ConfirmDialog(
+                f"Deactivate {institute.name}? Its users will not be able to sign in.",
+                "Deactivate",
                 url=url,
-                variant="primary",
-                fields=[("action", "activate")],
+                fields=[("action", "deactivate")],
             )
-        ]
+        return ConfirmDialog(
+            f"Activate {institute.name}? Its users can sign in again.",
+            "Activate",
+            url=url,
+            variant="primary",
+            fields=[("action", "activate")],
+        )
 
     def get_success_url(self) -> str:
         return reverse("super:institute_edit", kwargs={"pk": self.institute.pk})
@@ -220,3 +234,51 @@ class InstituteStatusView(SuperAdminPageMixin, InstituteObjectMixin, PortalPageV
         return HttpResponseRedirect(
             reverse("super:institute_edit", kwargs={"pk": institute.pk})
         )
+
+
+class InstituteAdminLinkPage(SuperAdminPageMixin, InstituteObjectMixin, DetailPage):
+    """POST-only: a new one-time sign-in link for the institute admin (M2)."""
+
+    http_method_names = ["post"]
+    title = "New sign-in link"
+    active_item = "institutes"
+
+    def post(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        self.institute = self.get_object()
+        self.admin = first_institute_admin(self.institute)
+        if self.admin is not None:
+            self.link = request.build_absolute_uri(
+                set_password_path(reissue_set_password_token(self.admin).key)
+            )
+        response = self.render_to_response(self.get_context_data())
+        patch_cache_control(response, no_store=True, private=True)
+        return response
+
+    def get_primary_cards(self) -> list[Any]:
+        back = Button(
+            "Back to institute",
+            url=reverse("super:institute_edit", kwargs={"pk": self.institute.pk}),
+            variant="secondary",
+        )
+        if self.admin is None:
+            return [
+                SectionCard(
+                    title=self.institute.name,
+                    body=BlockStack(
+                        blocks=["This institute has no active admin.", back]
+                    ),
+                )
+            ]
+        return [
+            SectionCard(
+                title=f"Link for {self.admin.email}",
+                body=BlockStack(
+                    blocks=[
+                        "Send this link to the admin. It is shown only once, and "
+                        "older unused links no longer work.",
+                        CopyField("Set-password link", self.link),
+                        back,
+                    ]
+                ),
+            )
+        ]

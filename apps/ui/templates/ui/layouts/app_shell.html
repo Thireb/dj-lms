@@ -4,7 +4,8 @@
 
 {% block body_extra_attrs %}
   data-portal="{{ portal|default:'admin' }}"
-  x-data="{}"
+  x-data="{ navOpen: false }"
+  @keydown.escape.window="navOpen = false"
 {% endblock %}
 
 {% block body %}
@@ -12,7 +13,7 @@
     {% block shell_header %}{% endblock %}
     <div class="flex flex-1">
       {% block shell_sidebar %}{% endblock %}
-      <main class="flex-1 p-4 md:p-6">
+      <main class="min-w-0 flex-1 p-4 md:p-6">
         <div class="mx-auto max-w-7xl">
           {% block shell_content %}{% endblock %}
         </div>

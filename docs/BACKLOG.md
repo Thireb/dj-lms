@@ -150,12 +150,59 @@ Status: `[ ]` open, `[x]` done. Priority: **High** = fix before merge or before 
 | S1 | Flash messages were never shown: no template rendered `messages`, so "Campus profile updated.", "Institute saved." and every other `messages.success` call was lost. Fixed: both shells render one `Toast` per message; toast tones use theme colors. | 2.3b build | Medium | [x] |
 | S2 | `ListPageBody`, `DataTable` and `BlockStack` rendered nested components without `request`, so a `ConfirmDialog` in a table row had no CSRF token and its POST got 403. Fixed with `render_child`; test posts with `enforce_csrf_checks=True`. | 2.3b build | High | [x] |
 | S3 | `badge-tone-*` classes (used by `Badge`) have no CSS, so status badges show no color. Map each tone to theme token classes in `badge.html`, as `toast.html` now does. | 2.3b build | Low | [x] fixed in 2.4 |
-| S4 | `static/css/src/input.css` `@source` paths start with `../../../../`, which is outside the repo. Classes are still found by Tailwind's automatic detection. Fix the paths to `../../../`. | 2.3b build | Low | [ ] |
-| S5 | `apps/institutes/urls/admin.py` is not included anywhere; admin URLs live in `apps/ui/urlconf/admin.py`. Delete it or include it. | 2.3b build | Low | [ ] |
+| S4 | `static/css/src/input.css` `@source` paths start with `../../../../`, which is outside the repo. Classes are still found by Tailwind's automatic detection. Fix the paths to `../../../`. | 2.3b build | Low | [x] fixed in Phase 2 audit |
+| S5 | `apps/institutes/urls/admin.py` is not included anywhere; admin URLs live in `apps/ui/urlconf/admin.py`. Delete it or include it. | 2.3b build | Low | [x] fixed in Phase 2 audit |
 | S6 | The URL walker only checked roles outside `allowed_roles`, so adding `Role.TEACHER` to an admin page passed every test (found by the 2.5a mutation check). Fixed: the walker now asserts admin portal views allow only `institute_admin` and `sub_admin`. | 2.5a build | Medium | [x] |
 | S7 | `DetailPageBody` rendered its cards without `request`, so a form inside a card had no CSRF token (same cause as S2). Fixed with `render_child`; test added. | 2.6 build | Medium | [x] |
-| S8 | Bulk upload runs in the web request: about 0.55 s of password hashing per row, so files are capped at 50 rows. Move the import to a Celery task when Celery arrives (roadmap 3.2), then raise the cap. | 2.6 build | Low | [ ] |
+| S8 | Bulk upload runs in the web request: about 0.55 s of password hashing per row, so files were capped at 50 rows; the Phase 2 audit (H6) lowered the cap to 15 and set the gunicorn timeout to 120 s in DEPLOYMENT.md. Move the import to a Celery task when Celery arrives (roadmap 3.2), then raise the cap. | 2.6 build | Low | [ ] |
 | S9 | Automatic defaulter blocking (SPEC 6.2) is not part of 2.7: it needs challans and overdue data from Phase 7. Build it as roadmap 7.6 on top of the 2.7 block and exempt fields; manual block and unblock must still win until the next run. | 2.4 planning | High | [ ] |
+| S10 | Layout forms never showed non-field errors (`whole_uni_form.html`), so "Passwords do not match." and service errors mapped to the whole form were hidden. Fixed; test added. | Phase 2 audit | Medium | [x] |
+
+## Phase 2 audit (external review, fixed in one PR)
+
+| # | Item | Priority | Status |
+|---|---|---|---|
+| H1 | No sign-in throttling on login, developer admin login and set-password. Now 5 failures per 15 minutes per lower-cased email and IP (set-password per IP); a locked attempt never hashes a password; IP from `TRUSTED_PROXY_IP_HEADER` only when set. | High | [x] |
+| H2 | Email case: `Sam@example.com` could not sign in as `sam@example.com`, and case duplicates were possible. Emails are lower-cased on save and sign-in, `Lower(email)` unique constraint, data migration. | High | [x] |
+| H3 | Sidebar took 224 of 360px on phones. Hidden below md with a Menu button and a full-screen panel. | High | [x] |
+| H4 | Admin top menu always open (508px desktop, 1,636px phone); sideways scroll on dashboard and upload. Groups are dropdowns, a collapsible list on phones; main and fieldsets are `min-w-0`; inputs are full width. 0px overflow at 360px on every page (headless Chromium). | High | [x] |
+| H5 | A 5 KB .xlsx with a cell at row 1,048,576 took 7-11 s of CPU. The reader scans at most 1,000 rows, stops after 5 s, and refuses files over 20 MB unpacked. | High | [x] |
+| H6 | A 50-row import outlived a 30 s worker. Cap 15 rows; gunicorn `--timeout 120` in DEPLOYMENT.md (S8 moves it to Celery). | High | [x] |
+| M1 | A damaged .xlsx gave a 500 (ParseError). Every read error is now "not a valid .xlsx workbook". | Medium | [x] |
+| M2 | A lost set-password link locked out the institute admin. `manage.py make_set_password_link` and a "New sign-in link" action on the super admin institute page; older unused links stop working. | Medium | [x] |
+| M3 | `?batch=²`, `?q=%00` and a 5,000-digit id gave a 500 on the lists. `id_param` and `search_param` in `apps/core/query.py`. | Medium | [x] |
+| M4 | The preview said Ready for rows the import rejected (field lengths). The check runs the model field checks and names the column. | Medium | [x] |
+| M5 | Cell clean-up changed passwords and dropped a phone's leading 0. Passwords are kept as typed; template cells are Text; a phone typed as a number is an error. | Medium | [x] |
+| M6 | Passwords were readable in the signed hidden field. Rows stay in the session; the page gets a random id. | Medium | [x] |
+| M7 | Production gaps: `SECURE_PROXY_SSL_HEADER`, WhiteNoise, `/health/`. Logged as S11-S13; DEPLOYMENT.md marks them not built. | Medium | [x] logged |
+| M8 | The page that shows a one-time link had no `Cache-Control: no-store`. Added (create institute, new sign-in link). | Medium | [x] |
+| M9 | Sub-admins have no `allowed_menus` until 9.3c (logged as S15). The dashboard now shows recent students and teachers only with the People menu. | Medium | [x] |
+| L1 | A user of an inactive institute got a bare 403. Now a page with the reason and Sign out. | Low | [x] |
+| L2 | Without remember me the server session lasted 14 days. Now 12 hours (remember me: 14 days). | Low | [x] |
+| L3 | Password fields stripped spaces. `strip=False` on every password field. | Low | [x] |
+| L4 | `safe_url` repaired inner spaces and allowed `//host` and `/\host`. It now refuses them. | Low | [x] |
+| L5 | Profile status was editable in the developer admin. Read-only. | Low | [x] |
+| L6 | No `[x-cloak]` CSS rule. Added. | Low | [x] |
+| L7 | `/` returned 404. It redirects to sign-in or the user's portal. | Low | [x] |
+| L8 | `create_user(role="super_admin")` set `is_staff=False`. Now `True` by default. | Low | [x] |
+| L9 | Set-password token use was not atomic. `select_for_update` in a transaction; a second use shows "already used". | Low | [x] |
+| L10 | Set-password did not compare the password with the user's email. It does now. | Low | [x] |
+| L11 | COMPONENTS.md was stale (render signature, shell_class, sorting, HTMX). Updated. | Low | [x] |
+| L12 | Components built ahead and not used by a page yet are listed in COMPONENTS.md section 7. | Low | [x] |
+
+Claims the audit tested that did not hold: overlong cells do not give a 500 on import (they fail per row, now caught in the check by M4); formula injection does not apply (nothing is exported); the XML parser has no `defusedxml`, but no attack worked against Python 3.13's expat limits (logged as S16, defense in depth).
+
+## Open after the Phase 2 audit
+
+| # | Item | Source | Priority | Status |
+|---|---|---|---|---|
+| S11 | `SECURE_PROXY_SSL_HEADER` is not set; behind a TLS proxy `SECURE_SSL_REDIRECT` would loop. Set it with the proxy setup. | Phase 2 audit M7 | High before deploy | [ ] |
+| S12 | WhiteNoise is not installed, so static files do not load with `DEBUG=False`. New dependency (ask first). | Phase 2 audit M7 | High before deploy | [ ] |
+| S13 | No `/health/` route for the uptime check. | Phase 2 audit M7 | High before deploy | [ ] |
+| S14 | The sign-in limits need one shared cache; `prod.py` uses Redis when `REDIS_URL` is set, but the `redis` package is not installed (new dependency, ask first). | Phase 2 audit H1 | High before deploy | [ ] |
+| S15 | Sub-admins have no `allowed_menus` until 9.3c, so `demo-sub` gets 403 on every admin page. 9.3c must add the field, the seed grants (Finance and People per SPEC 10) and tests; the dashboard already hides people names without People. | Phase 2 audit M9 | Medium | [ ] |
+| S16 | openpyxl parses XML without `defusedxml`. No attack worked against Python 3.13's expat limits; add `defusedxml` as defense in depth when dependencies are next reviewed. | Phase 2 audit | Low | [ ] |
+| S17 | No automated browser test: the 360px layout was checked once with headless Chromium. Add one with the JS test runner (B18). | Phase 2 audit | Low | [ ] |
 
 ## Later (deployment hardening, Phase 12)
 

@@ -9,6 +9,7 @@ from datetime import timedelta
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models.functions import Lower
 from django.utils import timezone
 
 from apps.core.roles import Role as RoleConstants
@@ -26,7 +27,7 @@ class UserManager(BaseUserManager["User"]):
         if not email:
             msg = "Email must be set"
             raise ValueError(msg)
-        email = self.normalize_email(email)
+        email = self.normalize_email(email).strip().lower()
         user = self.model(email=email, **extra_fields)
         user.set_password(password)
         user.full_clean()
@@ -39,9 +40,15 @@ class UserManager(BaseUserManager["User"]):
         password: str | None = None,
         **extra_fields: object,
     ) -> User:
-        extra_fields.setdefault("is_staff", False)
+        # A super admin always needs the developer admin (audit L8).
+        is_super = extra_fields.get("role") == RoleConstants.SUPER_ADMIN
+        extra_fields.setdefault("is_staff", is_super)
         extra_fields.setdefault("is_superuser", False)
         return self._create_user(email, password, **extra_fields)
+
+    def get_by_natural_key(self, username: str) -> User:
+        # Sign-in ignores case: Sam@Example.com is sam@example.com (audit H2).
+        return self.get(email__iexact=username.strip())
 
     def create_superuser(
         self,
@@ -99,6 +106,11 @@ class User(AbstractUser):
 
     class Meta:
         ordering = ["email"]
+        constraints = [
+            models.UniqueConstraint(
+                Lower("email"), name="accounts_user_email_lower_unique"
+            ),
+        ]
 
     def __str__(self) -> str:
         return self.email
@@ -119,6 +131,7 @@ class User(AbstractUser):
                 raise ValidationError({"institute": "This role requires an institute."})
 
     def save(self, *args: object, **kwargs: object) -> None:
+        self.email = (self.email or "").strip().lower()
         self.full_clean()
         super().save(*args, **kwargs)
 

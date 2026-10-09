@@ -354,3 +354,15 @@ def test_links_in_tenant_context_stay_in_institute(family, institute_b) -> None:
         links = list(GuardianStudentLink.objects.all())
 
     assert [link.student for link in links] == [family["child_b"]]
+
+
+@pytest.mark.django_db
+def test_existing_guardian_email_with_spaces_and_capitals_is_linked(institute_a):
+    first = student(institute_a, "c1-a@example.com")
+    second = student(institute_a, "c2-a@example.com")
+    original = _enrol(first, "parent@example.com").guardian
+
+    result = _enrol(second, "  PARENT@Example.com  ", password="")
+
+    assert result.created is False
+    assert result.guardian == original

@@ -19,7 +19,7 @@ class LoginForm(BaseForm):
     save_label = "Sign in"
 
     email = forms.EmailField(label="Email")
-    password = forms.CharField(label="Password", widget=PasswordInput())
+    password = forms.CharField(label="Password", widget=PasswordInput(), strip=False)
     remember_me = forms.BooleanField(
         label="Remember me",
         required=False,
@@ -53,14 +53,20 @@ class LoginForm(BaseForm):
 class SetPasswordForm(BaseForm):
     save_label = "Set password"
 
+    def __init__(self, *args, user: User | None = None, **kwargs):
+        self.user = user
+        super().__init__(*args, **kwargs)
+
     password = forms.CharField(
         label="New password",
         widget=PasswordInput(attrs={"autocomplete": "new-password"}),
+        strip=False,
         min_length=8,
     )
     confirm_password = forms.CharField(
         label="Confirm password",
         widget=PasswordInput(attrs={"autocomplete": "new-password"}),
+        strip=False,
         min_length=8,
     )
 
@@ -72,7 +78,7 @@ class SetPasswordForm(BaseForm):
             raise ValidationError("Passwords do not match.")
         if password:
             try:
-                validate_password(password)
+                validate_password(password, self.user)
             except ValidationError as exc:
                 self.add_error("password", exc)
         return cleaned
@@ -116,15 +122,18 @@ class ChangePasswordForm(BaseForm):
     current_password = forms.CharField(
         label="Current password",
         widget=PasswordInput(attrs={"autocomplete": "current-password"}),
+        strip=False,
     )
     new_password = forms.CharField(
         label="New password",
         widget=PasswordInput(attrs={"autocomplete": "new-password"}),
+        strip=False,
         min_length=8,
     )
     confirm_password = forms.CharField(
         label="Confirm new password",
         widget=PasswordInput(attrs={"autocomplete": "new-password"}),
+        strip=False,
         min_length=8,
     )
 

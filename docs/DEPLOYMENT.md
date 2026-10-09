@@ -27,7 +27,7 @@ All run as Docker containers.
 - One `Dockerfile` for the app image, shared by web, worker and beat.
 - One production compose file in the repo root that defines all services.
 - Image build: install dependencies, build Tailwind CSS, collect static files.
-- Start command (web): `gunicorn config.wsgi`.
+- Start command (web): `gunicorn config.wsgi --timeout 120`. Keep the 120 s timeout until the bulk upload runs in Celery (backlog S8): a 15-row import hashes up to 30 passwords in one request.
 - Start command (worker): `celery -A config worker -l info`.
 - Start command (beat): `celery -A config beat -l info`.
 - Run migrations as a one-off step before the new web container starts, not on every web start.
@@ -40,7 +40,8 @@ Listed in `.env.example`. Set real values in Pethost, never in git.
 - `SECRET_KEY`
 - `ALLOWED_HOSTS`
 - `DATABASE_URL`
-- `REDIS_URL`
+- `REDIS_URL` (also the shared cache for sign-in limits; needs the `redis` package, not installed yet)
+- `TRUSTED_PROXY_IP_HEADER` (for example `HTTP_X_REAL_IP`, a header the proxy always sets)
 - `STORAGE_*` (bucket, key, secret, endpoint)
 - `EMAIL_*`
 - `SENTRY_DSN` (optional)
@@ -50,8 +51,10 @@ Listed in `.env.example`. Set real values in Pethost, never in git.
 - [ ] Answers to "Ask Pethost first" recorded in this file.
 - [ ] `DEBUG=False`, `ALLOWED_HOSTS` set, `CSRF_TRUSTED_ORIGINS` set.
 - [ ] HTTPS-only cookies and HSTS enabled.
-- [ ] WhiteNoise serving static files.
-- [ ] Health check URL (`/health/`) returns 200.
+- [ ] `SECURE_PROXY_SSL_HEADER` set for the TLS proxy, or `SECURE_SSL_REDIRECT` loops (not built yet, backlog S11).
+- [ ] WhiteNoise serving static files (not built yet, backlog S12).
+- [ ] Health check URL (`/health/`) returns 200 (not built yet, backlog S13).
+- [ ] Redis cache on, so sign-in limits are shared by every worker.
 - [ ] Seed command creates the first Super Admin.
 - [ ] Backups on for the database.
 

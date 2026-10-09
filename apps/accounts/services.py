@@ -8,8 +8,10 @@ from typing import TYPE_CHECKING
 
 from django.conf import settings
 from django.contrib.auth import authenticate, login, update_session_auth_hash
+from django.db import transaction
 from django.http import HttpRequest
 from django.urls import NoReverseMatch, reverse
+from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 
 from apps.accounts.models import SetPasswordToken, User
@@ -65,7 +67,7 @@ def authenticate_user(*, email: str, password: str) -> AuthenticateResult:
 
 def apply_session_remember_me(request: HttpRequest, *, remember: bool) -> None:
     if remember:
-        request.session.set_expiry(settings.SESSION_COOKIE_AGE)
+        request.session.set_expiry(settings.REMEMBER_ME_SECONDS)
     else:
         request.session.set_expiry(0)
 
@@ -92,14 +94,19 @@ def lookup_set_password_token(key: str) -> TokenLookup:
     return TokenLookup(status=TokenStatus.OK, token=token)
 
 
-def set_password_from_token(*, token: SetPasswordToken, password: str) -> User:
-    user = token.user
+@transaction.atomic
+def set_password_from_token(*, token: SetPasswordToken, password: str) -> User | None:
+    """Use the token once. Returns None when another request used it first."""
+    locked = SetPasswordToken.objects.select_for_update().get(pk=token.pk)
+    if not locked.is_valid():
+        return None
+    user = locked.user
     user.set_password(password)
     user.save(update_fields=["password"])
-    token.mark_used()
+    locked.mark_used()
     SetPasswordToken.objects.filter(user=user, used_at__isnull=True).exclude(
-        pk=token.pk
-    ).update(used_at=token.used_at)
+        pk=locked.pk
+    ).update(used_at=locked.used_at)
     return user
 
 
@@ -116,6 +123,19 @@ def create_set_password_token(
 ) -> CreatedSetPasswordToken:
     plaintext_key, token = SetPasswordToken.create_for_user(user, ttl_hours=ttl_hours)
     return CreatedSetPasswordToken(key=plaintext_key, token=token)
+
+
+@transaction.atomic
+def reissue_set_password_token(user: User) -> CreatedSetPasswordToken:
+    """A new one-time link; every unused older link stops working (audit M2)."""
+    SetPasswordToken.objects.filter(user=user, used_at__isnull=True).update(
+        used_at=timezone.now()
+    )
+    return create_set_password_token(user)
+
+
+def set_password_path(key: str) -> str:
+    return reverse("accounts:set_password", kwargs={"token": key})
 
 
 def update_profile(

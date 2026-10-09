@@ -237,8 +237,8 @@ Full name*, Institute name*, Phone*, Email, Website, Message*. Saved for Super A
 - Excel template with one row per student. Columns:
   `full_name*, father_name, cnic, dob (YYYY-MM-DD), gender, class_label, phone, guardian_name*, guardian_phone*, address, city, batches* (comma list), subjects* (BatchName:Subject1|Subject2; next batch after a semicolon), fee_plans* (comma list), discount, student_email*, student_password*, guardian_email*, guardian_password*`
 - Steps: download template, upload, preview with row-level errors, confirm to import valid rows only.
-- Built in 2.6 without `fee_plans` and `discount` (they come with Phase 7). Limits: one `.xlsx` file up to 1 MB and 50 rows. Column names are not case sensitive. Batch, subject and class names must match active rows of the institute (case is ignored). `guardian_password` may be blank when the guardian already has an account, or when an earlier row in the same file creates that guardian.
-- The checked rows travel to the import step in a signed form field (valid 30 minutes, only for the admin who uploaded the file). Import checks every row again and enrols each good row in its own transaction.
+- Built in 2.6 without `fee_plans` and `discount` (they come with Phase 7). Limits: one `.xlsx` file up to 1 MB (20 MB unpacked), student rows within the first 1,000 sheet rows, and 15 students per file until the import runs in Celery (backlog S8). Phone, CNIC and password columns are Text cells in the template; a phone typed as a number is an error, because Excel drops the leading 0. Passwords are kept exactly as typed. The check step runs the same field checks as the import (lengths), so a row marked Ready imports. Column names are not case sensitive. Batch, subject and class names must match active rows of the institute (case is ignored). `guardian_password` may be blank when the guardian already has an account, or when an earlier row in the same file creates that guardian.
+- The checked rows stay on the server in the admin's session; the page gets only a random id (valid 30 minutes, used once). Import checks every row again and enrols each good row in its own transaction.
 - Errors listed per row (missing field, unknown batch/subject/plan, duplicate email). Import is all-or-nothing per row, never partial per row.
 
 ## 6. Business rules
@@ -388,7 +388,7 @@ Built by management command: `uv run python manage.py seed_demo` (needs `DEBUG` 
 
 - Built in 2.8: 3 classes, 4 batches, 6 subjects, 5 teachers, 52 students (30 active, 22 inactive), 20 guardians, 1 admin, 1 sub-admin, 1 blocked and 1 exempt student. Sign-ins: `demo-admin`, `demo-sub`, `demo-super`, `demo-teacher`, `demo-student` and `demo-guardian` `@example.com`.
 - Every student needs a guardian, so "20 guardians (one with two children)" cannot cover 52 students. Decided in 2.8: `demo-guardian` has exactly two children; the other 19 guardians share the other 50 students (2 or 3 each).
-- Waiting for later phases: the sub-admin's Finance and People menus (9.3c), fee plans, challans and defaulters (Phase 7), lectures and attendance (Phases 3 and 4), and the rest of the list.
+- Waiting for later phases: the sub-admin's Finance and People menus (9.3c; until then `demo-sub` gets 403 on admin pages, backlog S15), fee plans, challans and defaulters (Phase 7), lectures and attendance (Phases 3 and 4), and the rest of the list.
 
 - 1 institute "Demo Institute" on Premium plan, Asia/Karachi, currency Rs.
 - 3 class labels, 4 batches, 6 subjects, 3 fee plans.

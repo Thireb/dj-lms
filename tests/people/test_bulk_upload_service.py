@@ -48,7 +48,11 @@ def test_template_has_the_columns_and_a_help_sheet() -> None:
 
     header = [cell.value for cell in workbook["Students"][1]]
     assert tuple(header) == TEMPLATE_COLUMNS
-    assert workbook["Students"].max_row == 1
+    sheet = workbook["Students"]
+    assert all(cell.value is None for cell in sheet[2])
+    for column in ("phone", "guardian_phone", "cnic", "student_password"):
+        index = TEMPLATE_COLUMNS.index(column) + 1
+        assert sheet.cell(row=2, column=index).number_format == "@", column
     assert "Help" in workbook.sheetnames
 
 
