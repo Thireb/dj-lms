@@ -45,7 +45,24 @@ From 2.8 on, every phase that adds a model also extends `seed_demo` with that mo
 - [x] 2.8 Demo data at scale: extend `seed_demo` with bulk students per SPEC section 10. Build last in Phase 2, after 2.1 to 2.3 add the people and academics models.
 - [x] 2.9 Phase 2 audit (external review; findings and fixes in BACKLOG.md "Phase 2 audit"): full review of everything built in Phase 2 (CLAUDE.md PR review procedure on the whole phase, every open backlog item re-checked, findings added to BACKLOG.md). Phase 3 does not start until it is done.
 
-## Phase 3: Lectures
+## Phase R: Redesign (current priority, decided 2026-10-09)
+
+The product owner did not accept the current look (navigation, tables, forms, sign-in, all of it). The whole website is redesigned before new features. **Phase 3 is on hold until R5 is signed off.**
+
+- Brand: Lexicon (https://lexicon.edu.pk), the institute this LMS is for. Use its colours, type and theme.
+- UI/UX: modelled on IgnisLMS, the reference product: layout, navigation and interaction patterns only. `AGENTS.md` still applies: never copy its name, logo, text or images.
+
+- [x] R1 Research: extract Lexicon's palette, fonts and logo use; study the reference's public screens for layout and interaction patterns. Write a short style brief.
+  - Lexicon (measured in a browser): royal `#002DA8`, indigo `#130C8E`, sky `#1273EB`, near-white `#FAFAFA`, ink `#1C1B1B`; font Familjen Grotesk 400-700; 5px corners, soft shadows; logo is a 200px JPEG (ask for SVG).
+  - Reference patterns: light top bar with dropdown groups and a role chip (admin); dark grouped sidebar (other portals); campus hero with stats and actions; people cards with ring and recent list; up-next countdown; split-screen sign-in.
+  - Proposal for R2 review: https://claude.ai/artifact/EeJ9dKpEKbsJX5jehZurga (private to the owner).
+- [x] R2 Design system for approval: tokens (colour, type, spacing, radius, shadow, motion) and every component with previews, for the four portals, super admin and the public pages (sign-in, set password, forgot password, access paused). The owner approves before any template changes.
+  - Approved by the owner on 2026-10-09 (proposal artifact above). Decisions: one Lexicon look for every portal (no per-portal colours); light only, no dark mode; the "LEX" mark stands in until an SVG logo arrives; "sign-up pages" means the sign-in and set-password pages (there is no self-registration).
+- [ ] R3 Docs: rewrite `UI-GUIDELINES.md` and `COMPONENTS.md` to the approved system.
+- [ ] R4 Build: tokens, shells (top menu, sidebar), public pages, tables, forms, dashboards and every Phase 1-2 page; checked at 360px and desktop in a browser; new walkthrough video.
+- [ ] R5 Owner sign-off. Then Phase 3 resumes.
+
+## Phase 3: Lectures (on hold until R5)
 
 - [ ] 3.1 Lecture CRUD with manual meeting link.
 - [ ] 3.2 Recurring schedule builder (Celery task generates lectures).

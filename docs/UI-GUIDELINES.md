@@ -2,6 +2,8 @@
 
 Rules for building screens. AI agents must follow this file exactly. Do not invent new components, colors, or spacing.
 
+> **Redesign in progress (roadmap Phase R).** This file describes the old look, which the owner did not accept. It stays in force only until R3 rewrites it to the approved Lexicon design system. Do not start new screens in the old style; Phase 3 is on hold.
+
 Status: values marked **(proposed)** are our picks. Replace them after we see the demo.
 
 ## 1. UI stack

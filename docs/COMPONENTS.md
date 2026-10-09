@@ -1,5 +1,7 @@
 # COMPONENTS
 
+> **Redesign in progress (roadmap Phase R).** The component list and API stay; their look changes with the approved Lexicon design system (R3 updates this file).
+
 How UI is built in Python. Components are classes. Pages and forms assemble them. New screens are made by subclassing, not by copying templates.
 
 Same idea as our Pearl project: crispy-forms for forms, Python classes for components, inheritance for reuse.

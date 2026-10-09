@@ -19,6 +19,12 @@ This project's coding rules live in `AGENTS.md` (imported above). Everything bel
 - `docs/FEATURES.md`, `docs/ARCHITECTURE.md`, `docs/COMPONENTS.md`, `docs/UI-GUIDELINES.md`, `docs/SPEC-DETAILS.md` for the product rules.
 - If code and docs disagree, report it. Do not silently pick one.
 
+## Design skills (in the repo)
+
+- `.claude/skills/` holds the design skills used for the Phase R redesign, pinned in `skills-lock.json`: `frontend-design` (Anthropic, Apache 2.0) and `ui-ux-pro-max` (MIT). Claude Code loads them for anyone who opens this repo.
+- Use them for any UI work. The approved Lexicon direction in `UI-GUIDELINES.md` wins over their generic suggestions.
+- They are excluded from ruff; do not edit them by hand. Update them from their source repos.
+
 ## Commands
 
 - Tests: `uv run pytest`
