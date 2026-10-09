@@ -1,6 +1,6 @@
 # COMPONENTS
 
-> **Lexicon redesign (roadmap Phase R).** Looks follow `UI-GUIDELINES.md`. R4a restyled the shells, public pages and base components below. R4b restyled tables, filters, pagination and the form layout. R4c (dashboards) follows.
+> **Lexicon redesign (roadmap Phase R).** Looks follow `UI-GUIDELINES.md`. R4a restyled the shells, public pages and base components below. R4b restyled tables, filters, pagination and the form layout. R4c built the dashboards and portal home pages.
 
 How UI is built in Python. Components are classes. Pages and forms assemble them. New screens are made by subclassing, not by copying templates.
 
@@ -27,7 +27,8 @@ apps/ui/
     forms.py       # CrispyForm, PublicPostForm, PortalPostForm
     block_stack.py # BlockStack, ButtonRow
     data.py        # StatCard, DataTable, Column, Badge, StatusBadge, Avatar,
-                   # PersonCell, ProgressBar, ChartCard, EmptyState
+                   # PersonCell, PersonList, KpiSummary, ProgressBar,
+                   # ProgressRing, ChartCard, EmptyState
     actions.py     # Button, IconButton, QuickAction, ConfirmDialog, CopyField, Toast
     lectures.py    # CountdownCard, LectureRow, ScheduleList
     nav.py         # NotificationBell, FilterBar, Pagination
@@ -179,7 +180,7 @@ class StudentListPage(ListPage):
         return [Button("Enrol student", url=reverse("admin:student_create"), icon="plus")]
 ```
 
-Base page types: `DashboardPage`, `ListPage`, `DetailPage`, `FormPage`. They match the page patterns in `UI-GUIDELINES.md`. `DashboardPage` has an optional `get_hero()` slot (for example a `HeroBanner`) shown above the stat cards.
+Base page types: `DashboardPage`, `ListPage`, `DetailPage`, `FormPage`. They match the page patterns in `UI-GUIDELINES.md`. `DashboardPage` slots, in page order: `get_hero()` (a `HeroBanner`), `get_feature()` (one card, for example "Up next"), `get_stat_cards()`, `get_quick_actions()`, `get_sections()`. `section_columns = 2` puts the section cards side by side from lg.
 
 ## 6. Forms with crispy-forms
 
@@ -239,9 +240,9 @@ Every item here is a class. Names are fixed.
 | `SidebarShell` | layout | teacher/student/guardian shell: sidebar + top bar; below md the sidebar is hidden and a Menu button opens it as a full-screen panel (Escape or a tap outside closes it) | `portal`, `user`, `active` |
 | `TopNav` | layout | grouped dropdown menu from a menu config | `portal`, `active` |
 | `Sidebar` | layout | grouped sidebar menu from a menu config | `portal`, `active` |
-| `HeroBanner` | layout | dashboard welcome banner on the Lexicon band (gradient + waves) with chips and actions | `title`, `subtitle`, `chips`, `actions` |
+| `HeroBanner` | layout | dashboard banner on the Lexicon band (gradient + waves): title, subtitle, chips, actions (`Button` `light` first, then `glass`); `stats` adds glass number tiles on the right (admin campus hero); `initials` adds a large avatar (portal welcome) | `title`, `subtitle`, `chips`, `actions`, `stats` (list of value, label, note), `initials` |
 | `PageHeader` | layout | breadcrumb (chevrons), optional live clock chip in the viewer's time zone, title, subtitle, actions; portal pages turn the clock on | `title`, `breadcrumb`, `actions`, `subtitle`, `clock` |
-| `SectionCard` | layout | titled card with "View all" | `title`, `body`, `link_url`, `link_label` |
+| `SectionCard` | layout | titled card with "View all"; optional icon tile before the title | `title`, `body`, `link_url`, `link_label`, `icon` |
 | `Tabs` | layout | tabs with HTMX swap (not used by a page yet) | `tabs`, `active` |
 | `Modal` | layout | dialog (Alpine + HTMX; not used by a page yet) | `id`, `title`, `body` |
 | `PublicFormShell` | layout | public page: `split` (form left, band right; short band on phones) or `notice` (whole page is the band, centred message with an icon) | `page_title`, `header`, `content`, `variant`, `icon` |
@@ -258,8 +259,11 @@ Every item here is a class. Names are fixed.
 | `Badge` | data | status chip with a dot (`success`, `danger`, `warning`), or plain (`info`, `neutral`) | `text`, `tone` |
 | `Avatar` | data | initials (first letters of the first two words, or of the email's local part) in a soft circle; the tint is stable per name; full name in `title` | `name`, `size` (`sm`, `md`, `lg`) |
 | `ProgressBar` | data | percent bar | `value`, `label`, `tone` |
+| `ProgressRing` | data | percent as an SVG ring with the number inside (no chart library); `role="img"` with the label and percent | `value`, `label`, `tone` (`primary`, `indigo`) |
+| `KpiSummary` | data | one big number, its label, status chips and an optional `ProgressRing` | `value`, `label`, `chips`, `ring` |
+| `PersonList` | data | short list of `PersonCell` rows with a chip on the right (dashboard "Recently enrolled") | `rows` (person, trailing), `title`, `empty_text` |
 | `ChartCard` | data | Chart.js card | `title`, `chart_id`, `data_url` |
-| `EmptyState` | data | icon tile, message and one action | `title`, `text`, `action`, `icon` |
+| `EmptyState` | data | icon tile, message and one action; `framed=False` drops the dashed box inside a card | `title`, `text`, `action`, `icon`, `framed` |
 | `IconButton` | actions | icon-only link (with `url`) or button; `label` is the `aria-label` and tooltip | `icon`, `label`, `url` |
 | `Button` | actions | `primary`, `secondary`, `danger`, `ghost`, `light`, `glass` (the last two on the band); Lucide icon before the label | `label`, `variant`, `url`, `icon` |
 | `QuickAction` | actions | dashboard tile | `label`, `icon`, `url` |

@@ -4,7 +4,11 @@ from django.contrib.messages import get_messages
 
 from apps.ui.brand import BRAND_MARK, BRAND_NAME, user_badge
 from apps.ui.components.actions import Toast
-from apps.ui.components.base import Component, render_component_template
+from apps.ui.components.base import (
+    Component,
+    render_child,
+    render_component_template,
+)
 from apps.ui.components.nav import NotificationBell
 from apps.ui.safe_url import safe_url
 
@@ -179,15 +183,26 @@ class HeroBanner(Component):
         subtitle="",
         chips=None,
         actions=None,
+        stats=None,
+        initials="",
         **props,
     ):
+        """``stats`` is a list of (value, label, note) tiles on the band;
+        ``initials`` shows a large avatar before the title (portal welcome)."""
         super().__init__(
             title=title,
             subtitle=subtitle,
             chips=chips or [],
             actions=actions or [],
+            stats=stats or [],
+            initials=initials,
             **props,
         )
+
+    def render(self, request=None):
+        ctx = self.get_context()
+        ctx["actions"] = [render_child(action, request) for action in ctx["actions"]]
+        return render_component_template(self, ctx, request=request)
 
 
 class PageHeader(Component):
@@ -227,6 +242,7 @@ class SectionCard(Component):
         body,
         link_url=None,
         link_label="View all",
+        icon="",
         **props,
     ):
         super().__init__(
@@ -234,6 +250,7 @@ class SectionCard(Component):
             body=body,
             link_url=safe_url(link_url) if link_url is not None else None,
             link_label=link_label,
+            icon=icon,
             **props,
         )
 

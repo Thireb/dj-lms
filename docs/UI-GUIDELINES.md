@@ -2,7 +2,7 @@
 
 Rules for building screens. AI agents must follow this file exactly. Do not invent new components, colors, or spacing.
 
-Design system: **Lexicon**, approved by the owner on 2026-10-09 (roadmap Phase R, proposal linked in `ROADMAP.md` R1). Built so far: R4a (tokens, font, icons, shells, public pages, base components) and R4b (tables, filters, pagination, forms layout). R4c (dashboards) follows; until then the dashboards keep their older markup with the new colours.
+Design system: **Lexicon**, approved by the owner on 2026-10-09 (roadmap Phase R, proposal linked in `ROADMAP.md` R1). Built: R4a (tokens, font, icons, shells, public pages, base components), R4b (tables, filters, pagination, forms layout) and R4c (dashboards and portal home pages).
 
 ## 1. UI stack
 
@@ -63,7 +63,9 @@ From Lexicon's own site (lexicon.edu.pk), measured in a browser. **One look for 
 - Sidebar collapses to a drawer on mobile. Admin top menu becomes a hamburger drawer on mobile. Built in the Phase 2 audit: below md, a "Menu" button opens either one. Desktop admin groups are closed dropdowns.
 - Wide tables scroll sideways inside their own box, never the page. The main column and form fieldsets use `min-w-0`, and form fields are full width, so nothing pushes a 360px page wider.
 - Content: max width 1240px, `px-7 py-6` on desktop, `px-4 py-5` on mobile.
-- Dashboard grid: hero, then stat cards, then quick actions, then 2-column sections.
+- Dashboard grid: hero, then one feature card ("Up next"), then stat cards, then quick actions, then sections (2 columns on the admin dashboard and the guardian home).
+- Admin dashboard: the campus hero holds the main actions (first one white, the rest glass) and the key numbers; then a Students and a Teachers card (total, active and inactive chips, a ring, the five newest people). A sub-admin without the People menu sees the numbers but no names and no links.
+- Teacher, student and guardian homes: a welcome band (initials, "Good morning, name", code, batch and subject chips), then "Up next". Until lectures exist, "Up next" is an empty state that says when lectures appear.
 - Mobile first. Every page must work at 360px width.
 - Menu items per portal are in `FEATURES.md` section 13. Do not add or rename items without asking.
 - Public pages use `PublicFormShell` (`layouts/public.html`): `split` (form left, band right; a short band on top on phones) for sign-in, set password and forgot password; `notice` (whole page is the band) for Access paused and refusals.
@@ -73,7 +75,7 @@ From Lexicon's own site (lexicon.edu.pk), measured in a browser. **One look for 
 The full list, class names, files, and props are in `COMPONENTS.md` section 7. Summary:
 
 - **Layout:** `TopNavShell` (admin), `SidebarShell` (teacher, student, guardian), `Sidebar`, `TopNav`, `HeroBanner`, `PageHeader`, `SectionCard`, `Tabs`, `Modal`
-- **Data:** `StatCard`, `DataTable`, `Badge`, `Avatar`, `ProgressBar`, `ChartCard`, `EmptyState`
+- **Data:** `StatCard`, `DataTable`, `Badge`, `Avatar`, `PersonCell`, `PersonList`, `KpiSummary`, `ProgressBar`, `ProgressRing`, `ChartCard`, `EmptyState`
 - **Actions:** `Button`, `QuickAction`, `ConfirmDialog`, `Toast`
 - **Lectures:** `CountdownCard`, `LectureRow`, `ScheduleList`
 - **Navigation:** `NotificationBell`, `FilterBar`, `Pagination`
@@ -93,7 +95,7 @@ Each pattern is a base page class in `apps/ui/views/pages.py`. Subclass it.
 - **`ListPage`:** `PageHeader` -> `FilterBar` -> `DataTable` -> `Pagination`. Empty list shows `EmptyState`.
 - **`DetailPage`:** `PageHeader` -> two-column cards (info left, related lists right).
 - **`FormPage`:** `PageHeader` -> one card (max width 1024px) with the crispy sections split by hairlines: section title and explanation on the left, fields on the right (stacked on phones). Short fields go in two columns (`Section(columns=2)`). Buttons sit in a footer bar.
-- **`DashboardPage`:** `PageHeader` -> row of `StatCard` -> row of `QuickAction` -> `SectionCard`s.
+- **`DashboardPage`:** `PageHeader` -> `HeroBanner` -> feature card -> row of `StatCard` -> row of `QuickAction` -> `SectionCard`s.
 - **Modal forms:** use `HtmxModalForm` for short forms (under 6 fields). Longer forms get their own page.
 
 ## 7. Tables

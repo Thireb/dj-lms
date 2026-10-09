@@ -82,9 +82,11 @@ class PortalPageView(
             return DashboardPageBody(
                 header=header,
                 hero=context.get("hero"),
+                feature=context.get("feature"),
                 stat_cards=context.get("stat_cards", []),
                 quick_actions=context.get("quick_actions", []),
                 sections=context.get("sections", []),
+                section_columns=getattr(self, "section_columns", 1),
             )
         if layout == "list":
             return ListPageBody(
@@ -129,8 +131,13 @@ class PortalPageView(
 
 class DashboardPage(PortalPageView):
     page_layout = "dashboard"
+    section_columns = 1  # 2 puts the section cards side by side from lg
 
     def get_hero(self) -> Any | None:
+        return None
+
+    def get_feature(self) -> Any | None:
+        """One card between the hero and the stat cards (the "Up next" card)."""
         return None
 
     def get_stat_cards(self) -> list[Any]:
@@ -145,6 +152,7 @@ class DashboardPage(PortalPageView):
     def get_components(self) -> dict[str, Any]:
         return {
             "hero": self.get_hero(),
+            "feature": self.get_feature(),
             "stat_cards": self.get_stat_cards(),
             "quick_actions": self.get_quick_actions(),
             "sections": self.get_sections(),
