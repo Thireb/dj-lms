@@ -227,7 +227,7 @@ Name*, Email*, Password*, Allowed menus* (checkboxes of the 8 groups), Status.
 Name, Phone, Photo, Time zone, Appearance (Light/Dark/Auto), Notification switches (fee alerts, class alerts), Change password (current, new, confirm).
 
 ### 4.23 Login and first-time password
-Login: Email*, Password*, Show password, Remember me. First-time link: New password*, Confirm*. Password rule: at least 8 characters.
+Login: Email*, Password*, Show password, Remember me. First-time link: New password*, Confirm*. Password rule: at least 8 characters, not too common, not too similar to the email. Email is not case sensitive. Passwords keep every space. After 5 failed sign-ins in 15 minutes for the same email and IP: "Too many failed attempts. Try again in 15 minutes." Without Remember me the session ends when the browser closes (and after 12 hours on the server); with it, after 14 days. A lost link: the super admin uses "New sign-in link" on the institute page (older links stop working).
 
 ### 4.24 Contact form (public)
 Full name*, Institute name*, Phone*, Email, Website, Message*. Saved for Super Admin.

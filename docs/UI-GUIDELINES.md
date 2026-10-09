@@ -58,7 +58,8 @@ Shared tokens (all portals):
 - **Admin portal:** top horizontal menu bar with grouped dropdowns (Dashboards, Institute, People, Online Lectures, Finance, Teacher Salary, Academic, Messages), brand on the left, bell and user menu on the right, breadcrumb and live clock below, then a campus hero banner on the dashboard.
 - **Teacher, Student, Guardian portals:** dark left sidebar with labelled groups, top bar with clock, bell, theme toggle and avatar, then a hero banner on the dashboard.
 - Guardian top bar has the institute name and a **child switcher**.
-- Sidebar collapses to a drawer on mobile. Admin top menu becomes a hamburger drawer on mobile.
+- Sidebar collapses to a drawer on mobile. Admin top menu becomes a hamburger drawer on mobile. Built in the Phase 2 audit: below md, a "Menu" button opens either one. Desktop admin groups are closed dropdowns.
+- Wide tables scroll sideways inside their own box, never the page. The main column and form fieldsets use `min-w-0`, and form fields are full width, so nothing pushes a 360px page wider.
 - Content: `max-w-7xl`, `p-6` on desktop, `p-4` on mobile.
 - Dashboard grid: hero, then stat cards, then quick actions, then 2-column sections.
 - Mobile first. Every page must work at 360px width.
