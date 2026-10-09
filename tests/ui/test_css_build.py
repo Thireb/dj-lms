@@ -9,11 +9,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 BUILD_SCRIPT = ROOT / "scripts" / "build-app-css.sh"
 APP_CSS = ROOT / "static" / "css" / "app.css"
-ADMIN_PRIMARY_HEX = "#005e78"
+LEXICON_ROYAL = "#002da8"
 
 
-def test_build_app_css_portal_primary_not_baked() -> None:
-    """Portal theme colors must stay as CSS variables, not admin hex literals."""
+def test_build_app_css_uses_the_lexicon_theme() -> None:
+    """One Lexicon theme for every portal (roadmap Phase R): utilities read tokens."""
     subprocess.run(
         [str(BUILD_SCRIPT)],
         check=True,
@@ -23,9 +23,9 @@ def test_build_app_css_portal_primary_not_baked() -> None:
     )
     css = APP_CSS.read_text(encoding="utf-8")
 
-    match = re.search(r"\.bg-primary\s*\{[^}]+\}", css)
-    assert match is not None, "expected .bg-primary utility in compiled CSS"
-
-    rule = match.group(0)
-    assert "var(--portal-primary)" in rule, rule
-    assert ADMIN_PRIMARY_HEX not in rule, rule
+    rule = re.search(r"\.bg-primary\s*\{[^}]+\}", css)
+    assert rule is not None, "expected .bg-primary utility in compiled CSS"
+    assert "var(--color-primary)" in rule.group(0)
+    assert re.search(r"--color-primary:\s*" + LEXICON_ROYAL, css)
+    assert "Familjen Grotesk" in css
+    assert "--portal-primary" not in css

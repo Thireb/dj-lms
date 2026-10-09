@@ -73,7 +73,12 @@ from apps.ui.components.actions import (
 from apps.ui.components.block_stack import BlockStack
 from apps.ui.components.data import EmptyState, ProgressBar, StatCard
 from apps.ui.components.forms import CrispyForm, PortalPostForm
-from apps.ui.components.layout import HeroBanner, PublicFormShell, SectionCard
+from apps.ui.components.layout import (
+    HeroBanner,
+    PageHeader,
+    PublicFormShell,
+    SectionCard,
+)
 from apps.ui.components.nav import FilterBar, Pagination
 from apps.ui.views.pages import (
     DashboardPage,
@@ -588,7 +593,7 @@ class AdminDashboardPage(DashboardPage):
     # (label, icon, url name, menu key the link needs)
     QUICK_ACTIONS = [
         ("Enrol student", "user-plus", "admin:student_create", menu_keys.PEOPLE),
-        ("Add teacher", "chalkboard-user", "admin:teacher_create", menu_keys.PEOPLE),
+        ("Add teacher", "presentation", "admin:teacher_create", menu_keys.PEOPLE),
         ("Bulk upload", "upload", "admin:student_bulk_upload", menu_keys.PEOPLE),
         ("Add batch", "users", "admin:batch_create", menu_keys.INSTITUTE),
     ]
@@ -612,13 +617,13 @@ class AdminDashboardPage(DashboardPage):
                 students.total,
                 "Students",
                 note=f"{students.active} active, {students.inactive} inactive",
-                icon="user-graduate",
+                icon="graduation-cap",
             ),
             StatCard(
                 teachers.total,
                 "Teachers",
                 note=f"{teachers.active} active, {teachers.inactive} inactive",
-                icon="chalkboard-user",
+                icon="presentation",
             ),
             StatCard(
                 data.batches_running,
@@ -687,13 +692,18 @@ def access_paused_response(request: HttpRequest) -> HttpResponse:
     institute = getattr(request, "institute", None)
     phone = getattr(institute, "phone", "")
     message = f"{ACCESS_PAUSED} at {phone}." if phone else f"{ACCESS_PAUSED}."
-    card = SectionCard(
-        title="Access paused",
-        body=BlockStack(
-            blocks=[message, SignOutForm(logout_url=reverse("accounts:logout"))]
+    shell = PublicFormShell(
+        page_title="Access paused",
+        header=PageHeader(title="Access paused"),
+        content=BlockStack(
+            blocks=[
+                message,
+                SignOutForm(logout_url=reverse("accounts:logout"), variant="light"),
+            ]
         ),
+        variant="notice",
+        icon="circle-pause",
     )
-    shell = PublicFormShell(page_title="Access paused", content=card)
     return HttpResponse(shell.render(request=request), status=403)
 
 

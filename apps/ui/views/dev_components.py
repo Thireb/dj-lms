@@ -20,6 +20,7 @@ from apps.ui.components.data import (
     ProgressBar,
     StatCard,
 )
+from apps.ui.components.icon import Icon
 from apps.ui.components.layout import (
     HeroBanner,
     Modal,
@@ -161,6 +162,7 @@ def dev_components(request: HttpRequest) -> HttpResponse:
         "data_table": table,
         "badge": Badge("Paid", tone="success"),
         "avatar": Avatar("Alex Sample"),
+        "icon": Icon("bell", "h-6 w-6"),
         "progress_bar": ProgressBar(65, label="Attendance"),
         "chart_card": ChartCard("Enrolments", "demo-chart", "/dev/components/"),
         "empty_state": EmptyState(

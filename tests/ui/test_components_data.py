@@ -36,7 +36,8 @@ def test_badge_renders() -> None:
 def test_avatar_renders_initials() -> None:
     html = str(Avatar("Alex Sample"))
     assert "avatar" in html
-    assert "AL" in html
+    assert ">AS<" in html  # first letters of the first two words
+    assert str(Avatar("Hiba Rauf")).count('title="Hiba Rauf"') == 1
 
 
 def test_progress_bar_renders() -> None:

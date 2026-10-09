@@ -1281,6 +1281,84 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "    if request.user.is_authenticated:\n        return redirect(post_login_redirect_url(request.user))",
         "    if False:\n        return redirect(post_login_redirect_url(request.user))",
     ),
+    (
+        "unknown icons render nothing",
+        "apps/ui/components/icon.py",
+        'ctx["href"] = f"{static(ICON_SPRITE)}#{name}" if name in ICON_NAMES else ""',
+        'ctx["href"] = f"{static(ICON_SPRITE)}#{name}"',
+    ),
+    (
+        "portal pages show the clock",
+        "apps/ui/views/pages.py",
+        "            clock=True,\n",
+        "            clock=False,\n",
+    ),
+    (
+        "sign-in band panel",
+        "apps/ui/templates/ui/layouts/public.html",
+        '<aside class="band hidden',
+        '<aside class="hidden',
+    ),
+    (
+        "notice pages are the band",
+        "apps/ui/templates/ui/layouts/public.html",
+        '<main class="band grid',
+        '<main class="grid',
+    ),
+    (
+        "public forms have no box",
+        "apps/ui/templates/ui/layouts/public.html",
+        "[&_.section]:border-0 ",
+        "",
+    ),
+    (
+        "sign-in submit full width",
+        "apps/accounts/forms.py",
+        'cancel_label="Forgot password?",\n                stacked=True,',
+        'cancel_label="Forgot password?",',
+    ),
+    (
+        "access paused uses notice",
+        "apps/people/views.py",
+        '        variant="notice",\n        icon="circle-pause",',
+        '        icon="circle-pause",',
+    ),
+    (
+        "refusal uses notice",
+        "apps/core/responses.py",
+        '        variant="notice",\n',
+        "\n",
+    ),
+    (
+        "teacher dashboard link",
+        "apps/ui/menus/teacher.py",
+        '"teacher:home"',
+        '"teacher:dashboard"',
+    ),
+    (
+        "initials use email local part",
+        "apps/ui/brand.py",
+        '    local = name.split("@", 1)[0]\n',
+        "    local = name\n",
+    ),
+    (
+        "dialog is a modal",
+        "apps/ui/templates/ui/components/confirm_dialog.html",
+        'role="alertdialog" aria-modal="true"',
+        'role="alertdialog"',
+    ),
+    (
+        "font preloaded",
+        "templates/base.html",
+        "familjen-grotesk-latin.woff2",
+        "missing-font.woff2",
+    ),
+    (
+        "role shown in user chip",
+        "apps/ui/templates/ui/components/profile_menu.html",
+        '{% if badge.role %}<span class="block text-xs text-muted">{{ badge.role }}</span>{% endif %}',
+        "",
+    ),
 ]
 
 

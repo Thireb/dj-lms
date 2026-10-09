@@ -2,92 +2,191 @@
 
 @source "../../../templates/**/*.html";
 @source "../../../apps/**/templates/**/*.html";
-@source inline("bg-primary");
+@source "../../../apps/**/*.py";
 
 /* Alpine hides x-cloak items until it starts, so they never flash (audit L6). */
 [x-cloak] {
   display: none !important;
 }
 
+/* Familjen Grotesk, Lexicon's typeface (OFL 1.1, static/vendor/familjen-grotesk/OFL.txt).
+   One variable font file per subset covers weights 400 to 700. */
+@font-face {
+  font-family: "Familjen Grotesk";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("../vendor/familjen-grotesk/familjen-grotesk-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
+    U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Familjen Grotesk";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("../vendor/familjen-grotesk/familjen-grotesk-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB,
+    U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* Lexicon design tokens (roadmap Phase R, approved 2026-10-09). One look for every
+   portal. Names kept from the old system so existing utilities still work. */
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-heading: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-sans: "Familjen Grotesk", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-heading: "Familjen Grotesk", "Segoe UI", system-ui, -apple-system, sans-serif;
 
-  --color-success: #059669;
-  --color-success-light: #10b981;
-  --color-warning: #d97706;
-  --color-danger: #e11d48;
-  --color-danger-light: #ef4444;
-  --color-info: #2563eb;
-  --color-violet: #7c3aed;
+  --color-primary: #002da8; /* Lexicon royal: actions, links */
+  --color-primary-dark: #00238a;
+  --color-primary-50: #eef2fc;
+  --color-primary-100: #dce4f8;
+  --color-accent: #1273eb; /* sky: gradient end, focus ring */
+  --color-indigo: #130c8e; /* Lexicon indigo: sidebar, heroes */
+  --color-indigo-deep: #0b0766;
+  --color-nav-dark: #130c8e;
+  --color-sidebar-dark: #130c8e;
 
-  --color-muted: #5d6e73;
-  --color-border: #e2e8ea;
+  --color-page: #f7f8fb;
   --color-surface: #ffffff;
-}
+  --color-field: #f2f4f9;
+  --color-text: #16182b;
+  --color-ink-2: #4a5068;
+  --color-muted: #636a85; /* 5.1:1 on white */
+  --color-border: #e6e8f0;
+  --color-border-strong: #c9cedd;
 
-/* Portal tokens: inline theme so utilities reference var(--portal-*) at runtime. */
-@theme inline {
-  --color-primary: var(--portal-primary);
-  --color-primary-dark: var(--portal-primary-dark);
-  --color-accent: var(--portal-accent);
-  --color-nav-dark: var(--portal-nav-dark);
-  --color-sidebar-dark: var(--portal-sidebar-dark);
-  --color-page: var(--portal-page-bg);
-  --color-text: var(--portal-text);
-}
+  --color-success: #0e7a55;
+  --color-success-50: #e3f5ee;
+  --color-warning: #9a5b00;
+  --color-warning-50: #fdf1dc;
+  --color-danger: #b4233f;
+  --color-danger-50: #fbe7eb;
+  --color-info: #002da8;
+  --color-info-50: #eef2fc;
 
-/* Shared portal tokens (defaults = admin) */
-:root,
-[data-portal="admin"] {
-  --portal-primary: #005e78;
-  --portal-primary-dark: #00475b;
-  --portal-accent: #0b7f9c;
-  --portal-nav-dark: #00303d;
-  --portal-sidebar-dark: #002530;
-  --portal-page-bg: #f0f3f5;
-  --portal-text: #0c1b1f;
-}
+  --radius-control: 10px;
+  --radius-card: 18px;
+  --radius-hero: 24px;
 
-[data-portal="teacher"] {
-  --portal-primary: #005e78;
-  --portal-primary-dark: #00475b;
-  --portal-accent: #00a2cf;
-  --portal-nav-dark: #00303d;
-  --portal-sidebar-dark: #00303d;
-  --portal-page-bg: #f3f7f9;
-  --portal-text: #0f172a;
-}
-
-[data-portal="student"] {
-  --portal-primary: #0d9488;
-  --portal-primary-dark: #0f766e;
-  --portal-accent: #34d399;
-  --portal-nav-dark: #115e59;
-  --portal-sidebar-dark: #115e59;
-  --portal-page-bg: #f0fdfa;
-  --portal-text: #0f172a;
-}
-
-[data-portal="guardian"] {
-  --portal-primary: #0ea5e9;
-  --portal-primary-dark: #0284c7;
-  --portal-accent: #6366f1;
-  --portal-nav-dark: #0f172a;
-  --portal-sidebar-dark: #0f172a;
-  --portal-page-bg: #f0f4f8;
-  --portal-text: #0f172a;
+  --shadow-float: 0 18px 40px -22px rgb(0 45 168 / 0.35);
+  --shadow-pop: 0 10px 30px -12px rgb(19 12 142 / 0.28), 0 2px 6px rgb(22 24 43 / 0.06);
 }
 
 @layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
   body {
-    @apply bg-page font-sans text-sm text-text antialiased;
+    @apply bg-page font-sans text-[15px] leading-normal text-text antialiased;
+    font-variant-numeric: tabular-nums;
   }
 
   h1,
   h2,
-  h3 {
-    @apply font-heading;
+  h3,
+  h4 {
+    @apply font-heading tracking-tight text-balance;
+  }
+
+  :focus-visible {
+    outline: 3px solid rgb(18 115 235 / 0.45);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      transition-duration: 0.01ms !important;
+      animation-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  .icon {
+    width: 1.125rem;
+    height: 1.125rem;
+    flex: none;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  /* Buttons: 40px tall (48px for btn-lg); icon and label in one row. */
+  .btn {
+    @apply inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-[10px] border border-transparent px-4 text-sm font-semibold whitespace-nowrap transition-colors;
+  }
+  .btn-lg {
+    @apply h-12 rounded-xl px-5 text-[15px];
+  }
+  .btn-primary {
+    @apply bg-primary text-white hover:bg-primary-dark;
+    box-shadow: var(--shadow-float);
+  }
+  .btn-secondary {
+    @apply border-border bg-surface text-text hover:border-border-strong;
+  }
+  .btn-danger {
+    @apply bg-danger-50 text-danger hover:bg-danger hover:text-white;
+  }
+  .btn-ghost {
+    @apply text-ink-2 hover:bg-primary-50 hover:text-primary;
+  }
+  .btn-light {
+    @apply bg-white text-indigo hover:bg-primary-50;
+  }
+  .btn-glass {
+    @apply border-white/25 bg-white/10 text-white hover:bg-white/20;
+  }
+  .icon-btn {
+    @apply relative inline-grid h-10 w-10 cursor-pointer place-items-center rounded-[10px] border border-border bg-surface text-ink-2 transition-colors hover:border-border-strong hover:text-primary;
+  }
+
+  /* Status chips with a dot; chip-plain drops the dot. */
+  .chip {
+    @apply inline-flex h-[26px] items-center gap-1.5 rounded-full px-2.5 text-[13px] font-semibold whitespace-nowrap;
+  }
+  .chip::before {
+    content: "";
+    @apply h-1.5 w-1.5 rounded-full bg-current;
+  }
+  .chip-plain::before {
+    display: none;
+  }
+
+  /* Form fields: 48px, soft fill, royal ring on focus. */
+  .field-control {
+    @apply block h-12 w-full rounded-xl border border-transparent bg-field px-3.5 text-[15px] text-text placeholder:text-muted transition-colors;
+  }
+  .field-control:focus {
+    @apply border-primary bg-surface outline-none;
+    box-shadow: 0 0 0 4px rgb(0 45 168 / 0.12);
+  }
+  textarea.field-control {
+    @apply h-auto min-h-24 py-3;
+  }
+  .field-error .field-control {
+    @apply border-danger bg-surface;
+  }
+
+  /* The Lexicon band: royal-to-indigo gradient with fine wave lines. The one bold element. */
+  .band {
+    @apply relative overflow-hidden text-white;
+    background: linear-gradient(118deg, var(--color-indigo) 0%, var(--color-primary) 58%, var(--color-accent) 135%);
+  }
+  .band-waves {
+    @apply pointer-events-none absolute inset-0 h-full w-full;
+    opacity: 0.5;
+  }
+  .band-waves path {
+    fill: none;
+    stroke: rgb(255 255 255 / 0.16);
+    stroke-width: 1.2;
   }
 }

@@ -10,6 +10,7 @@ from apps.ui.components.data import (
     ProgressBar,
     StatCard,
 )
+from apps.ui.components.icon import Icon
 from apps.ui.components.layout import (
     HeroBanner,
     Modal,
@@ -38,6 +39,7 @@ __all__ = [
     "EmptyState",
     "FilterBar",
     "HeroBanner",
+    "Icon",
     "LectureRow",
     "Modal",
     "NotificationBell",

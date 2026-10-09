@@ -7,10 +7,7 @@ class DatePicker(forms.DateInput):
 
     def __init__(self, attrs=None):
         default_attrs = {
-            "class": (
-                "mt-1 block w-full rounded-lg border border-border "
-                "px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-primary"
-            ),
+            "class": "field-control",
         }
         if attrs:
             default_attrs.update(attrs)
@@ -23,10 +20,7 @@ class TimePicker(forms.TimeInput):
 
     def __init__(self, attrs=None):
         default_attrs = {
-            "class": (
-                "mt-1 block w-full rounded-lg border border-border "
-                "px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-primary"
-            ),
+            "class": "field-control",
         }
         if attrs:
             default_attrs.update(attrs)
@@ -38,10 +32,7 @@ class PasswordInput(forms.PasswordInput):
 
     def __init__(self, attrs=None):
         default_attrs = {
-            "class": (
-                "mt-1 block w-full rounded-lg border border-border "
-                "px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-primary"
-            ),
+            "class": "field-control pr-12",
             "autocomplete": "current-password",
         }
         if attrs:
@@ -54,11 +45,7 @@ class MoneyInput(forms.NumberInput):
 
     def __init__(self, attrs=None):
         default_attrs = {
-            "class": (
-                "mt-1 block w-full rounded-lg border border-border "
-                "px-3 py-2 text-right font-mono text-sm "
-                "focus-visible:ring-2 focus-visible:ring-primary"
-            ),
+            "class": "field-control text-right",
             "step": "0.01",
             "min": "0",
         }

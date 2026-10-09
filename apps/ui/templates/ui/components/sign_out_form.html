@@ -1,6 +1,4 @@
 <form method="post" action="{{ logout_url }}" class="inline">
   {% csrf_token %}
-  <button type="submit" class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-surface hover:bg-primary/90">
-    Sign out
-  </button>
+  <button type="submit" class="btn {% if variant == 'light' %}btn-light{% else %}btn-secondary{% endif %}">Sign out</button>
 </form>

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import re
+from pathlib import Path
 
 import pytest
 from apps.core.roles import Role
@@ -26,7 +27,8 @@ def test_sidebar_is_hidden_on_phones_with_a_menu_button(institute_a) -> None:
 
     page = _page(teacher, "teacher:home")
 
-    assert re.search(r'id="portal-sidebar" class="[^"]*\bhidden md:block', page)
+    classes = re.search(r'id="portal-sidebar" class="([^"]*)"', page).group(1).split()
+    assert "hidden" in classes and "md:block" in classes
     assert "max-md:fixed max-md:inset-0" in page  # opened as a full panel
     assert 'aria-controls="portal-sidebar"' in page
     assert 'x-data="{ navOpen: false }"' in page
@@ -79,4 +81,7 @@ def test_base_form_styles_text_widgets_only() -> None:
     assert fields["kind"].widget.attrs["class"] == INPUT_CLASSES
     assert "class" not in fields["agree"].widget.attrs
     assert fields["custom"].widget.attrs["class"] == "own"
-    assert "w-full" in INPUT_CLASSES
+    assert INPUT_CLASSES == "field-control"
+    css = (Path(__file__).resolve().parents[2] / "static/css/src/input.css").read_text()
+    rule = css[css.index(".field-control {") :].split("}", 1)[0]
+    assert "w-full" in rule  # fields fit a 360px screen

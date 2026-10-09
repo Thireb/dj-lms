@@ -56,6 +56,7 @@ class FormActions(LayoutObject):
         cancel_url=None,
         cancel_label="Cancel",
         css_class=None,
+        stacked=False,
     ):
         from apps.ui.safe_url import safe_url
 
@@ -63,6 +64,7 @@ class FormActions(LayoutObject):
         self.cancel_url = safe_url(cancel_url) if cancel_url is not None else None
         self.cancel_label = cancel_label
         self.css_class = css_class or ""
+        self.stacked = stacked
 
     def render(self, form, context, template_pack=None, **kwargs):
         return render_to_string(
@@ -72,5 +74,6 @@ class FormActions(LayoutObject):
                 "cancel_url": self.cancel_url,
                 "cancel_label": self.cancel_label,
                 "css_class": self.css_class,
+                "stacked": self.stacked,
             },
         )

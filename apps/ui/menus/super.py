@@ -14,7 +14,7 @@ class SuperMenu:
             MenuGroup(
                 label="Platform",
                 items=(
-                    MenuItem("Institutes", "super:institute_list", "building"),
+                    MenuItem("Institutes", "super:institute_list", "building-2"),
                     MenuItem("Create institute", "super:institute_create", "plus"),
                 ),
             ),
@@ -22,7 +22,7 @@ class SuperMenu:
                 label="Account",
                 items=(
                     MenuItem("My profile", "accounts:profile", "user"),
-                    MenuItem("Sign out", "accounts:logout", "right-from-bracket"),
+                    MenuItem("Sign out", "accounts:logout", "log-out"),
                 ),
             ),
         )

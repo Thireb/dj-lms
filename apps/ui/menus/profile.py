@@ -5,25 +5,25 @@ from __future__ import annotations
 from apps.ui.menu_items import MenuItem
 
 ADMIN_PROFILE_ITEMS: tuple[MenuItem, ...] = (
-    MenuItem("Account settings", "admin:account_settings", "user-gear"),
-    MenuItem("Toolbar settings", "admin:toolbar_settings", "sliders"),
+    MenuItem("Account settings", "admin:account_settings", "user-cog"),
+    MenuItem("Toolbar settings", "admin:toolbar_settings", "sliders-horizontal"),
     MenuItem("Default portal", "admin:default_portal", "door-open"),
     MenuItem(
         "Institute settings",
         "admin:institute_settings",
-        "building",
+        "building-2",
         admin_only=True,
     ),
     MenuItem(
         "Manage users",
         "admin:manage_users",
-        "users-gear",
+        "users-round",
         admin_only=True,
     ),
     MenuItem(
         "Manage permissions",
         "admin:manage_permissions",
-        "key",
+        "key-round",
         admin_only=True,
     ),
     MenuItem(
@@ -36,7 +36,7 @@ ADMIN_PROFILE_ITEMS: tuple[MenuItem, ...] = (
     MenuItem(
         "Sign out",
         "accounts:logout",
-        "right-from-bracket",
+        "log-out",
         post_only=True,
     ),
 )

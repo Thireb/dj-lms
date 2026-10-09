@@ -38,8 +38,9 @@ from apps.accounts.services import (
 )
 from apps.core.roles import Role
 from apps.ui.components.actions import Button
+from apps.ui.components.block_stack import BlockStack
 from apps.ui.components.forms import CrispyForm, PublicPostForm
-from apps.ui.components.layout import PageHeader, PublicFormShell, SectionCard
+from apps.ui.components.layout import PageHeader, PublicFormShell
 from apps.ui.menus.registry import portal_for_user
 from apps.ui.views.pages import FormPage
 
@@ -51,6 +52,8 @@ class PublicFormPage(TemplateView):
     title = ""
     form_class: type | None = None
     section_title = ""
+    heading = ""
+    subtitle = ""
 
     def dispatch(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
         if request.user.is_authenticated and self.redirect_if_authenticated:
@@ -87,16 +90,17 @@ class PublicFormPage(TemplateView):
         raise NotImplementedError
 
     def render_page(self, form: Any, status: int = 200) -> HttpResponse:
-        header = PageHeader(title=self.title)
-        card = SectionCard(
-            title=self.section_title or self.title,
-            body=PublicPostForm(
-                action=self.request.path,
-                body=CrispyForm(form=form),
+        shell = PublicFormShell(
+            page_title=self.title,
+            header=self.get_heading(),
+            content=PublicPostForm(
+                action=self.request.path, body=CrispyForm(form=form)
             ),
         )
-        shell = PublicFormShell(page_title=self.title, header=header, content=card)
         return HttpResponse(shell.render(request=self.request), status=status)
+
+    def get_heading(self) -> PageHeader:
+        return PageHeader(title=self.heading or self.title, subtitle=self.subtitle)
 
     def get_cancel_url(self) -> str | None:
         return None
@@ -105,6 +109,8 @@ class PublicFormPage(TemplateView):
 class LoginView(PublicFormPage):
     title = "Sign in"
     section_title = "Sign in"
+    heading = "Welcome back"
+    subtitle = "Sign in to your Lexicon portal."
     form_class = LoginForm
     redirect_if_authenticated = True
 
@@ -155,26 +161,28 @@ class ForgotPasswordView(PublicFormPage):
         return redirect("accounts:login")
 
     def render_page(self, form: Any) -> HttpResponse:
-        from apps.ui.components.actions import Button
-        from apps.ui.components.block_stack import BlockStack
-
-        header = PageHeader(title=self.title)
-        card = SectionCard(
-            title=self.section_title,
-            body=BlockStack(
+        shell = PublicFormShell(
+            page_title=self.title,
+            header=PageHeader(title="Forgot your password?"),
+            content=BlockStack(
                 blocks=[
                     self.message,
-                    Button(label="Back to sign in", url=reverse("accounts:login")),
+                    Button(
+                        label="Back to sign in",
+                        url=reverse("accounts:login"),
+                        icon="arrow-left",
+                        variant="secondary",
+                    ),
                 ]
             ),
         )
-        shell = PublicFormShell(page_title=self.title, header=header, content=card)
         return HttpResponse(shell.render(request=self.request))
 
 
 class SetPasswordView(PublicFormPage):
     title = "Set your password"
     section_title = "Set your password"
+    subtitle = "Choose a password with at least 8 characters."
     form_class = SetPasswordForm
     redirect_if_authenticated = False
 
@@ -197,9 +205,20 @@ class SetPasswordView(PublicFormPage):
             message = "This link was already used. Sign in with your password."
         else:
             message = "This link is not valid. Ask your institute admin for a new one."
-        header = PageHeader(title=self.title)
-        card = SectionCard(title=self.section_title, body=message)
-        shell = PublicFormShell(page_title=self.title, header=header, content=card)
+        shell = PublicFormShell(
+            page_title=self.title,
+            header=PageHeader(title=self.title),
+            content=BlockStack(
+                blocks=[
+                    message,
+                    Button(
+                        label="Go to sign in",
+                        url=reverse("accounts:login"),
+                        variant="secondary",
+                    ),
+                ]
+            ),
+        )
         return HttpResponse(shell.render(request=self.request))
 
     def post(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:

@@ -12,7 +12,7 @@ class StudentMenu:
                 items=(
                     MenuItem(
                         "Dashboard",
-                        "student:dashboard",
+                        "student:home",
                         "gauge",
                         menu_key="dashboard",
                     ),
@@ -41,8 +41,8 @@ class StudentMenu:
                         "clipboard",
                         feature="lesson_plans",
                     ),
-                    MenuItem("Assignments", "student:assignment_list", "list-check"),
-                    MenuItem("Quizzes and exams", "student:quiz_list", "pen-to-square"),
+                    MenuItem("Assignments", "student:assignment_list", "list-checks"),
+                    MenuItem("Quizzes and exams", "student:quiz_list", "square-pen"),
                     MenuItem("Documents", "student:documents", "folder-open"),
                 ),
             ),
@@ -52,7 +52,7 @@ class StudentMenu:
                     MenuItem(
                         "Messages",
                         "student:message_inbox",
-                        "envelope",
+                        "mail",
                         feature="messaging",
                     ),
                 ),
@@ -72,8 +72,8 @@ class StudentMenu:
                 label="Account",
                 items=(
                     MenuItem("My profile", "accounts:profile", "user"),
-                    MenuItem("Settings", "student:settings", "gear"),
-                    MenuItem("Sign out", "accounts:logout", "right-from-bracket"),
+                    MenuItem("Settings", "student:settings", "settings"),
+                    MenuItem("Sign out", "accounts:logout", "log-out"),
                 ),
             ),
         )
