@@ -203,6 +203,7 @@ Claims the audit tested that did not hold: overlong cells do not give a 500 on i
 | S15 | Sub-admins have no `allowed_menus` until 9.3c, so `demo-sub` gets 403 on every admin page. 9.3c must add the field, the seed grants (Finance and People per SPEC 10) and tests; the dashboard already hides people names without People. | Phase 2 audit M9 | Medium | [ ] |
 | S16 | openpyxl parses XML without `defusedxml`. No attack worked against Python 3.13's expat limits; add `defusedxml` as defense in depth when dependencies are next reviewed. | Phase 2 audit | Low | [ ] |
 | S17 | No automated browser test: the 360px layout was checked once with headless Chromium. Add one with the JS test runner (B18). | Phase 2 audit | Low | [ ] |
+| S18 | The notification bell in the admin top bar was a near-black icon on the dark bar (rgb(12,27,31) on rgb(0,48,61)), so it looked cut off in the Phase 2 walkthrough video. The bell now inherits the bar's light text colour, and its hover uses `bg-primary/20` instead of the light `bg-page`. Checked in Chromium at 1280px and 390px. | Phase 2 walkthrough | Low | [x] |
 
 ## Later (deployment hardening, Phase 12)
 

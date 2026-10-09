@@ -85,3 +85,18 @@ def test_base_form_styles_text_widgets_only() -> None:
     css = (Path(__file__).resolve().parents[2] / "static/css/src/input.css").read_text()
     rule = css[css.index(".field-control {") :].split("}", 1)[0]
     assert "w-full" in rule  # fields fit a 360px screen
+
+
+@pytest.mark.django_db
+def test_bell_is_dark_ink_on_the_white_admin_bar(institute_a) -> None:
+    # S18: the bell was a dark icon on the old dark bar. Since R4a the bar is
+    # white and the bell is an icon-btn (ink-2 icon on a white tile).
+    admin = make_user(
+        email="a@example.com", role=Role.INSTITUTE_ADMIN, institute=institute_a
+    )
+
+    page = _page(admin, "admin:home")
+
+    header = re.search(r'<header class="(top-nav-shell[^"]*)"', page).group(1)
+    assert "bg-surface" in header.split()
+    assert 'class="notification-bell icon-btn"' in page

@@ -1418,6 +1418,12 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "bg-tone-clay-50 text-tone-clay",
         "bg-[#fcebe3] text-tone-clay",
     ),
+    (
+        "bell is an icon button",
+        "apps/ui/templates/ui/components/notification_bell.html",
+        'class="notification-bell icon-btn"',
+        'class="notification-bell text-surface"',
+    ),
 ]
 
 
