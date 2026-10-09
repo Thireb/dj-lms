@@ -15,6 +15,7 @@ Plan: **B** = Basic, **P** = Premium. Plan split is from the reference pricing p
 
 - [x] Many institutes on one install, each with isolated data. (B) (verify)
 - [x] Super Admin panel: create institutes, set plan, activate/deactivate. (verify)
+- [x] Super Admin: new one-time sign-in link for an institute admin who lost theirs (also `manage.py make_set_password_link`).
 - [ ] Super Admin: read contact requests (roadmap 11.2).
 - [ ] Five logins per institute: Admin, Sub-admin (helper), Teacher, Student, Guardian. (Sub-admin menus wait for roadmap 9.3c.)
 - [x] One campus per institute. (verify)
@@ -30,6 +31,7 @@ Plan: **B** = Basic, **P** = Premium. Plan split is from the reference pricing p
 - [ ] Public site: Home, Features, Portals, Pricing, Contact, Privacy, Terms, Sign in.
 - [ ] Contact / demo-request form that lands in Super Admin.
 - [x] Sign in with email + password, show-password toggle, remember me.
+- [x] Sign-in limit: 5 failed attempts per 15 minutes per email and IP; email is not case sensitive.
 - [x] No self-service password reset: "Forgot password" tells the user to contact the admin.
 - [x] First-time "set your password" screen (password + confirm) reached from a link.
 - [x] Account profile: edit name, phone, and time zone; change password (current, new, confirm).

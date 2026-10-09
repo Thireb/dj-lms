@@ -233,8 +233,8 @@ Every item here is a class. Names are fixed.
 
 | Class | File | Purpose | Main props |
 |---|---|---|---|
-| `TopNavShell` | layout | admin shell: top menu bar with dropdown groups | `portal`, `user`, `active` |
-| `SidebarShell` | layout | teacher/student/guardian shell: sidebar + top bar | `portal`, `user`, `active` |
+| `TopNavShell` | layout | admin shell: top menu bar with dropdown groups; below md a Menu button shows the groups as a collapsible list | `portal`, `user`, `active` |
+| `SidebarShell` | layout | teacher/student/guardian shell: sidebar + top bar; below md the sidebar is hidden and a Menu button opens it as a full-screen panel (Escape or a tap outside closes it) | `portal`, `user`, `active` |
 | `TopNav` | layout | grouped dropdown menu from a menu config | `portal`, `active` |
 | `Sidebar` | layout | grouped sidebar menu from a menu config | `portal`, `active` |
 | `HeroBanner` | layout | dashboard welcome banner with chips and actions | `title`, `subtitle`, `chips`, `actions` |

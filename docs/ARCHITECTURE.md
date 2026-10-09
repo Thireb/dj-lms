@@ -83,6 +83,13 @@ Decision: one user = one role. A person who needs two roles gets two separate ac
 - Profile models in `people`: `StudentProfile`, `TeacherProfile`, `GuardianProfile` (one-to-one with User).
 - `GuardianStudentLink` connects a guardian to one or more students.
 
+Sign-in and sessions (Phase 2 audit):
+- Emails are stored in lower case, and sign-in ignores case. A `Lower(email)` unique constraint blocks two accounts that differ only by case.
+- Failed sign-ins: 5 per 15 minutes per lower-cased email and client IP (`apps/accounts/throttle.py`), shared by the product login and `/django-admin/`; the set-password page is limited per IP. A locked attempt never hashes a password. Counts live in the cache, so production needs Redis (backlog S14). The client IP comes from `TRUSTED_PROXY_IP_HEADER` only when it is set.
+- Without "remember me" the cookie ends at browser close and the server session after 12 hours; with it, 14 days.
+- Set-password links are one-time and stored as a hash. A new link (super admin "New sign-in link", or `manage.py make_set_password_link <email>`) makes older unused links stop working. Pages that show a link send `Cache-Control: no-store`.
+- A signed-in user without an active institute gets a 403 page with the reason and Sign out.
+
 Three layers of access, always in this order:
 1. **Role gate:** `RoleRequiredMixin` with `allowed_roles = [Role.TEACHER]` on every view. Wrong role gets 403.
 2. **Scoped data:** `Model.objects.for_user(user)` returns only what that user may see (teacher: own batches; student: own records; guardian: linked students only; admin: own institute). Views never use an unscoped manager.
