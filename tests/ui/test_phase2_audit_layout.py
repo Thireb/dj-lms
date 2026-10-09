@@ -80,3 +80,26 @@ def test_base_form_styles_text_widgets_only() -> None:
     assert "class" not in fields["agree"].widget.attrs
     assert fields["custom"].widget.attrs["class"] == "own"
     assert "w-full" in INPUT_CLASSES
+
+
+@pytest.mark.django_db
+def test_bell_is_light_on_the_dark_admin_bar(institute_a) -> None:
+    # Measured in Chromium: the icon was rgb(12,27,31) on the rgb(0,48,61) bar.
+    admin = make_user(
+        email="a@example.com", role=Role.INSTITUTE_ADMIN, institute=institute_a
+    )
+
+    page = _page(admin, "admin:home")
+
+    group = re.search(r'<div class="([^"]*)">\s*<div class="profile-menu', page)
+    assert group and "text-surface" in group.group(1).split()
+    assert 'class="notification-bell' in page
+
+
+def test_bell_hover_works_on_dark_and_light_bars() -> None:
+    from apps.ui.components.nav import NotificationBell
+
+    html = str(NotificationBell(user=None))
+
+    assert "hover:bg-primary/20" in html
+    assert "hover:bg-page" not in html  # a light hover hid the light icon

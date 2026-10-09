@@ -1281,6 +1281,18 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "    if request.user.is_authenticated:\n        return redirect(post_login_redirect_url(request.user))",
         "    if False:\n        return redirect(post_login_redirect_url(request.user))",
     ),
+    (
+        "bell light on admin bar",
+        "apps/ui/templates/ui/components/top_nav_shell.html",
+        '<div class="flex items-center gap-2 text-surface">',
+        '<div class="flex items-center gap-2">',
+    ),
+    (
+        "bell hover tint",
+        "apps/ui/templates/ui/components/notification_bell.html",
+        "hover:bg-primary/20",
+        "hover:bg-page",
+    ),
 ]
 
 
