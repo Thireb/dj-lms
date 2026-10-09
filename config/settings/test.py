@@ -15,7 +15,8 @@ _default_test_database_url = "postgres://lms:lms_dev_password@localhost:5432/lms
 _database_url = os.environ.get("DATABASE_URL", _default_test_database_url)
 
 _db = database_config_from_url(_database_url)
-_db["TEST"] = {"NAME": "lms_test"}
+# The mutation check gives each parallel worker its own test database.
+_db["TEST"] = {"NAME": os.environ.get("TEST_DB_NAME", "lms_test")}
 DATABASES = {"default": _db}  # noqa: F405
 
 PASSWORD_HASHERS = [  # noqa: F405

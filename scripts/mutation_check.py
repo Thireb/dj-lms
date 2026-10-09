@@ -1,15 +1,29 @@
 """Undo each access or validation fix, run pytest, and expect a failure.
 
-Usage: uv run python scripts/mutation_check.py [name-filter]
-Prints CAUGHT or MISSED per entry and exits 1 if any entry is MISSED or stale.
-Every file is restored with `git checkout` after its run, so start from a
-clean working tree for the files listed here.
+Usage: uv run python scripts/mutation_check.py [name-filter] [--jobs N]
+
+Prints CAUGHT, MISSED or STALE per entry and exits 1 if any entry is MISSED
+or STALE. Commit first: the entries run against HEAD, each worker in its own
+git worktree with its own test database, so the working tree is never touched.
+
+To be fast without changing the result, each entry runs in up to 3 stages and
+stops at the first failure: the test that caught it last time (cached in
+.mutation_cache.json, gitignored), then the tests of the app that owns the
+file, then the full suite. An entry is MISSED only when the full suite passes.
 """
 
 from __future__ import annotations
 
+import argparse
+import json
+import os
+import queue
+import re
 import subprocess
 import sys
+import tempfile
+import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -1427,43 +1441,141 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
 ]
 
 
-def run_pytest() -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        ["uv", "run", "pytest", "-q", "-x", "-p", "no:cacheprovider"],
-        cwd=ROOT,
-        capture_output=True,
-        text=True,
-    )
+CACHE = ROOT / ".mutation_cache.json"
+# pytest exit codes that say nothing about the mutation: 4 = a cached test no
+# longer exists, 5 = no tests collected. Move on to the next stage.
+NO_VERDICT = {4, 5}
+FAILED_LINE = re.compile(r"^FAILED (\S+?)(?: - |$)", re.M)
 
 
-def restore(path: str) -> None:
-    subprocess.run(["git", "checkout", "--", path], cwd=ROOT, check=True)
+class Worker:
+    """A detached worktree at HEAD with its own test database."""
+
+    def __init__(self, number: int, base: Path) -> None:
+        self.path = base / f"w{number}"
+        subprocess.run(
+            ["git", "worktree", "add", "--detach", "-q", str(self.path), "HEAD"],
+            cwd=ROOT,
+            check=True,
+        )
+        css = ROOT / "static/css/app.css"  # built file, not in git
+        if css.exists():
+            (self.path / "static/css/app.css").write_bytes(css.read_bytes())
+        self.env = {**os.environ, "TEST_DB_NAME": f"lms_test_mut{number}"}
+        self.fresh = True
+
+    def pytest(self, targets: list[str]) -> subprocess.CompletedProcess[str]:
+        # The first run builds this worker's database; later runs reuse it.
+        db_flag = "--create-db" if self.fresh else "--reuse-db"
+        self.fresh = False
+        return subprocess.run(
+            [sys.executable, "-m", "pytest", "-q", "-x", db_flag]
+            + ["-p", "no:cacheprovider", *targets],
+            cwd=self.path,
+            env=self.env,
+            capture_output=True,
+            text=True,
+        )
+
+    def restore(self, path: str) -> None:
+        subprocess.run(["git", "checkout", "--", path], cwd=self.path, check=True)
+
+    def remove(self) -> None:
+        subprocess.run(
+            ["git", "worktree", "remove", "--force", str(self.path)],
+            cwd=ROOT,
+            check=False,
+        )
+
+
+def stages(name: str, path: str, cache: dict[str, str]) -> list[list[str]]:
+    """Cheapest likely-failing tests first; the full suite always last."""
+    found: list[list[str]] = []
+    if name in cache:
+        found.append([cache[name]])
+    parts = Path(path).parts
+    if parts[0] == "apps" and (ROOT / "tests" / parts[1]).is_dir():
+        found.append([f"tests/{parts[1]}"])
+    found.append([])
+    return found
+
+
+def check(entry, worker: Worker, cache: dict[str, str]) -> tuple[str, str, str]:
+    name, path, original, mutated = entry
+    target = worker.path / path
+    source = target.read_text()
+    if original not in source:
+        return "STALE", f"text not found in {path}", ""
+    target.write_text(source.replace(original, mutated, 1))
+    summary = "no tests ran"
+    try:
+        for targets in stages(name, path, cache):
+            result = worker.pytest(targets)
+            if result.returncode in NO_VERDICT:
+                continue
+            summary = (result.stdout.strip().splitlines() or ["no output"])[-1]
+            if result.returncode != 0:
+                failed = FAILED_LINE.search(result.stdout)
+                return "CAUGHT", summary, failed.group(1) if failed else ""
+        return "MISSED", summary, ""
+    finally:
+        worker.restore(path)
+
+
+def load_cache() -> dict[str, str]:
+    try:
+        return json.loads(CACHE.read_text())
+    except (OSError, ValueError):
+        return {}
 
 
 def main() -> int:
-    name_filter = sys.argv[1] if len(sys.argv) > 1 else ""
-    failures = 0
-    for name, path, original, mutated in MUTATIONS:
-        if name_filter and name_filter not in name:
-            continue
-        target = ROOT / path
-        source = target.read_text()
-        if original not in source:
-            print(f"STALE:  {name}: text not found in {path}")
-            failures += 1
-            continue
-        target.write_text(source.replace(original, mutated, 1))
+    parser = argparse.ArgumentParser()
+    parser.add_argument("name_filter", nargs="?", default="")
+    parser.add_argument("--jobs", type=int, default=4)
+    args = parser.parse_args()
+    entries = [entry for entry in MUTATIONS if args.name_filter in entry[0]]
+    dirty = subprocess.run(
+        ["git", "status", "--porcelain", "--untracked-files=no"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+    ).stdout
+    if dirty:
+        print("Note: uncommitted changes are not checked; entries run on HEAD.")
+    cache = load_cache()
+    started = time.monotonic()
+    counts = {"CAUGHT": 0, "MISSED": 0, "STALE": 0}
+    with tempfile.TemporaryDirectory(prefix="mutation-") as base:
+        workers = [Worker(n, Path(base)) for n in range(min(args.jobs, len(entries)))]
+        free: queue.Queue[Worker] = queue.Queue()
+        for worker in workers:
+            free.put(worker)
+
+        def run(entry):
+            worker = free.get()
+            try:
+                return entry, check(entry, worker, cache)
+            finally:
+                free.put(worker)
+
         try:
-            result = run_pytest()
+            with ThreadPoolExecutor(max_workers=len(workers)) as pool:
+                for entry, (status, summary, failed) in pool.map(run, entries):
+                    counts[status] += 1
+                    if failed:
+                        cache[entry[0]] = failed
+                    print(f"{status + ':':7} {entry[0]}: {summary}", flush=True)
         finally:
-            restore(path)
-        summary = (result.stdout.strip().splitlines() or ["no output"])[-1]
-        if result.returncode == 0:
-            print(f"MISSED: {name}: {summary}")
-            failures += 1
-        else:
-            print(f"CAUGHT: {name}: {summary}")
-    return 1 if failures else 0
+            for worker in workers:
+                worker.remove()
+    CACHE.write_text(json.dumps(cache, indent=1, sort_keys=True) + "\n")
+    minutes = (time.monotonic() - started) / 60
+    print(
+        f"{counts['CAUGHT']} caught, {counts['MISSED']} missed, "
+        f"{counts['STALE']} stale in {minutes:.1f} min"
+    )
+    return 1 if counts["MISSED"] or counts["STALE"] else 0
 
 
 if __name__ == "__main__":

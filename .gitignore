@@ -226,3 +226,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Which test caught each mutation last time (scripts/mutation_check.py)
+.mutation_cache.json
