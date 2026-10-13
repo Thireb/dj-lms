@@ -136,7 +136,9 @@ Each pattern is a base page class in `apps/ui/views/pages.py`. Subclass it.
 - Respect `prefers-reduced-motion`.
 - Visible keyboard focus on every control (3px sky outline from `:focus-visible` in `input.css`).
 - Contrast at least 4.5:1 for text.
-- Every icon-only button has an `aria-label`.
+- Every icon-only button has an `aria-label`. A link with visible text keeps that text as its name (no `aria-label` that differs; add `sr-only` words after it instead).
+- Tap targets are at least 32px tall, 40px for form controls; a checkbox and its label are one clickable row.
+- Error pages (403, 404, 500) use the `notice` public layout: icon, what happened, "Go to my home page" (`apps/core/responses.py`).
 - Money: `Rs 4,000` format using the institute currency. Right-aligned in tables.
 - Dates: `16 Aug 2026`. Times: 12-hour with AM/PM.
 

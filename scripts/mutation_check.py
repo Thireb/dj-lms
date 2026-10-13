@@ -1486,6 +1486,54 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "items-center whitespace-nowrap",
         "items-center",
     ),
+    (
+        "access mixins use the styled 403",
+        "apps/core/mixins/access.py",
+        "        if role not in self.allowed_roles:\n            return forbidden_response(request)",
+        '        if role not in self.allowed_roles:\n            return HttpResponse("Forbidden.", status=403)',
+    ),
+    (
+        "404 handler wired",
+        "config/urls_test.py",
+        'handler404 = "apps.core.responses.handle_404"',
+        "",
+    ),
+    (
+        "menu list closes on escape",
+        "apps/ui/templates/ui/components/top_nav.html",
+        ' @keydown.escape="menuOpen = false" @click.outside="menuOpen = false"',
+        "",
+    ),
+    (
+        "view all tap target",
+        "apps/ui/templates/ui/components/section_card.html",
+        "inline-flex min-h-8 items-center",
+        "inline-flex items-center",
+    ),
+    (
+        "checkbox row is one label",
+        "apps/ui/templates/ui/forms/field.html",
+        "flex min-h-10 cursor-pointer",
+        "flex cursor-pointer",
+    ),
+    (
+        "logo link has no mismatched label",
+        "apps/ui/templates/ui/components/top_nav_shell.html",
+        '<a href="/" class="flex-none">',
+        '<a href="/" class="flex-none" aria-label="{{ brand_name }} home">',
+    ),
+    (
+        "sign-in copy promises only what exists",
+        "apps/ui/templates/ui/layouts/public.html",
+        "Coming to the portal step by step",
+        "Join live classes from any device",
+    ),
+    (
+        "dashboard queries stay flat",
+        "apps/people/home.py",
+        '        .prefetch_related("batch_subjects__batch")\n',
+        "",
+    ),
 ]
 
 

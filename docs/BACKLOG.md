@@ -205,6 +205,21 @@ Claims the audit tested that did not hold: overlong cells do not give a 500 on i
 | S17 | No automated browser test: the 360px layout was checked once with headless Chromium. Add one with the JS test runner (B18). | Phase 2 audit | Low | [ ] |
 | S18 | The notification bell in the admin top bar was a near-black icon on the dark bar (rgb(12,27,31) on rgb(0,48,61)), so it looked cut off in the Phase 2 walkthrough video. The bell now inherits the bar's light text colour, and its hover uses `bg-primary/20` instead of the light `bg-page`. Checked in Chromium at 1280px and 390px. | Phase 2 walkthrough | Low | [x] |
 
+## Redesign audit (after R4c, fixed before Phase 3)
+
+The audit called these L1-L8; renamed RA1-RA8 because L1-L12 are already used above.
+
+| # | Item | Priority | Status |
+|---|---|---|---|
+| RA1 | No styled error pages: a 403 was the bare text "Forbidden." and a 404 the plain Django page. `handler403/404/500` and the access mixins now return a Lexicon notice page (icon, what happened, "Go to my home page"). | Low | [x] |
+| RA2 | Esc and a click outside did not close the admin Menu list (below 1280px). Both close it now. | Low | [x] |
+| RA3 | "View all" on the dashboard cards was 49x20px. It is now at least 32px tall with padding. | Low | [x] |
+| RA4 | Checkboxes were a 20px target. The whole row is one label, 40px tall. | Low | [x] |
+| RA5 | The logo link's `aria-label="LEXICON home"` did not match its visible text (axe label-content-name-mismatch). The label is gone; the name is the visible "LEXICON" plus a screen-reader-only "home". | Low | [x] |
+| RA6 | The sign-in panel promised live classes, homework and challans, which do not exist yet. It now lists what exists and says the rest is coming. | Low | [x] |
+| RA7 | No `/health/` route. Already S13 (Phase 12). | High before deploy | [ ] see S13 |
+| RA8 | No query-count tests. `tests/people/test_dashboard_queries.py` sets a budget per dashboard (admin 13, teacher 7, student 7, guardian 8) with more people than the pages list, so an N+1 query fails it. | Low | [x] |
+
 ## Later (deployment hardening, Phase 12)
 
 | # | Item | Priority | Status |
