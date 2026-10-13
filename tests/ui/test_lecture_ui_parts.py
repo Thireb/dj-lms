@@ -43,6 +43,28 @@ def test_hidden_filter_is_kept_but_does_not_count_as_a_filter() -> None:
     assert ">Clear<" not in html
 
 
+def test_kept_filter_does_not_count_and_clear_keeps_it() -> None:
+    child = {"name": "child", "label": "Child", "value": "7", "kept": True}
+    child["options"] = [("7", "Child A"), ("8", "Child B")]
+    subject = {"name": "subject", "label": "Subject", "value": "3"}
+    subject["options"] = [("", "Any subject"), ("3", "Math")]
+
+    alone = str(FilterBar([child]))
+    both = str(FilterBar([child, subject]))
+
+    assert ">Clear<" not in alone
+    assert '<a href="?child=7" class="btn btn-ghost">Clear</a>' in both
+
+
+def test_kept_filter_value_is_encoded_in_the_clear_link() -> None:
+    child = {"name": "child", "value": "7&x=<b>", "kept": True, "options": [("", "")]}
+    subject = {"name": "q", "value": "a"}
+
+    html = str(FilterBar([child, subject]))
+
+    assert 'href="?child=7%26x%3D%3Cb%3E"' in html
+
+
 def test_hidden_filter_value_is_escaped() -> None:
     html = str(FilterBar([{"name": "show", "value": '"><b>x', "hidden": True}]))
 

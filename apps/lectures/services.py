@@ -36,7 +36,7 @@ from apps.lectures.models import (
     meeting_url_validator,
 )
 from apps.lectures.providers import provider_for
-from apps.lectures.times import local_date, local_day_bounds, time_range
+from apps.lectures.times import combine_local, local_date, local_day_bounds, time_range
 from apps.people.models import ProfileStatus, TeacherProfile
 
 SHOW_UPCOMING = "upcoming"
@@ -247,10 +247,18 @@ def list_lectures(
     teacher_id: int | None = None,
     batch_id: int | None = None,
     subject_id: int | None = None,
+    student_id: int | None = None,
     status: str = "",
+    date_from: date | None = None,
+    date_to: date | None = None,
     now: datetime | None = None,
 ) -> LectureQuerySet:
-    """Lectures the user may see, for the Today, Upcoming, Past or All view."""
+    """Lectures the user may see, for the Today, Upcoming, Past or All view.
+
+    ``student_id`` keeps the lectures of one student (a guardian's chosen
+    child); the caller checks that the user may see that student.
+    ``date_from`` and ``date_to`` are days in the viewer's time zone, both
+    included."""
     now = now or timezone.now()
     lectures = (
         Lecture.objects.for_user(user)
@@ -264,8 +272,19 @@ def list_lectures(
         lectures = lectures.filter(batch_id=batch_id)
     if subject_id is not None:
         lectures = lectures.filter(subjects__id=subject_id).distinct()
+    if student_id is not None:
+        # One filter() call: the same enrolment row has the student and batch.
+        lectures = lectures.filter(
+            subjects__student_links__student_id=student_id,
+            subjects__student_links__batch_id=F("batch_id"),
+        ).distinct()
     if status in LectureStatus.values:
         lectures = lectures.filter(status=status)
+    if date_from is not None:
+        lectures = lectures.filter(starts_at__gte=combine_local(date_from, time.min))
+    if date_to is not None:
+        day_after = date_to + timedelta(days=1)
+        lectures = lectures.filter(starts_at__lt=combine_local(day_after, time.min))
     if show == "today":
         start, end = local_day_bounds(now)
         lectures = lectures.filter(starts_at__gte=start, starts_at__lt=end)
@@ -274,6 +293,72 @@ def list_lectures(
     elif show == SHOW_UPCOMING:
         lectures = lectures.filter(ends_at_db__gt=now)
     return lectures.order_by("starts_at", "pk")
+
+
+# Calendar (roadmap 3.3, SPEC 3: teacher Schedule)
+
+CALENDAR_WEEK = "week"
+CALENDAR_MONTH = "month"
+
+
+@dataclass(frozen=True)
+class CalendarRange:
+    """The days a week or month view shows. Weeks start on Monday; a month
+    view shows whole weeks, so it can start and end in the next months."""
+
+    view: str
+    first: date
+    last: date
+    month: date | None
+    previous: date
+    next: date
+
+    @property
+    def days(self) -> list[date]:
+        count = (self.last - self.first).days + 1
+        return [self.first + timedelta(days=offset) for offset in range(count)]
+
+
+def _first_of_next_month(day: date) -> date:
+    return (day.replace(day=1) + timedelta(days=32)).replace(day=1)
+
+
+def calendar_range(view: str, anchor: date) -> CalendarRange:
+    if view == CALENDAR_MONTH:
+        month = anchor.replace(day=1)
+        next_month = _first_of_next_month(month)
+        month_end = next_month - timedelta(days=1)
+        return CalendarRange(
+            view=CALENDAR_MONTH,
+            first=month - timedelta(days=month.weekday()),
+            last=month_end + timedelta(days=6 - month_end.weekday()),
+            month=month,
+            previous=(month - timedelta(days=1)).replace(day=1),
+            next=next_month,
+        )
+    monday = anchor - timedelta(days=anchor.weekday())
+    return CalendarRange(
+        view=CALENDAR_WEEK,
+        first=monday,
+        last=monday + timedelta(days=6),
+        month=None,
+        previous=monday - timedelta(days=7),
+        next=monday + timedelta(days=7),
+    )
+
+
+def calendar_lectures(user: Any, first: date, last: date) -> list[Lecture]:
+    """Lectures the user may see that start on the days first to last, in the
+    viewer's time zone."""
+    start = combine_local(first, time.min)
+    end = combine_local(last + timedelta(days=1), time.min)
+    return list(
+        Lecture.objects.for_user(user)
+        .filter(starts_at__gte=start, starts_at__lt=end)
+        .select_related("batch")
+        .prefetch_related("subjects")
+        .order_by("starts_at", "pk")
+    )
 
 
 # Recurring schedules (roadmap 3.2, SPEC 4.6 and 6.4)

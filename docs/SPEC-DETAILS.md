@@ -111,7 +111,7 @@ Menu key `institute`: `institute_admin`, and a `sub_admin` granted Institute.
 | Screen | Columns | Notes |
 |---|---|---|
 | My Lectures | Date, Time, Title, Batch, Subject, Mode, Status | tabs Today / Upcoming / Past; row actions Start, Whiteboard, Attendance, Edit |
-| Schedule | calendar (week and month) | click an item to open it |
+| Schedule | calendar (week and month) | click an item to open it (3.3: a scheduled lecture opens its edit page; others do not link until lecture detail exists) |
 | Lecture History | Date, Title, Batch, Duration, Present / Total | filter by batch |
 | Documents | Title, Batch, Subject, Date | upload and delete own |
 | Lesson Plans / Homework / Reports | Title, Batch, Subject, Date, Status | create, edit drafts |
@@ -138,6 +138,7 @@ Menu key `institute`: `institute_admin`, and a `sub_admin` granted Institute.
 ### Guardian
 
 Same lists as the student for the chosen child, plus:
+- 3.3 (assumed until the header child switcher exists): "Lectures schedule" has a Child filter when the guardian has two or more children; the first child by name is the default, and a child that is not the guardian's falls back to the default.
 - **Fee and Challans:** Challan no., Month, Amount, Paid, Due date, Status, Print.
 - **Fee Pay:** form (section 4.17) plus a history list of submissions with status.
 - **Class Attendance:** same as student My Attendance.

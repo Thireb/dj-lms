@@ -39,7 +39,9 @@ class TeacherMenu:
                         "calendar-days",
                         menu_key="lecture_schedule",
                     ),
-                    MenuItem("Schedule", "teacher:schedule", "calendar"),
+                    MenuItem(
+                        "Schedule", "teacher:schedule", "calendar", menu_key="schedule"
+                    ),
                     MenuItem(
                         "Lecture history",
                         "teacher:lecture_history",

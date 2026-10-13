@@ -30,7 +30,7 @@ apps/ui/
                    # PersonCell, PersonList, KpiSummary, ProgressBar,
                    # ProgressRing, ChartCard, EmptyState
     actions.py     # Button, IconButton, QuickAction, ConfirmDialog, CopyField, Toast
-    lectures.py    # CountdownCard, LectureRow, ScheduleList
+    lectures.py    # CountdownCard, LectureRow, ScheduleList, Calendar
     nav.py         # NotificationBell, FilterBar, Pagination
     pdf.py         # PdfHeader
   forms/
@@ -274,8 +274,9 @@ Every item here is a class. Names are fixed.
 | `CountdownCard` | lectures | "Up next" with live timer + Join | `lecture`, `viewer`; `scheduled_at` is validated to a UTC ISO string in `data-scheduled-at`, read by `countdownCard` in `static/js/app.js` |
 | `LectureRow` | lectures | one lecture in a list | `lecture`, `viewer` |
 | `ScheduleList` | lectures | lectures grouped by day | `lectures`, `viewer` |
+| `Calendar` | lectures | week (seven day cards, side by side from lg) or month (a grid of weeks from md; on phones a list of the month's days that have entries), with previous, Today and next links; each day is a `CalendarDay` (`day`, `items`, `is_today`, `in_month`) and each entry a `CalendarItem` (`time`, `title`, `detail`, `status`, `tone`, `url`); an unsafe item `url` renders as plain text | `days`, `view` (`week`, `month`), `label`, `previous_url`, `today_url`, `next_url`, `empty_text`, `empty_day_text` |
 | `NotificationBell` | nav | bell + unread count | `user` |
-| `FilterBar` | nav | search field with an icon + selects and "Apply filters"; "Clear" shows when a filter has a value. Each filter (dict or object) has `name`, `label`, optional `value`, `placeholder`; a filter with `options` (list of value, label) renders a select; a filter with `hidden=True` is a hidden input that keeps a value (such as the chosen tab) and does not count for "Clear" | `filters` |
+| `FilterBar` | nav | search field with an icon + selects and "Apply filters"; "Clear" shows when a filter has a value. Each filter (dict or object) has `name`, `label`, optional `value`, `placeholder`; a filter with `options` (list of value, label) renders a select; a filter with `hidden=True` is a hidden input that keeps a value (such as the chosen tab) and does not count for "Clear"; a select with `kept=True` (a guardian's chosen child) does not count for "Clear", and "Clear" keeps its value; `input_type="date"` renders a date field | `filters` |
 | `Pagination` | nav | "Showing X to Y of N", then previous, page numbers (elided when long) and next; `query` keeps the current filters | `page_obj`, `query` |
 | `PdfHeader` | pdf | institute header for PDFs | `institute` |
 

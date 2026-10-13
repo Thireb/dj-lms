@@ -208,6 +208,23 @@ def test_finished_lecture_has_no_edit_action(admin_client, school) -> None:
 
 
 @pytest.mark.django_db
+def test_date_range_filter(admin_client, school) -> None:
+    near = add_lecture(school, title="Near", starts_at=soon(days=2))
+    add_lecture(school, title="Far", starts_at=soon(days=9))
+    day = timezone.localtime(near.starts_at, KARACHI).date().isoformat()
+
+    html = admin_client.get(
+        _url("list"), {"date_from": day, "date_to": day}
+    ).content.decode()
+    bad = admin_client.get(_url("list"), {"date_from": "nope"}).content.decode()
+
+    assert "Near" in html and "Far" not in html
+    assert f'<input type="date" name="date_from" value="{day}"' in html
+    assert "Near" in bad and "Far" in bad
+    assert '<input type="date" name="date_from" value=""' in bad
+
+
+@pytest.mark.django_db
 def test_filter_dropdowns_list_own_institute_only(admin_client, school) -> None:
     html = admin_client.get(_url("list")).content.decode()
 

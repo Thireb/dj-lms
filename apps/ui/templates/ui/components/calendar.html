@@ -1,0 +1,23 @@
+{% load ui_icons %}<section class="calendar calendar-{{ view }} min-w-0 overflow-hidden rounded-[18px] border border-border bg-surface" aria-label="{{ label }}">
+  <div class="flex flex-wrap items-center gap-3 border-b border-border px-4 py-3">
+    <h2 class="calendar-label text-base font-semibold text-text">{{ label }}</h2>
+    <nav class="ml-auto flex items-center gap-1" aria-label="Calendar pages">
+      {% if previous_url %}<a href="{{ previous_url }}" class="calendar-previous inline-grid h-10 w-10 place-items-center rounded-lg text-muted hover:bg-primary-50 hover:text-primary" aria-label="Previous {{ view }}" title="Previous {{ view }}">{% icon "chevron-left" %}</a>{% endif %}
+      {% if today_url %}<a href="{{ today_url }}" class="calendar-today inline-flex min-h-10 items-center rounded-lg px-3 text-sm font-semibold text-primary hover:bg-primary-50">Today</a>{% endif %}
+      {% if next_url %}<a href="{{ next_url }}" class="calendar-next inline-grid h-10 w-10 place-items-center rounded-lg text-muted hover:bg-primary-50 hover:text-primary" aria-label="Next {{ view }}" title="Next {{ view }}">{% icon "chevron-right" %}</a>{% endif %}
+    </nav>
+  </div>
+  {% if view == "month" %}
+  <div class="hidden md:block">
+    <div class="grid grid-cols-7 border-b border-border bg-page" aria-hidden="true">{% for name in weekday_names %}<div class="px-2 py-2 text-center text-[13px] font-semibold text-muted">{{ name }}</div>{% endfor %}</div>
+    {% for week in weeks %}<div class="grid grid-cols-7 border-b border-border last:border-b-0">{% for day in week %}<div class="calendar-day min-h-28 min-w-0 border-r border-border p-1.5 last:border-r-0{% if not day.in_month %} bg-page{% endif %}"{% if day.is_today %} aria-current="date"{% endif %}><p class="mb-1 text-right text-xs {% if day.is_today %}font-semibold text-primary{% elif day.in_month %}text-text{% else %}text-muted{% endif %}"><span class="sr-only">{{ day.day|date:"l j F" }}</span><span aria-hidden="true">{{ day.day|date:"j" }}</span></p><div class="space-y-1">{% for item in day.items %}{% include "ui/components/calendar_item.html" with compact=True %}{% endfor %}</div></div>{% endfor %}</div>{% endfor %}
+  </div>
+  <div class="calendar-agenda divide-y divide-border md:hidden">
+    {% for day in busy_days %}<div class="calendar-day px-4 py-3"{% if day.is_today %} aria-current="date"{% endif %}><h3 class="mb-2 text-sm font-semibold {% if day.is_today %}text-primary{% else %}text-text{% endif %}">{{ day.day|date:"D j M" }}</h3><div class="space-y-1.5">{% for item in day.items %}{% include "ui/components/calendar_item.html" with compact=False %}{% endfor %}</div></div>{% empty %}<p class="px-4 py-10 text-center text-sm text-muted">{{ empty_text }}</p>{% endfor %}
+  </div>
+  {% else %}
+  <div class="grid gap-3 p-3 lg:grid-cols-7 lg:gap-2">
+    {% for day in days %}<div class="calendar-day min-w-0 rounded-xl border p-2 {% if day.is_today %}border-primary{% else %}border-border{% endif %}"{% if day.is_today %} aria-current="date"{% endif %}><h3 class="mb-2 text-sm font-semibold {% if day.is_today %}text-primary{% else %}text-text{% endif %}">{{ day.day|date:"D j M" }}</h3>{% if day.items %}<div class="space-y-1.5">{% for item in day.items %}{% include "ui/components/calendar_item.html" with compact=False %}{% endfor %}</div>{% else %}<p class="text-xs text-muted">{{ empty_day_text }}</p>{% endif %}</div>{% endfor %}
+  </div>
+  {% endif %}
+</section>
