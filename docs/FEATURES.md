@@ -66,10 +66,10 @@ Setup order the reference teaches: Campus, Classes, Batches, Subjects, Fee Plans
 
 ## 5. Lectures (B)
 
-- [ ] Add lecture (Admin or Teacher): title, date, time, duration, teacher, batch, subjects (from what the teacher is assigned).
-- [ ] Delivery mode: Zoom API (later), Manual Link (paste any link), In-Person.
+- [x] Add lecture (Admin or Teacher): title, date, time, duration, teacher, batch, subjects (from what the teacher is assigned).
+- [ ] Delivery mode: Zoom API (later), Manual Link (paste any link), In-Person. Built in 3.1: Manual link and In person.
 - [ ] Recurring schedules: weekly (or custom) timetable creates every lecture in one step.
-- [ ] Lecture lists with tabs: Today, Upcoming, Past, All; filter by subject.
+- [x] Lecture lists with tabs: Today, Upcoming, Past, All; filter by subject. Built in 3.1 for the admin (All lectures) and teacher (My lectures); student and guardian lists come with 3.3.
 - [ ] Teacher actions on a lecture: Start class, open whiteboard, take manual attendance.
 - [ ] Student actions: Join (enabled once the teacher starts), "Waiting for host" state, "Join opens soon" state.
 - [ ] Teacher calendar view (Schedule) and Lecture History.

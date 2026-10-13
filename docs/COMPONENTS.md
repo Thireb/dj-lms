@@ -244,6 +244,7 @@ Every item here is a class. Names are fixed.
 | `PageHeader` | layout | breadcrumb (chevrons), optional live clock chip in the viewer's time zone, title, subtitle, actions; portal pages turn the clock on | `title`, `breadcrumb`, `actions`, `subtitle`, `clock` |
 | `SectionCard` | layout | titled card with "View all"; optional icon tile before the title | `title`, `body`, `link_url`, `link_label`, `icon` |
 | `Tabs` | layout | tabs with HTMX swap (not used by a page yet) | `tabs`, `active` |
+| `LinkTabs` | layout | tabs that are plain links (each tab is its own list, for example Today, Upcoming, Past, All); the current tab has `aria-current="page"`; 40px tall; scrolls sideways on phones | `tabs`, `active`, `label` (the nav name) |
 | `Modal` | layout | dialog (Alpine + HTMX; not used by a page yet) | `id`, `title`, `body` |
 | `PublicFormShell` | layout | public page: `split` (form left, band right; short band on phones) or `notice` (whole page is the band, centred message with an icon) | `page_title`, `header`, `content`, `variant`, `icon` |
 | `CrispyForm` | forms | crispy form body (`form_tag=False` inside a parent form) | `form` |
@@ -264,17 +265,17 @@ Every item here is a class. Names are fixed.
 | `PersonList` | data | short list of `PersonCell` rows with a chip on the right (dashboard "Recently enrolled") | `rows` (person, trailing), `title`, `empty_text` |
 | `ChartCard` | data | Chart.js card | `title`, `chart_id`, `data_url` |
 | `EmptyState` | data | icon tile, message and one action; `framed=False` drops the dashed box inside a card | `title`, `text`, `action`, `icon`, `framed` |
-| `IconButton` | actions | icon-only link (with `url`) or button; `label` is the `aria-label` and tooltip | `icon`, `label`, `url` |
+| `IconButton` | actions | icon-only link (with `url`) or button; `label` is the `aria-label` and tooltip; `new_tab=True` adds `target="_blank" rel="noopener noreferrer"` (links to other sites, such as meeting links) | `icon`, `label`, `url`, `new_tab` |
 | `Button` | actions | `primary`, `secondary`, `danger`, `ghost`, `light`, `glass` (the last two on the band); Lucide icon before the label | `label`, `variant`, `url`, `icon` |
 | `QuickAction` | actions | dashboard tile | `label`, `icon`, `url` |
 | `ConfirmDialog` | actions | confirm actions in a centred modal (`role="alertdialog"`, backdrop, Escape and click outside close it); renders a POST form with CSRF (when rendered with `request`) and Cancel | `message`, `confirm_label`, `url`, `trigger_label`, `variant` (`danger`/`primary`), `fields` (hidden name/value pairs) |
 | `CopyField` | actions | read-only value with a copy button (one-time links) | `label`, `value` |
-| `Toast` | actions | success/error message | `message`, `tone` |
+| `Toast` | actions | success, warning or error message (`tone` is the Django message level tag) | `message`, `tone` |
 | `CountdownCard` | lectures | "Up next" with live timer + Join | `lecture`, `viewer`; `scheduled_at` is validated to a UTC ISO string in `data-scheduled-at`, read by `countdownCard` in `static/js/app.js` |
 | `LectureRow` | lectures | one lecture in a list | `lecture`, `viewer` |
 | `ScheduleList` | lectures | lectures grouped by day | `lectures`, `viewer` |
 | `NotificationBell` | nav | bell + unread count | `user` |
-| `FilterBar` | nav | search field with an icon + selects and "Apply filters"; "Clear" shows when a filter has a value. Each filter (dict or object) has `name`, `label`, optional `value`, `placeholder`; a filter with `options` (list of value, label) renders a select | `filters` |
+| `FilterBar` | nav | search field with an icon + selects and "Apply filters"; "Clear" shows when a filter has a value. Each filter (dict or object) has `name`, `label`, optional `value`, `placeholder`; a filter with `options` (list of value, label) renders a select; a filter with `hidden=True` is a hidden input that keeps a value (such as the chosen tab) and does not count for "Clear" | `filters` |
 | `Pagination` | nav | "Showing X to Y of N", then previous, page numbers (elided when long) and next; `query` keeps the current filters | `page_obj`, `query` |
 | `PdfHeader` | pdf | institute header for PDFs | `institute` |
 

@@ -13,6 +13,7 @@ from apps.ui.components.data import (
 from apps.ui.components.icon import Icon
 from apps.ui.components.layout import (
     HeroBanner,
+    LinkTabs,
     Modal,
     PageHeader,
     SectionCard,
@@ -53,6 +54,7 @@ __all__ = [
     "Sidebar",
     "SidebarShell",
     "StatCard",
+    "LinkTabs",
     "Tabs",
     "Toast",
     "TopNav",

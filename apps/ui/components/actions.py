@@ -17,7 +17,11 @@ class Button(Component):
 
 
 class IconButton(Component):
-    """Icon-only link or button; ``label`` becomes its aria-label and tooltip."""
+    """Icon-only link or button; ``label`` becomes its aria-label and tooltip.
+
+    ``new_tab=True`` opens the link in a new tab without an opener (meeting
+    links to other sites).
+    """
 
     template_name = "ui/components/icon_button.html"
 

@@ -4,6 +4,7 @@ from django.urls import path
 
 from apps.academics import views as academics
 from apps.institutes.views import CampusProfilePage, InstituteSettingsPage
+from apps.lectures import views as lectures
 from apps.people import views as people
 
 app_name = "admin"
@@ -91,6 +92,13 @@ urlpatterns = [
         "students/upload/template/",
         people.StudentBulkTemplateView.as_view(),
         name="student_bulk_template",
+    ),
+    path("lectures/", lectures.LectureListPage.as_view(), name="lecture_list"),
+    path("lectures/add/", lectures.LectureCreatePage.as_view(), name="lecture_create"),
+    path(
+        "lectures/<int:pk>/edit/",
+        lectures.LectureEditPage.as_view(),
+        name="lecture_edit",
     ),
     path("portal-access/", people.PortalAccessPage.as_view(), name="portal_access"),
     path(

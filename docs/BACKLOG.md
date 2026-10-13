@@ -220,6 +220,17 @@ The audit called these L1-L8; renamed RA1-RA8 because L1-L12 are already used ab
 | RA7 | No `/health/` route. Already S13 (Phase 12). | High before deploy | [ ] see S13 |
 | RA8 | No query-count tests. `tests/people/test_dashboard_queries.py` sets a budget per dashboard (admin 13, teacher 7, student 7, guardian 8) with more people than the pages list, so an N+1 query fails it. | Low | [x] |
 
+## Build of 3.1 (lectures)
+
+Left out of 3.1 on purpose; each has a home in a later item.
+
+| # | Item | Priority | Status |
+|---|---|---|---|
+| LC1 | All lectures has no date-range filter yet (SPEC 3 lists one). The Today, Upcoming, Past and All tabs and the teacher, batch, subject and status filters are built. Add the range with the schedule views (3.3). | Low | [ ] |
+| LC2 | Row actions View and Cancel, and the teacher's Start, Whiteboard and Attendance, come with lecture states (3.5), the whiteboard and attendance (4.1). 3.1 has Edit and "Open meeting link". | Low | [ ] |
+| LC3 | `seed_demo` has no lectures yet. Add the SPEC 13 demo lectures with the recurring builder (3.2), which makes them in one step. | Low | [ ] |
+| LC4 | The admin dashboard "lectures today" number and the teacher home lecture count and up-next countdown come with 3.4. | Low | [ ] |
+
 ## Later (deployment hardening, Phase 12)
 
 | # | Item | Priority | Status |
