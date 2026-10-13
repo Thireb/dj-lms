@@ -21,7 +21,12 @@ class StudentMenu:
             MenuGroup(
                 label="Academics",
                 items=(
-                    MenuItem("My lectures", "student:lecture_list", "video"),
+                    MenuItem(
+                        "My lectures",
+                        "student:lecture_list",
+                        "video",
+                        menu_key="lectures",
+                    ),
                     MenuItem("My attendance", "student:attendance", "clipboard-check"),
                     MenuItem(
                         "Leave requests",

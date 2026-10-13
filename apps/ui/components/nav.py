@@ -1,3 +1,5 @@
+from urllib.parse import urlencode
+
 from apps.ui.components.base import Component
 
 
@@ -21,7 +23,10 @@ def _value(field) -> str:
 
 class FilterBar(Component):
     """Search fields and selects; a filter with ``hidden=True`` is a hidden
-    input that keeps a value (such as the chosen tab) when filters apply."""
+    input that keeps a value (such as the chosen tab) when filters apply.
+    A select with ``kept=True`` (such as a guardian's chosen child) does not
+    count for "Clear", and "Clear" keeps its value. ``input_type="date"``
+    renders a date field."""
 
     template_name = "ui/components/filter_bar.html"
 
@@ -33,7 +38,12 @@ class FilterBar(Component):
         # A hidden field (for example the chosen tab) is kept on submit but
         # is not a filter the user can clear.
         ctx["active"] = any(
-            _value(f) for f in ctx["filters"] if not _get(f, "hidden", False)
+            _value(f)
+            for f in ctx["filters"]
+            if not _get(f, "hidden", False) and not _get(f, "kept", False)
+        )
+        ctx["clear_query"] = urlencode(
+            [(_get(f, "name"), _value(f)) for f in ctx["filters"] if _get(f, "kept")]
         )
         return ctx
 

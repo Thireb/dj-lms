@@ -25,6 +25,7 @@ class GuardianMenu:
                         "Lectures schedule",
                         "guardian:lecture_schedule",
                         "calendar",
+                        menu_key="lecture_schedule",
                     ),
                     MenuItem(
                         "Homework",

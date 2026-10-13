@@ -3,6 +3,8 @@ Create / Edit (roadmap 3.1, SPEC 3 and 4.5)."""
 
 from __future__ import annotations
 
+from datetime import MAXYEAR, MINYEAR, date
+from functools import cached_property
 from typing import Any
 from urllib.parse import urlencode
 
@@ -28,12 +30,17 @@ from apps.lectures.models import (
     ScheduleStatus,
 )
 from apps.lectures.services import (
+    CALENDAR_MONTH,
+    CALENDAR_WEEK,
     SHOW_CHOICES,
     SHOW_UPCOMING,
+    CalendarRange,
     LectureDetails,
     SavedLecture,
     ScheduleDetails,
     SchedulePreview,
+    calendar_lectures,
+    calendar_range,
     create_lecture,
     create_schedule,
     extend_schedule,
@@ -49,22 +56,26 @@ from apps.lectures.ui import (
     LectureTable,
     SchedulePreviewList,
     ScheduleTable,
+    StudentLectureTable,
     TeacherLectureTable,
     TeacherScheduleTable,
+    calendar_days,
     stop_dialog,
 )
-from apps.people.models import TeacherProfile
+from apps.people.models import StudentProfile, TeacherProfile
 from apps.ui.components.actions import Button
 from apps.ui.components.block_stack import BlockStack
 from apps.ui.components.data import EmptyState
 from apps.ui.components.forms import CrispyForm, PortalPostForm
 from apps.ui.components.layout import LinkTabs, SectionCard
+from apps.ui.components.lectures import Calendar
 from apps.ui.components.nav import FilterBar, Pagination
 from apps.ui.views.pages import FormPage, ListPage, PortalPageView
 
 PAGE_SIZE = 25
 SHOW_KEYS = {key for key, _ in SHOW_CHOICES}
 STATUS_OPTIONS = [("", "Any status"), *LectureStatus.choices]
+DATE_FIELD = {"input_type": "date"}
 EMPTY_TITLES = {
     "today": "No lectures today.",
     "upcoming": "No upcoming lectures.",
@@ -114,7 +125,7 @@ class TeacherLectureMixin(AdminLectureMixin):
 
 class LectureListPage(AdminLectureMixin, ListPage):
     title = "All lectures"
-    filter_keys = ("teacher", "batch", "subject", "status")
+    filter_keys = ("teacher", "batch", "subject", "status", "date_from", "date_to")
 
     def get_actions(self) -> list[Any]:
         return [Button(self.create_label, url=self.url("create"), icon="plus")]
@@ -125,6 +136,9 @@ class LectureListPage(AdminLectureMixin, ListPage):
         }
         show = search_param(self.request.GET.get("show"))
         filters["show"] = show if show in SHOW_KEYS else SHOW_UPCOMING
+        for key in ("date_from", "date_to"):
+            if key in filters and calendar_day(filters[key]) is None:
+                filters[key] = ""
         return filters
 
     def get_rows(self, filters: dict[str, str]) -> Any:
@@ -132,9 +146,11 @@ class LectureListPage(AdminLectureMixin, ListPage):
             self.request.user,
             show=filters["show"],
             teacher_id=id_param(filters.get("teacher")),
-            batch_id=id_param(filters["batch"]),
-            subject_id=id_param(filters["subject"]),
-            status=filters["status"],
+            batch_id=id_param(filters.get("batch")),
+            subject_id=id_param(filters.get("subject")),
+            status=filters.get("status", ""),
+            date_from=calendar_day(filters.get("date_from")),
+            date_to=calendar_day(filters.get("date_to")),
         )
 
     def get_components(self) -> dict[str, Any]:
@@ -191,41 +207,239 @@ class LectureListPage(AdminLectureMixin, ListPage):
             "options": self.options(batches, "Any batch"),
         }
 
+    def subject_filter(self, value: str) -> dict[str, Any]:
+        subjects = self.subject_rows().order_by("name")
+        return {
+            "name": "subject",
+            "label": "Subject",
+            "value": value,
+            "options": self.options(subjects, "Any subject"),
+        }
+
+    def subject_rows(self) -> Any:
+        return Subject.objects.for_user(self.request.user)
+
+    def status_filter(self, value: str) -> dict[str, Any]:
+        return {
+            "name": "status",
+            "label": "Status",
+            "value": value,
+            "options": STATUS_OPTIONS,
+        }
+
+    def date_from_filter(self, value: str) -> dict[str, Any]:
+        return {"name": "date_from", "label": "From", "value": value, **DATE_FIELD}
+
+    def date_to_filter(self, value: str) -> dict[str, Any]:
+        return {"name": "date_to", "label": "To", "value": value, **DATE_FIELD}
+
     def filter_fields(self, filters: dict[str, str]) -> list[dict[str, Any]]:
-        subjects = Subject.objects.for_user(self.request.user).order_by("name")
-        fields = [{"name": "show", "value": filters["show"], "hidden": True}]
-        if "teacher" in self.filter_keys:
-            fields.append(self.teacher_filter(filters["teacher"]))
+        """One field per ``filter_keys`` entry, built by ``<key>_filter``."""
         return [
-            *fields,
-            self.batch_filter(filters["batch"]),
-            {
-                "name": "subject",
-                "label": "Subject",
-                "value": filters["subject"],
-                "options": self.options(subjects, "Any subject"),
-            },
-            {
-                "name": "status",
-                "label": "Status",
-                "value": filters["status"],
-                "options": STATUS_OPTIONS,
-            },
+            {"name": "show", "value": filters["show"], "hidden": True},
+            *(getattr(self, f"{key}_filter")(filters[key]) for key in self.filter_keys),
         ]
 
     def get_table(self, rows: list[Lecture], filters: dict[str, str]) -> Any:
-        if not rows and not Lecture.objects.for_user(self.request.user).exists():
-            return EmptyState(
-                "No lectures yet.",
-                icon="video",
-                action=Button(self.first_label, url=self.url("create")),
-            )
+        if not rows and not self.visible_lectures().exists():
+            return self.first_lecture_state()
         return self.table_class(rows, empty_title=EMPTY_TITLES[filters["show"]])
+
+    def visible_lectures(self) -> Any:
+        return Lecture.objects.for_user(self.request.user)
+
+    def first_lecture_state(self) -> EmptyState:
+        return EmptyState(
+            "No lectures yet.",
+            icon="video",
+            action=Button(self.first_label, url=self.url("create")),
+        )
 
 
 class TeacherLectureListPage(TeacherLectureMixin, LectureListPage):
     title = "My lectures"
     filter_keys = ("batch", "subject", "status")
+
+
+class StudentLectureListPage(LectureListPage):
+    """Student "My lectures" (SPEC 3): the lectures of the student's batches
+    and subjects, read only."""
+
+    portal = "student"
+    menu_key = None
+    active_item = "lectures"
+    allowed_roles = [Role.STUDENT]
+    title = "My lectures"
+    filter_keys = ("subject",)
+    table_class = StudentLectureTable
+    empty_text = "Lectures for your batches and subjects show here."
+
+    def get_actions(self) -> list[Any]:
+        return []
+
+    def first_lecture_state(self) -> EmptyState:
+        return EmptyState("No lectures yet.", text=self.empty_text, icon="video")
+
+
+class GuardianLectureListPage(StudentLectureListPage):
+    """Guardian "Lectures schedule": the student list for one child. With
+    more than one child, a filter chooses the child (the first by default)."""
+
+    portal = "guardian"
+    active_item = "lecture_schedule"
+    allowed_roles = [Role.GUARDIAN]
+    title = "Lectures schedule"
+    filter_keys = ("child", "subject")
+    empty_text = "Your child's lectures show here once they are scheduled."
+
+    @cached_property
+    def children(self) -> list[StudentProfile]:
+        return list(
+            StudentProfile.objects.for_user(self.request.user)
+            .select_related("user")
+            .order_by("user__first_name", "user__last_name", "pk")
+        )
+
+    @cached_property
+    def child(self) -> StudentProfile | None:
+        wanted = id_param(search_param(self.request.GET.get("child")))
+        chosen = [child for child in self.children if child.pk == wanted]
+        return (chosen or self.children or [None])[0]
+
+    def get_subtitle(self) -> str:
+        return f"Lectures for {self.child}." if self.child else ""
+
+    def get_filters(self) -> dict[str, str]:
+        filters = super().get_filters()
+        filters["child"] = str(self.child.pk) if self.child else ""
+        return filters
+
+    def date_from_filter(self, value: str) -> dict[str, Any]:
+        return {"name": "date_from", "label": "From", "value": value, **DATE_FIELD}
+
+    def date_to_filter(self, value: str) -> dict[str, Any]:
+        return {"name": "date_to", "label": "To", "value": value, **DATE_FIELD}
+
+    def filter_fields(self, filters: dict[str, str]) -> list[dict[str, Any]]:
+        fields = super().filter_fields(filters)
+        if len(self.children) < 2:
+            return [field for field in fields if field["name"] != "child"]
+        return fields
+
+    def child_filter(self, value: str) -> dict[str, Any]:
+        return {
+            "name": "child",
+            "label": "Child",
+            "value": value,
+            "kept": True,
+            "options": [(str(child.pk), str(child)) for child in self.children],
+        }
+
+    def subject_rows(self) -> Any:
+        if self.child is None:
+            return Subject.objects.none()
+        return super().subject_rows().filter(student_links__student=self.child)
+
+    def get_rows(self, filters: dict[str, str]) -> Any:
+        if self.child is None:
+            return Lecture.objects.none()
+        return list_lectures(
+            self.request.user,
+            show=filters["show"],
+            subject_id=id_param(filters.get("subject")),
+            student_id=self.child.pk,
+        )
+
+    def visible_lectures(self) -> Any:
+        if self.child is None:
+            return Lecture.objects.none()
+        return list_lectures(self.request.user, show="all", student_id=self.child.pk)
+
+    def first_lecture_state(self) -> EmptyState:
+        if self.child is None:
+            return EmptyState(
+                "No children are linked to this account yet.",
+                text="Contact the institute office.",
+                icon="graduation-cap",
+            )
+        return super().first_lecture_state()
+
+
+class TeacherCalendarPage(ListPage):
+    """Teacher "Schedule" (SPEC 3): own lectures in a week or month view, in
+    the teacher's time zone. A scheduled lecture links to its edit page."""
+
+    portal = "teacher"
+    active_item = "schedule"
+    allowed_roles = [Role.TEACHER]
+    title = "Schedule"
+
+    def get_actions(self) -> list[Any]:
+        url = reverse("teacher:lecture_create")
+        return [Button("Create lecture", url=url, icon="plus")]
+
+    def get_components(self) -> dict[str, Any]:
+        view = search_param(self.request.GET.get("view"))
+        view = view if view == CALENDAR_MONTH else CALENDAR_WEEK
+        today = timezone.localdate()
+        anchor = calendar_day(self.request.GET.get("date")) or today
+        span = calendar_range(view, anchor)
+        lectures = calendar_lectures(self.request.user, span.first, span.last)
+        days = calendar_days(
+            lectures,
+            span.days,
+            today=today,
+            month=span.month,
+            url_for=self.lecture_url,
+        )
+        return {
+            "filters": self.view_tabs(view, anchor),
+            "table": Calendar(
+                days,
+                view=view,
+                label=calendar_label(span),
+                previous_url=self.page_url(view, span.previous),
+                today_url=self.page_url(view, today),
+                next_url=self.page_url(view, span.next),
+                empty_text="No lectures this month.",
+            ),
+        }
+
+    def page_url(self, view: str, day: date) -> str:
+        return "?" + urlencode({"view": view, "date": day.isoformat()})
+
+    def view_tabs(self, view: str, anchor: date) -> LinkTabs:
+        return LinkTabs(
+            [
+                {"id": key, "label": label, "url": self.page_url(key, anchor)}
+                for key, label in ((CALENDAR_WEEK, "Week"), (CALENDAR_MONTH, "Month"))
+            ],
+            active=view,
+            label="Calendar views",
+        )
+
+    def lecture_url(self, lecture: Lecture) -> str | None:
+        if lecture.status != LectureStatus.SCHEDULED:
+            return None
+        return reverse("teacher:lecture_edit", kwargs={"pk": lecture.pk})
+
+
+def calendar_day(value: str | None) -> date | None:
+    """A ``YYYY-MM-DD`` query value, or None. Years at the ends of the range
+    are refused, so the previous and next pages cannot overflow."""
+    try:
+        day = date.fromisoformat(search_param(value))
+    except ValueError:
+        return None
+    return day if MINYEAR < day.year < MAXYEAR else None
+
+
+def calendar_label(span: CalendarRange) -> str:
+    """Example: October 2026, or 12 to 18 Oct 2026."""
+    if span.month is not None:
+        return date_format(span.month, "F Y")
+    first = "j M" if span.first.year == span.last.year else "j M Y"
+    return f"{date_format(span.first, first)} to {date_format(span.last, 'j M Y')}"
 
 
 # Forms
@@ -413,6 +627,12 @@ class ScheduleListPage(AdminScheduleMixin, LectureListPage):
             "table": self.schedule_table(list(page.object_list)),
             "pagination": Pagination(page, query=query),
         }
+
+    def date_from_filter(self, value: str) -> dict[str, Any]:
+        return {"name": "date_from", "label": "From", "value": value, **DATE_FIELD}
+
+    def date_to_filter(self, value: str) -> dict[str, Any]:
+        return {"name": "date_to", "label": "To", "value": value, **DATE_FIELD}
 
     def filter_fields(self, filters: dict[str, str]) -> list[dict[str, Any]]:
         fields = []

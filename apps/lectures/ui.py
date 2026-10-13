@@ -1,12 +1,16 @@
 """Lecture and schedule tables (SPEC section 3: All Lectures, My Lectures,
-Recurring Schedules) and the schedule preview (SPEC 4.6)."""
+Recurring Schedules), the schedule preview (SPEC 4.6) and the teacher's
+calendar days (roadmap 3.3)."""
 
 from __future__ import annotations
 
-from datetime import datetime
+from collections import defaultdict
+from collections.abc import Callable, Iterable
+from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.dateformat import format as date_format
 
 from apps.lectures.models import (
@@ -20,6 +24,7 @@ from apps.lectures.times import local_date, time_range
 from apps.ui.components.actions import ConfirmDialog, IconButton
 from apps.ui.components.block_stack import ButtonRow
 from apps.ui.components.data import Badge, Column, DataTable, PersonCell
+from apps.ui.components.lectures import CalendarDay, CalendarItem
 
 STATUS_TONES = {
     LectureStatus.SCHEDULED: "info",
@@ -95,6 +100,59 @@ class TeacherLectureTable(LectureTable):
     @property
     def columns(self) -> list[Column]:  # type: ignore[override]
         return [column for column in super().columns if column.key != "teacher"]
+
+
+class StudentLectureTable(LectureTable):
+    """Student "My lectures" and the guardian's lectures for one child. The
+    Join column comes with roadmap 3.4."""
+
+    portal = "student"
+
+    @property
+    def columns(self) -> list[Column]:  # type: ignore[override]
+        return [
+            Column("title", "Lecture"),
+            Column("date", "Date", lecture_date),
+            Column("time", "Time", lecture_time),
+            Column("subjects", "Subjects", lecture_subjects),
+            Column("teacher", "Teacher", lambda lecture: str(lecture.teacher)),
+            Column("status", "Status", lecture_status_badge),
+        ]
+
+
+def calendar_item(lecture: Lecture, url: str | None) -> CalendarItem:
+    return CalendarItem(
+        time=lecture_time(lecture),
+        title=lecture.title,
+        detail=f"{lecture.batch.name} · {lecture_subjects(lecture)}",
+        status=lecture.get_status_display(),
+        tone=STATUS_TONES[lecture.status],
+        url=url,
+    )
+
+
+def calendar_days(
+    lectures: Iterable[Lecture],
+    days: list[date],
+    *,
+    today: date,
+    month: date | None,
+    url_for: Callable[[Lecture], str | None],
+) -> list[CalendarDay]:
+    """One ``CalendarDay`` per day, with its lectures by the viewer's date."""
+    items: dict[date, list[CalendarItem]] = defaultdict(list)
+    for lecture in lectures:
+        day = timezone.localtime(lecture.starts_at).date()
+        items[day].append(calendar_item(lecture, url_for(lecture)))
+    return [
+        CalendarDay(
+            day=day,
+            items=items.get(day, []),
+            is_today=day == today,
+            in_month=month is None or day.month == month.month,
+        )
+        for day in days
+    ]
 
 
 def schedule_time(schedule: RecurringSchedule) -> str:

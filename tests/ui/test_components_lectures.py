@@ -99,3 +99,87 @@ def test_schedule_list_renders() -> None:
     viewer = SimpleNamespace(timezone_label="PKT")
     html = str(ScheduleList(fake_lectures(), viewer))
     assert "schedule-list" in html
+
+
+def _day(day, *items, **flags):
+    from apps.ui.components.lectures import CalendarDay
+
+    return CalendarDay(day=day, items=list(items), **flags)
+
+
+def _week(start=None, **items_by_offset):
+    from datetime import date, timedelta
+
+    start = start or date(2026, 10, 12)
+    return [
+        _day(start + timedelta(days=n), *items_by_offset.get(f"d{n}", []))
+        for n in range(7)
+    ]
+
+
+def test_calendar_week_shows_days_items_and_links() -> None:
+    from apps.ui.components.lectures import Calendar, CalendarItem
+
+    item = CalendarItem("10:00 AM to 11:00 AM PKT", "Algebra", url="/teacher/x/")
+    html = str(
+        Calendar(
+            _week(d2=[item]),
+            label="12 to 18 Oct 2026",
+            previous_url="?date=2026-10-05",
+            next_url="?date=2026-10-19",
+            today_url="?date=2026-10-13",
+        )
+    )
+
+    assert html.count('class="calendar-day ') == 7
+    assert "Wed 14 Oct" in html
+    assert '<a href="/teacher/x/"' in html
+    assert html.count(">No lectures<") == 6
+    assert 'aria-label="Previous week"' in html
+    assert 'href="?date=2026-10-19"' in html
+
+
+def test_calendar_item_with_unsafe_link_is_plain_text() -> None:
+    from apps.ui.components.lectures import Calendar, CalendarItem
+
+    item = CalendarItem("10:00 AM", "Algebra", url="javascript:alert(1)")
+    html = str(Calendar(_week(d0=[item])))
+
+    assert "javascript:" not in html
+    assert '<div class="calendar-item' in html
+
+
+def test_calendar_month_has_week_rows_and_a_phone_list() -> None:
+    from datetime import date, timedelta
+
+    from apps.ui.components.lectures import Calendar, CalendarItem
+
+    first = date(2026, 9, 28)
+    days = [
+        _day(
+            first + timedelta(days=n),
+            *(
+                [CalendarItem("9:00 AM", "Busy day")]
+                if n in (3, 35)  # 1 Oct and 2 Nov
+                else []
+            ),
+            in_month=(first + timedelta(days=n)).month == 10,
+            is_today=n == 15,
+        )
+        for n in range(42)
+    ]
+    html = str(Calendar(days, view="month", label="October 2026"))
+    phone = html.split("calendar-agenda", 1)[1]
+
+    assert html.count('last:border-b-0">') == 6
+    assert html.count('aria-current="date"') == 1
+    assert "Thu 1 Oct" in phone
+    assert "Mon 2 Nov" not in phone  # outside the month
+
+
+def test_calendar_month_with_nothing_says_so() -> None:
+    from apps.ui.components.lectures import Calendar
+
+    html = str(Calendar(_week(), view="month", empty_text="No lectures this month."))
+
+    assert "No lectures this month." in html

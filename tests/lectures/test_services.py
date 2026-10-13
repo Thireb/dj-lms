@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import timedelta
+from zoneinfo import ZoneInfo
 
 import pytest
 from apps.academics.models import Batch, Subject, TeacherBatchSubject
@@ -15,6 +16,8 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 from tests.lectures.conftest import MEET_URL, add_lecture, details, put_at, soon
+from tests.people.conftest import student
+from tests.school import link_guardian, link_student
 
 
 def _create(school, **fields):
@@ -401,6 +404,54 @@ def test_list_filters(school, admin_a) -> None:
     assert _list_titles(admin_a, subject_id=school.physics.pk) == ["Physics"]
     assert _list_titles(admin_a, status="cancelled") == []
     assert len(_list_titles(admin_a, status="not-a-status")) == 2
+
+
+@pytest.mark.django_db
+def test_date_range_uses_viewer_days_and_includes_both_ends(school, admin_a) -> None:
+    """Lectures at 23:00 UTC are on the next day in Karachi (UTC+5)."""
+    first = add_lecture(school, title="First", starts_at=soon(days=2, hour=23))
+    add_lecture(school, title="Second", starts_at=soon(days=3, hour=23))
+    add_lecture(school, title="Third", starts_at=soon(days=4, hour=23))
+    karachi_day = timezone.localtime(first.starts_at, ZoneInfo("Asia/Karachi")).date()
+    later = karachi_day + timedelta(days=1)
+
+    with timezone.override("Asia/Karachi"):
+        assert _list_titles(admin_a, date_from=later) == ["Second", "Third"]
+        assert _list_titles(admin_a, date_to=later) == ["First", "Second"]
+        assert _list_titles(admin_a, date_from=later, date_to=later) == ["Second"]
+    with timezone.override("UTC"):
+        assert _list_titles(admin_a, date_from=later, date_to=later) == ["Third"]
+
+
+@pytest.mark.django_db
+def test_student_filter_keeps_one_child(school, institute_a) -> None:
+    """A guardian of two children sees one child's lectures at a time."""
+    link_guardian(school.student_2, "g1-a@example.com")
+    add_lecture(school, title="Math")
+    add_lecture(
+        school,
+        title="Physics",
+        teacher=school.teacher_2,
+        batch=school.evening,
+        subjects=[school.physics],
+    )
+    guardian = school.guardian_1.user
+
+    assert _list_titles(guardian) == ["Math", "Physics"]
+    assert _list_titles(guardian, student_id=school.student_1.pk) == ["Math"]
+    assert _list_titles(guardian, student_id=school.student_2.pk) == ["Physics"]
+
+
+@pytest.mark.django_db
+def test_student_filter_needs_batch_and_subject_on_one_row(school, institute_a) -> None:
+    """Morning/Physics plus Evening/Math does not match a Morning/Math lecture."""
+    mixed = student(institute_a, "mixed@example.com")
+    link_student(
+        mixed, {school.morning: [school.physics], school.evening: [school.math]}
+    )
+    add_lecture(school, title="Math")
+
+    assert _list_titles(school.teacher_1.user, student_id=mixed.pk) == []
 
 
 @pytest.mark.django_db
