@@ -271,9 +271,10 @@ class LectureFormPage(AdminLectureMixin, FormPage):
     def warn_batch_clashes(self, saved: SavedLecture) -> None:
         for clash in saved.batch_clashes:
             when = time_range(clash.starts_at, clash.ends_at)
+            # No title: on the teacher portal it may be another teacher's.
             messages.warning(
                 self.request,
-                f"{clash.batch.name} also has {clash.title} on "
+                f"{clash.batch.name} also has a lecture on "
                 f"{local_date(clash.starts_at)}, {when}.",
             )
 

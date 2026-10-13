@@ -1708,6 +1708,12 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "        style_widgets(self)  # the fields added after BaseForm styled the others\n",
         "",
     ),
+    (
+        "batch warning hides the title",
+        "apps/lectures/views.py",
+        '                f"{clash.batch.name} also has a lecture on "\n',
+        '                f"{clash.batch.name} also has {clash.title} on "\n',
+    ),
 ]
 
 

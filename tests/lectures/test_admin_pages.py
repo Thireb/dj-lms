@@ -346,7 +346,8 @@ def test_batch_clash_saves_with_a_warning(admin_client, school) -> None:
 
     assert Lecture.unscoped.count() == 2
     assert "toast-warning" in html
-    assert "Morning also has Algebra basics on " in html
+    assert "Morning also has a lecture on " in html
+    assert "Algebra basics" not in html.split("toast-warning")[1].split("</div>")[0]
 
 
 # Edit
