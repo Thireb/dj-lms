@@ -1669,8 +1669,8 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
     (
         "lecture edit uses for_user",
         "apps/lectures/views.py",
-        "        lectures = Lecture.objects.for_user(self.request.user).prefetch_related(\n",
-        "        lectures = Lecture.unscoped.prefetch_related(\n",
+        '            Lecture.objects.for_user(self.request.user)\n            .select_related("schedule")\n',
+        '            Lecture.unscoped.all()\n            .select_related("schedule")\n',
     ),
     (
         "teacher without profile 403",

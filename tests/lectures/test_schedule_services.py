@@ -369,6 +369,21 @@ def test_stop_cancels_lectures_not_started_and_blocks_changes(school) -> None:
 
 
 @pytest.mark.django_db
+def test_a_stopped_schedule_adds_no_later_dates(school) -> None:
+    _set_horizon(school.morning.institute, 1)
+    start = karachi_today() + timedelta(days=1)
+    schedule = add_schedule(school, end_date=start + timedelta(days=20))
+    _in_context(school, stop_schedule, schedule)
+    before = len(schedule_lectures(schedule))
+
+    a_week_later = timezone.now() + timedelta(days=7)
+    result = _in_context(school, generate_lectures, schedule, now=a_week_later)
+
+    assert result.created == 0
+    assert len(schedule_lectures(schedule)) == before
+
+
+@pytest.mark.django_db
 def test_editing_a_schedule_lecture_marks_it_as_edited_alone(school) -> None:
     lecture = schedule_lectures(add_schedule(school))[0]
 
