@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import datetime, timedelta
 
 import pytest
@@ -52,6 +53,14 @@ def put_at(lecture: Lecture, starts_at: datetime) -> Lecture:
     Lecture.unscoped.filter(pk=lecture.pk).update(starts_at=starts_at)
     lecture.refresh_from_db()
     return lecture
+
+
+def select_values(html: str, name: str) -> list[str]:
+    """The option values of one select. Check a pk inside its own select:
+    the pks of other tables can have the same number."""
+    match = re.search(rf'<select name="{name}".*?</select>', html, re.S)
+    assert match, name
+    return re.findall(r'<option value="([^"]*)"', match.group(0))
 
 
 def signed_in(user) -> Client:

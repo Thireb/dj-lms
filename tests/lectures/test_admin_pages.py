@@ -12,12 +12,20 @@ from apps.core.roles import Role
 from apps.core.tenancy import tenant_context
 from apps.lectures.models import Lecture, LectureStatus
 from apps.lectures.views import LectureCreatePage, LectureListPage
+from apps.people.models import ProfileStatus, TeacherProfile
 from django.test import RequestFactory
 from django.urls import reverse
 from django.utils import timezone
 
 from tests.conftest import cell, make_user, table_row
-from tests.lectures.conftest import MEET_URL, add_lecture, put_at, signed_in, soon
+from tests.lectures.conftest import (
+    MEET_URL,
+    add_lecture,
+    put_at,
+    select_values,
+    signed_in,
+    soon,
+)
 
 KARACHI = ZoneInfo("Asia/Karachi")  # institute A's time zone
 
@@ -203,9 +211,11 @@ def test_finished_lecture_has_no_edit_action(admin_client, school) -> None:
 def test_filter_dropdowns_list_own_institute_only(admin_client, school) -> None:
     html = admin_client.get(_url("list")).content.decode()
 
-    assert f'<option value="{school.teacher_1.pk}">' in html
-    assert f'value="{school.teacher_b.pk}"' not in html
-    assert f'value="{school.batch_b.pk}"' not in html
+    teachers = select_values(html, "teacher")
+    batches = select_values(html, "batch")
+    assert str(school.teacher_1.pk) in teachers
+    assert str(school.teacher_b.pk) not in teachers
+    assert str(school.batch_b.pk) not in batches
 
 
 # Add
@@ -237,6 +247,20 @@ def test_add_form_offers_the_chosen_teacher_pairs_only(admin_client, school) -> 
 @pytest.mark.parametrize("value", ["x", "", "99999"])
 def test_bad_teacher_param_offers_nothing(admin_client, school, value) -> None:
     html = admin_client.get(_url("create"), {"teacher": value}).content.decode()
+
+    assert "Choose a teacher to see their batches." in html
+
+
+@pytest.mark.django_db
+def test_inactive_teacher_param_offers_nothing(admin_client, school) -> None:
+    # unscoped: test set-up outside a tenant context.
+    TeacherProfile.unscoped.filter(pk=school.teacher_2.pk).update(
+        status=ProfileStatus.INACTIVE
+    )
+
+    html = admin_client.get(
+        _url("create"), {"teacher": school.teacher_2.pk}
+    ).content.decode()
 
     assert "Choose a teacher to see their batches." in html
 

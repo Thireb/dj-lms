@@ -13,7 +13,13 @@ from django.urls import reverse
 from django.utils import timezone
 
 from tests.conftest import make_user, table_row
-from tests.lectures.conftest import MEET_URL, add_lecture, signed_in, soon
+from tests.lectures.conftest import (
+    MEET_URL,
+    add_lecture,
+    select_values,
+    signed_in,
+    soon,
+)
 
 
 def _url(action: str, pk: int | None = None) -> str:
@@ -87,8 +93,9 @@ def test_list_shows_own_lectures_without_a_teacher_column(school) -> None:
 def test_list_filters_offer_own_batches_only(school) -> None:
     html = signed_in(school.teacher_1.user).get(_url("list")).content.decode()
 
-    assert f'<option value="{school.morning.pk}">Morning</option>' in html
-    assert f'value="{school.evening.pk}"' not in html
+    batches = select_values(html, "batch")
+    assert str(school.morning.pk) in batches
+    assert str(school.evening.pk) not in batches
     assert 'name="teacher"' not in html
 
 
