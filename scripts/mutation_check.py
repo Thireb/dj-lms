@@ -1245,12 +1245,6 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "        response = self.render_to_response(self.get_context_data())\n",
     ),
     (
-        "dashboard hides people without menu",
-        "apps/people/views.py",
-        "        if not people_link:",
-        "        if False:",
-    ),
-    (
         "safe_url refuses //host",
         "apps/ui/safe_url.py",
         '    if cleaned.startswith("//"):\n        return ""\n',
@@ -1423,6 +1417,60 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "apps/ui/templates/ui/components/notification_bell.html",
         'class="notification-bell icon-btn"',
         'class="notification-bell text-surface"',
+    ),
+    (
+        "dashboard names need people menu",
+        "apps/people/views.py",
+        "        show_names = self.can_open(menu_keys.PEOPLE)",
+        "        show_names = True",
+    ),
+    (
+        "first hero action is light",
+        "apps/people/views.py",
+        'variant="light" if index == 0 else "glass"',
+        'variant="glass"',
+    ),
+    (
+        "ring dash follows the value",
+        "apps/ui/components/data.py",
+        "circumference * ctx['value'] / 100",
+        "circumference",
+    ),
+    (
+        "greeting noon boundary",
+        "apps/people/home.py",
+        "    if now.hour < 12:",
+        "    if now.hour <= 12:",
+    ),
+    (
+        "teacher counts active students",
+        "apps/people/home.py",
+        ".filter(status=ProfileStatus.ACTIVE)",
+        "",
+    ),
+    (
+        "up next before stat cards",
+        "apps/ui/templates/ui/layouts/pages/dashboard.html",
+        "  {% if feature %}{{ feature }}{% endif %}\n",
+        "",
+    ),
+    (
+        "empty state frame optional",
+        "apps/ui/templates/ui/components/empty_state.html",
+        "{% if framed %}",
+        "{% if True %}",
+    ),
+    (
+        "hero stat notes optional",
+        "apps/ui/templates/ui/components/hero_banner.html",
+        "{% if note %}<dd",
+        "{% if True %}<dd",
+    ),
+    (
+        "top menu groups never wrap",
+        "apps/ui/templates/ui/components/top_nav.html",
+        "items-center whitespace-nowrap",
+        "items-center",
     ),
 ]
 

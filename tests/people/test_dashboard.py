@@ -75,8 +75,11 @@ def test_dashboard_page_shows_counts_and_recent_people(school, institute_a, name
     page = client.get(reverse(name)).content.decode()
 
     assert "Institute A" in page  # hero banner
-    assert ">Students<" in page and ">Running batches<" in page
-    assert "3 active, 0 inactive" in page
+    hero = page[page.index("hero-stats") :]
+    assert ">Students</dt>" in hero and ">3 active</dd>" in hero
+    assert ">Running batches</dt>" in hero and ">of 2</dd>" in hero
+    assert ">3 active<" in page and ">0 inactive<" in page  # people cards
+    assert 'aria-label="Active students: 100%"' in page  # ring
     assert "s1-a@example.com" in page  # recent students (no names in fixture)
     assert "s1-b@example.com" not in page  # institute B
     assert f'href="{reverse("admin:student_list")}"' in page
@@ -127,4 +130,34 @@ def test_hero_comes_before_the_stat_cards(school, institute_a) -> None:
 
     page = client.get(reverse("admin:home")).content.decode()
 
-    assert 0 < page.index("hero-banner") < page.index("stat-card")
+    assert 0 < page.index("hero-banner") < page.index("section-card")
+    assert "stat-card" not in page  # the numbers live in the hero
+
+
+@pytest.mark.django_db
+def test_first_hero_action_is_the_light_button(school, institute_a) -> None:
+    client = Client()
+    client.force_login(_admin(institute_a))
+
+    page = client.get(reverse("admin:home")).content.decode()
+
+    hero = page[page.index("hero-banner") : page.index("hero-stats")]
+    assert (
+        hero.index("btn-light") < hero.index("Enrol student") < hero.index("btn-glass")
+    )
+
+
+@pytest.mark.django_db
+def test_sub_admin_without_people_sees_counts_but_no_names(school, institute_a):
+    user = _admin(institute_a, role=Role.SUB_ADMIN)
+    user.allowed_menus = ["dashboards"]
+    request = RequestFactory().get(reverse("admin:home"))
+    request.user = user
+    request.institute = institute_a
+
+    page = AdminDashboardPage.as_view()(request).content.decode()
+
+    assert ">Total students<" in page
+    assert "person-list" not in page
+    assert "s1-a@example.com" not in page
+    assert "View all" not in page

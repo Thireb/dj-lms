@@ -1,7 +1,7 @@
 {% load ui_icons %}<div class="profile-menu relative" x-data="{ open: false }" @click.outside="open = false" @keydown.escape="open = false">
   <button type="button" class="flex h-10 items-center gap-2.5 rounded-full border border-border bg-surface py-1 pl-1 pr-3 text-left transition-colors hover:border-border-strong" @click="open = !open" aria-haspopup="true" :aria-expanded="open.toString()" aria-expanded="false" aria-label="Account menu">
     <span class="grid h-8 w-8 flex-none place-items-center rounded-full bg-primary-50 text-xs font-bold text-primary" aria-hidden="true">{{ badge.initials }}</span>
-    <span class="hidden leading-tight sm:block"><span class="block max-w-[11rem] truncate text-sm font-semibold text-text">{{ badge.name }}</span>{% if badge.role %}<span class="block text-xs text-muted">{{ badge.role }}</span>{% endif %}</span>
+    <span class="hidden leading-tight min-[1400px]:block"><span class="block max-w-[11rem] truncate text-sm font-semibold text-text">{{ badge.name }}</span>{% if badge.role %}<span class="block text-xs text-muted">{{ badge.role }}</span>{% endif %}</span>
     {% icon "chevron-down" "h-3.5 w-3.5 text-muted" %}
   </button>
   <ul x-show="open" x-cloak class="absolute right-0 z-40 mt-2 grid w-64 gap-0.5 rounded-2xl border border-border bg-surface p-1.5 text-text shadow-[var(--shadow-pop)]">

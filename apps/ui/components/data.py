@@ -143,6 +143,55 @@ class ProgressBar(Component):
         )
 
 
+class ProgressRing(Component):
+    """Percent as a ring (plain SVG, no chart library); the label is for
+    screen readers, the number shows in the middle."""
+
+    template_name = "ui/components/progress_ring.html"
+    radius = 34
+
+    def __init__(self, value, label="", tone="primary", **props):
+        super().__init__(
+            value=clamp_progress_value(value), label=label, tone=tone, **props
+        )
+
+    def get_context(self):
+        ctx = super().get_context()
+        circumference = 2 * 3.14159 * self.radius
+        ctx["radius"] = self.radius
+        ctx["circumference"] = f"{circumference:.1f}"
+        ctx["dash"] = f"{circumference * ctx['value'] / 100:.1f}"
+        return ctx
+
+
+class KpiSummary(Component):
+    """One big number with its label, status chips and an optional ring."""
+
+    template_name = "ui/components/kpi_summary.html"
+
+    def __init__(self, value, label, chips=None, ring=None, **props):
+        super().__init__(
+            value=value, label=label, chips=chips or [], ring=ring, **props
+        )
+
+
+class PersonList(Component):
+    """Short list of people (``PersonCell``) with a chip on the right."""
+
+    template_name = "ui/components/person_list.html"
+
+    def __init__(self, rows, title="", empty_text="No one yet.", **props):
+        super().__init__(rows=rows, title=title, empty_text=empty_text, **props)
+
+    def render(self, request=None):
+        ctx = self.get_context()
+        ctx["rows"] = [
+            (render_child(person, request), render_child(trailing, request))
+            for person, trailing in ctx["rows"]
+        ]
+        return render_component_template(self, ctx, request=request)
+
+
 class ChartCard(Component):
     template_name = "ui/components/chart_card.html"
 
@@ -158,5 +207,8 @@ class ChartCard(Component):
 class EmptyState(Component):
     template_name = "ui/components/empty_state.html"
 
-    def __init__(self, title, text="", action=None, icon="inbox", **props):
-        super().__init__(title=title, text=text, action=action, icon=icon, **props)
+    def __init__(self, title, text="", action=None, icon="inbox", framed=True, **props):
+        """``framed=False`` drops the dashed box (when already inside a card)."""
+        super().__init__(
+            title=title, text=text, action=action, icon=icon, framed=framed, **props
+        )

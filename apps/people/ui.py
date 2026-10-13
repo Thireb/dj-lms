@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 from django.urls import reverse
-from django.utils import timezone
-from django.utils.dateformat import format as format_date
 
+from apps.people.dashboard import PeopleCounts
 from apps.people.models import (
     PortalAccessRule,
     ProfileStatus,
@@ -14,7 +13,15 @@ from apps.people.models import (
 )
 from apps.ui.components.actions import ConfirmDialog, IconButton
 from apps.ui.components.block_stack import BlockStack, ButtonRow
-from apps.ui.components.data import Badge, Column, DataTable, PersonCell
+from apps.ui.components.data import (
+    Badge,
+    Column,
+    DataTable,
+    KpiSummary,
+    PersonCell,
+    PersonList,
+    ProgressRing,
+)
 
 Profile = StudentProfile | TeacherProfile
 
@@ -126,28 +133,51 @@ class BulkPreviewTable(DataTable):
     empty_title = "No rows."
 
 
-def _added_on(profile: Profile) -> str:
-    return format_date(timezone.localtime(profile.created_at), "j M Y")
+def _recent_row(profile: Profile, extra: str) -> tuple[PersonCell, Badge]:
+    detail = ", ".join(part for part in (_code(profile), extra) if part)
+    return PersonCell(str(profile), detail=detail), profile_status_badge(profile)
 
 
-class RecentStudentTable(DataTable):
-    columns = [
-        Column("name", "Student", person),
-        Column("batches", "Batches", _batches),
-        Column("status", "Status", profile_status_badge),
-        Column("added", "Enrolled", _added_on),
-    ]
-    empty_title = "No students yet."
+def people_summary(
+    counts: PeopleCounts,
+    recent: list[StudentProfile] | list[TeacherProfile],
+    *,
+    noun: str,
+    show_names: bool,
+) -> BlockStack:
+    """Total, active and inactive chips, a ring, and the newest people.
 
-
-class RecentTeacherTable(DataTable):
-    columns = [
-        Column("name", "Teacher", person),
-        Column("subjects", "Subjects", _subjects),
-        Column("status", "Status", profile_status_badge),
-        Column("added", "Added", _added_on),
-    ]
-    empty_title = "No teachers yet."
+    ``show_names`` is False for a sub-admin without the People menu: names
+    are People data, not Dashboards data (audit M9).
+    """
+    is_student = noun == "students"
+    summary = KpiSummary(
+        counts.total,
+        f"Total {noun}",
+        chips=[
+            Badge(f"{counts.active} active", tone="success"),
+            Badge(
+                f"{counts.inactive} inactive",
+                tone="danger" if counts.inactive else "neutral",
+            ),
+        ],
+        ring=ProgressRing(
+            counts.active_percent,
+            label=f"Active {noun}",
+            tone="primary" if is_student else "indigo",
+        ),
+    )
+    if not show_names:
+        return BlockStack(blocks=[summary])
+    extra = _batches if is_student else _subjects
+    rows = [_recent_row(profile, extra(profile)) for profile in recent]
+    title = "Recently enrolled" if is_student else "Recently added"
+    return BlockStack(
+        blocks=[
+            summary,
+            PersonList(rows, title=title, empty_text=f"No {noun} yet."),
+        ]
+    )
 
 
 def _access(student: StudentProfile) -> tuple[bool, bool]:

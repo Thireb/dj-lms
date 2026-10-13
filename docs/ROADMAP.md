@@ -62,7 +62,7 @@ The product owner did not accept the current look (navigation, tables, forms, si
 - [ ] R4 Build: tokens, shells (top menu, sidebar), public pages, tables, forms, dashboards and every Phase 1-2 page; checked at 360px and desktop in a browser; new walkthrough video.
   - [x] R4a Foundation: tokens, font, Lucide icons, shells, public pages, base components.
   - [x] R4b Tables (people as avatar cards, cards on phones), filters, pagination, form sections with explanations.
-  - [ ] R4c Dashboards and portal home pages; walkthrough video.
+  - [x] R4c Dashboards and portal home pages; walkthrough video.
 - [ ] R5 Owner sign-off. Then Phase 3 resumes.
 
 ## Phase 3: Lectures (on hold until R5)

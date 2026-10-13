@@ -1,8 +1,9 @@
 {{ header }}
 <div class="space-y-6">
   {% if hero %}{{ hero }}{% endif %}
+  {% if feature %}{{ feature }}{% endif %}
   {% if stat_cards %}
-    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div class="grid gap-3 sm:gap-4 {% if stat_cards|length == 3 %}grid-cols-3{% else %}grid-cols-2 lg:grid-cols-4{% endif %}">
       {% for card in stat_cards %}{{ card }}{% endfor %}
     </div>
   {% endif %}
@@ -11,5 +12,9 @@
       {% for action in quick_actions %}{{ action }}{% endfor %}
     </div>
   {% endif %}
-  {% for section in sections %}{{ section }}{% endfor %}
+  {% if sections %}
+    <div class="grid gap-5 {% if section_columns == 2 %}lg:grid-cols-2 lg:items-start{% endif %}">
+      {% for section in sections %}{{ section }}{% endfor %}
+    </div>
+  {% endif %}
 </div>

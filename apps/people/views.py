@@ -14,9 +14,7 @@ from django.core.paginator import Paginator
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
-from django.utils import timezone
 from django.utils.cache import patch_cache_control
-from django.utils.dateformat import format as format_date
 
 from apps.academics.models import Batch, ClassLabel
 from apps.core import menus as menu_keys
@@ -58,20 +56,18 @@ from apps.people.services import (
 from apps.people.ui import (
     BulkPreviewTable,
     PortalAccessTable,
-    RecentStudentTable,
-    RecentTeacherTable,
     StudentTable,
     TeacherTable,
+    people_summary,
     profile_status_dialog,
 )
 from apps.ui.components.actions import (
     Button,
     ConfirmDialog,
-    QuickAction,
     SignOutForm,
 )
 from apps.ui.components.block_stack import BlockStack
-from apps.ui.components.data import EmptyState, ProgressBar, StatCard
+from apps.ui.components.data import EmptyState
 from apps.ui.components.forms import CrispyForm, PortalPostForm
 from apps.ui.components.layout import (
     HeroBanner,
@@ -591,6 +587,7 @@ class AdminDashboardPage(DashboardPage):
     menu_key = menu_keys.DASHBOARDS
     allowed_roles = [Role.INSTITUTE_ADMIN, Role.SUB_ADMIN]
     title = "Main dashboard"
+    section_columns = 2
 
     # (label, icon, url name, menu key the link needs)
     QUICK_ACTIONS = [
@@ -608,79 +605,55 @@ class AdminDashboardPage(DashboardPage):
         return user_has_menu(self.request.user, key)
 
     def get_hero(self) -> HeroBanner:
-        today = format_date(timezone.localdate(), "l, j M Y")
-        return HeroBanner(title=self.get_institute().name, subtitle=today)
-
-    def get_stat_cards(self) -> list[Any]:
         data = self.data
         students, teachers = data.students, data.teachers
-        return [
-            StatCard(
-                students.total,
-                "Students",
-                note=f"{students.active} active, {students.inactive} inactive",
-                icon="graduation-cap",
-            ),
-            StatCard(
-                teachers.total,
-                "Teachers",
-                note=f"{teachers.active} active, {teachers.inactive} inactive",
-                icon="presentation",
-            ),
-            StatCard(
-                data.batches_running,
-                "Running batches",
-                note=f"With active students, of {data.batches_total} batches",
-                icon="users",
-            ),
-        ]
+        institute = self.get_institute()
+        address = institute.address.strip().splitlines()
+        return HeroBanner(
+            title=institute.name,
+            subtitle=address[0] if address else "",
+            actions=self.get_hero_actions(),
+            stats=[
+                (students.total, "Students", f"{students.active} active"),
+                (teachers.total, "Teachers", f"{teachers.active} active"),
+                (data.batches_running, "Running batches", f"of {data.batches_total}"),
+            ],
+        )
 
-    def get_quick_actions(self) -> list[Any]:
-        return [
-            QuickAction(label, icon, reverse(url_name))
+    def get_hero_actions(self) -> list[Button]:
+        allowed = [
+            (label, icon, url_name)
             for label, icon, url_name, key in self.QUICK_ACTIONS
             if self.can_open(key)
+        ]
+        return [
+            Button(
+                label,
+                variant="light" if index == 0 else "glass",
+                url=reverse(url_name),
+                icon=icon,
+            )
+            for index, (label, icon, url_name) in enumerate(allowed)
         ]
 
     def get_sections(self) -> list[Any]:
         data = self.data
-        people_link = self.can_open(menu_keys.PEOPLE)
-        sections = [
-            SectionCard(
-                title="Active people",
-                body=BlockStack(
-                    blocks=[
-                        ProgressBar(
-                            data.students.active_percent,
-                            label=f"Students active: {data.students.active} "
-                            f"of {data.students.total}",
-                            tone="success",
-                        ),
-                        ProgressBar(
-                            data.teachers.active_percent,
-                            label=f"Teachers active: {data.teachers.active} "
-                            f"of {data.teachers.total}",
-                            tone="success",
-                        ),
-                    ]
-                ),
-            ),
+        show_names = self.can_open(menu_keys.PEOPLE)
+        cards = [
+            ("Students", "graduation-cap", data.students, data.recent_students),
+            ("Teachers", "presentation", data.teachers, data.recent_teachers),
         ]
-        if not people_link:
-            # Names of people are People-menu data, not Dashboards data (M9).
-            return sections
+        list_urls = {"Students": "admin:student_list", "Teachers": "admin:teacher_list"}
         return [
-            *sections,
             SectionCard(
-                title="Recent students",
-                body=RecentStudentTable(data.recent_students),
-                link_url=reverse("admin:student_list"),
-            ),
-            SectionCard(
-                title="Recent teachers",
-                body=RecentTeacherTable(data.recent_teachers),
-                link_url=reverse("admin:teacher_list"),
-            ),
+                title=title,
+                icon=icon,
+                body=people_summary(
+                    counts, recent, noun=title.lower(), show_names=show_names
+                ),
+                link_url=reverse(list_urls[title]) if show_names else None,
+            )
+            for title, icon, counts, recent in cards
         ]
 
 
