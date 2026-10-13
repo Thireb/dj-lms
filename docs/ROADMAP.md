@@ -47,7 +47,7 @@ From 2.8 on, every phase that adds a model also extends `seed_demo` with that mo
 
 ## Phase R: Redesign (current priority, decided 2026-10-09)
 
-The product owner did not accept the current look (navigation, tables, forms, sign-in, all of it). The whole website is redesigned before new features. **Phase 3 is on hold until R5 is signed off.**
+The product owner did not accept the current look (navigation, tables, forms, sign-in, all of it). The whole website is redesigned before new features. Phase 3 was on hold until R5; R5 is signed off (2026-10-13).
 
 - Brand: Lexicon (https://lexicon.edu.pk), the institute this LMS is for. Use its colours, type and theme.
 - UI/UX: modelled on IgnisLMS, the reference product: layout, navigation and interaction patterns only. `AGENTS.md` still applies: never copy its name, logo, text or images.
@@ -59,13 +59,14 @@ The product owner did not accept the current look (navigation, tables, forms, si
 - [x] R2 Design system for approval: tokens (colour, type, spacing, radius, shadow, motion) and every component with previews, for the four portals, super admin and the public pages (sign-in, set password, forgot password, access paused). The owner approves before any template changes.
   - Approved by the owner on 2026-10-09 (proposal artifact above). Decisions: one Lexicon look for every portal (no per-portal colours); light only, no dark mode; the "LEX" mark stands in until an SVG logo arrives; "sign-up pages" means the sign-in and set-password pages (there is no self-registration).
 - [x] R3 Docs: rewrite `UI-GUIDELINES.md` and `COMPONENTS.md` to the approved system.
-- [ ] R4 Build: tokens, shells (top menu, sidebar), public pages, tables, forms, dashboards and every Phase 1-2 page; checked at 360px and desktop in a browser; new walkthrough video.
+- [x] R4 Build: tokens, shells (top menu, sidebar), public pages, tables, forms, dashboards and every Phase 1-2 page; checked at 360px and desktop in a browser; new walkthrough video.
   - [x] R4a Foundation: tokens, font, Lucide icons, shells, public pages, base components.
   - [x] R4b Tables (people as avatar cards, cards on phones), filters, pagination, form sections with explanations.
   - [x] R4c Dashboards and portal home pages; walkthrough video.
-- [ ] R5 Owner sign-off. Then Phase 3 resumes.
+- [x] R5 Owner sign-off. Then Phase 3 resumes.
+  - Signed off by the owner on 2026-10-13 after the R4c walkthrough. The redesign audit findings (RA1-RA8 in `BACKLOG.md`) are fixed before Phase 3.
 
-## Phase 3: Lectures (on hold until R5)
+## Phase 3: Lectures
 
 - [ ] 3.1 Lecture CRUD with manual meeting link.
 - [ ] 3.2 Recurring schedule builder (Celery task generates lectures).

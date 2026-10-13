@@ -16,3 +16,8 @@ urlpatterns = [
     path("", root_redirect, name="root"),
     path("", include("apps.ui.urls")),
 ]
+
+# Styled error pages (redesign audit RA1); used when DEBUG is False.
+handler403 = "apps.core.responses.handle_403"
+handler404 = "apps.core.responses.handle_404"
+handler500 = "apps.core.responses.handle_500"

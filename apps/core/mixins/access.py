@@ -6,9 +6,10 @@ from typing import Any
 
 from django.contrib.auth.views import redirect_to_login
 from django.core.exceptions import ImproperlyConfigured
-from django.http import HttpRequest, HttpResponse, HttpResponseForbidden
+from django.http import HttpRequest, HttpResponse
 from django.template.loader import render_to_string
 
+from apps.core.responses import forbidden_response
 from apps.core.roles import Role, user_is_super_admin, user_role
 
 
@@ -29,13 +30,13 @@ class RoleRequiredMixin:
 
     def dispatch(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
         if not self.allowed_roles:
-            return HttpResponseForbidden("Forbidden.")
+            return forbidden_response(request)
         user = request.user
         if not getattr(user, "is_authenticated", False):
             return redirect_to_login(request.get_full_path())
         role = user_role(user)
         if role not in self.allowed_roles:
-            return HttpResponseForbidden("Forbidden.")
+            return forbidden_response(request)
         return super().dispatch(request, *args, **kwargs)
 
 
@@ -73,7 +74,7 @@ class TenantRequiredMixin:
             return super().dispatch(request, *args, **kwargs)
         institute = getattr(request, "institute", None)
         if institute is None:
-            return HttpResponseForbidden("No institute assigned.")
+            return forbidden_response(request)
         return super().dispatch(request, *args, **kwargs)
 
 
@@ -105,7 +106,7 @@ class MenuRequiredMixin:
         role = user_role(user) if authenticated else None
 
         if role == Role.SUB_ADMIN and not key:
-            return HttpResponseForbidden("Forbidden.")
+            return forbidden_response(request)
 
         if (
             portal == "admin"
@@ -120,5 +121,5 @@ class MenuRequiredMixin:
         if key and role == Role.SUB_ADMIN:
             allowed = getattr(user, "allowed_menus", None) or []
             if key not in allowed:
-                return HttpResponseForbidden("Forbidden.")
+                return forbidden_response(request)
         return super().dispatch(request, *args, **kwargs)
