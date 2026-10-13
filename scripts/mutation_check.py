@@ -1387,8 +1387,8 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
     (
         "filter bar clear only when active",
         "apps/ui/templates/ui/components/filter_bar.html",
-        '{% if active %}<a href="?"',
-        '{% if True %}<a href="?"',
+        '{% if active %}<a href="?{{ clear_query }}"',
+        '{% if True %}<a href="?{{ clear_query }}"',
     ),
     (
         "filter value read from objects",
@@ -1699,8 +1699,8 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
     (
         "hidden filter is not clearable",
         "apps/ui/components/nav.py",
-        '            _value(f) for f in ctx["filters"] if not _get(f, "hidden", False)\n',
-        '            _value(f) for f in ctx["filters"]\n',
+        '            if not _get(f, "hidden", False) and not _get(f, "kept", False)\n',
+        '            if not _get(f, "kept", False)\n',
     ),
     (
         "lecture form styles added fields",
