@@ -178,3 +178,38 @@ def test_seed_takes_over_phase_1_users_without_profiles(demo_env) -> None:
     assert StudentProfile.unscoped.filter(
         user__email="demo-student@example.com"
     ).exists()
+
+
+def _demo_lectures():
+    from apps.lectures.models import Lecture, RecurringSchedule
+
+    institute = Institute.objects.get(name="Demo Institute")
+    # unscoped: test assertion outside a tenant context.
+    return (
+        Lecture.unscoped.filter(institute=institute),
+        RecurringSchedule.unscoped.filter(institute=institute),
+    )
+
+
+@pytest.mark.django_db
+def test_seed_demo_adds_a_schedule_and_lectures_once(demo_env) -> None:
+    call_command("seed_demo")
+    lectures, schedules = _demo_lectures()
+    first = lectures.count()
+    call_command("seed_demo")
+
+    teacher = TeacherProfile.unscoped.get(user__email="demo-teacher@example.com")
+    assert schedules.count() == 1
+    assert schedules.get().teacher == teacher
+    assert lectures.filter(schedule__isnull=True).count() == 2
+    assert first > 10  # Mon, Wed and Fri for the next 8 weeks
+    assert lectures.count() == first
+
+
+@pytest.mark.django_db
+def test_reset_removes_demo_lectures(demo_env) -> None:
+    call_command("seed_demo")
+    call_command("seed_demo", "--reset")
+
+    lectures, schedules = _demo_lectures()
+    assert lectures.count() == schedules.count() == 0

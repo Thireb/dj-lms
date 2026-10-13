@@ -23,3 +23,12 @@ if not _database_url:
     )
 
 DATABASES = {"default": database_config_from_url(_database_url)}  # noqa: F405
+
+# Tasks run inside the request unless a worker is running; set
+# CELERY_ALWAYS_EAGER=false and start "celery -A config worker -B".
+CELERY_TASK_ALWAYS_EAGER = os.environ.get("CELERY_ALWAYS_EAGER", "true").lower() in {
+    "1",
+    "true",
+    "yes",
+}
+CELERY_TASK_EAGER_PROPAGATES = True

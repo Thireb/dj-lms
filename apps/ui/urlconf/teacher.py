@@ -18,4 +18,29 @@ urlpatterns = [
         lectures.TeacherLectureEditPage.as_view(),
         name="lecture_edit",
     ),
+    path(
+        "lectures/schedules/",
+        lectures.TeacherScheduleListPage.as_view(),
+        name="lecture_schedule_list",
+    ),
+    path(
+        "lectures/schedules/add/",
+        lectures.TeacherScheduleCreatePage.as_view(),
+        name="lecture_schedule_create",
+    ),
+    path(
+        "lectures/schedules/<int:pk>/edit/",
+        lectures.TeacherScheduleEditPage.as_view(),
+        name="lecture_schedule_edit",
+    ),
+    path(
+        "lectures/schedules/<int:pk>/extend/",
+        lectures.TeacherScheduleExtendPage.as_view(),
+        name="lecture_schedule_extend",
+    ),
+    path(
+        "lectures/schedules/<int:pk>/stop/",
+        lectures.TeacherScheduleStopView.as_view(),
+        name="lecture_schedule_stop",
+    ),
 ]

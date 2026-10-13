@@ -154,7 +154,7 @@ Status: `[ ]` open, `[x]` done. Priority: **High** = fix before merge or before 
 | S5 | `apps/institutes/urls/admin.py` is not included anywhere; admin URLs live in `apps/ui/urlconf/admin.py`. Delete it or include it. | 2.3b build | Low | [x] fixed in Phase 2 audit |
 | S6 | The URL walker only checked roles outside `allowed_roles`, so adding `Role.TEACHER` to an admin page passed every test (found by the 2.5a mutation check). Fixed: the walker now asserts admin portal views allow only `institute_admin` and `sub_admin`. | 2.5a build | Medium | [x] |
 | S7 | `DetailPageBody` rendered its cards without `request`, so a form inside a card had no CSRF token (same cause as S2). Fixed with `render_child`; test added. | 2.6 build | Medium | [x] |
-| S8 | Bulk upload runs in the web request: about 0.55 s of password hashing per row, so files were capped at 50 rows; the Phase 2 audit (H6) lowered the cap to 15 and set the gunicorn timeout to 120 s in DEPLOYMENT.md. Move the import to a Celery task when Celery arrives (roadmap 3.2), then raise the cap. | 2.6 build | Low | [ ] |
+| S8 | Bulk upload runs in the web request: about 0.55 s of password hashing per row, so files were capped at 50 rows; the Phase 2 audit (H6) lowered the cap to 15 and set the gunicorn timeout to 120 s in DEPLOYMENT.md. Move the import to a Celery task when Celery arrives (roadmap 3.2), then raise the cap. Celery is set up in 3.2; the move is its own branch (it needs a progress page). | 2.6 build | Low | [ ] |
 | S9 | Automatic defaulter blocking (SPEC 6.2) is not part of 2.7: it needs challans and overdue data from Phase 7. Build it as roadmap 7.6 on top of the 2.7 block and exempt fields; manual block and unblock must still win until the next run. | 2.4 planning | High | [ ] |
 | S10 | Layout forms never showed non-field errors (`whole_uni_form.html`), so "Passwords do not match." and service errors mapped to the whole form were hidden. Fixed; test added. | Phase 2 audit | Medium | [x] |
 
@@ -199,7 +199,7 @@ Claims the audit tested that did not hold: overlong cells do not give a 500 on i
 | S11 | `SECURE_PROXY_SSL_HEADER` is not set; behind a TLS proxy `SECURE_SSL_REDIRECT` would loop. Set it with the proxy setup. | Phase 2 audit M7 | High before deploy | [ ] |
 | S12 | WhiteNoise is not installed, so static files do not load with `DEBUG=False`. New dependency (ask first). | Phase 2 audit M7 | High before deploy | [ ] |
 | S13 | No `/health/` route for the uptime check. | Phase 2 audit M7 | High before deploy | [ ] |
-| S14 | The sign-in limits need one shared cache; `prod.py` uses Redis when `REDIS_URL` is set, but the `redis` package is not installed (new dependency, ask first). | Phase 2 audit H1 | High before deploy | [ ] |
+| S14 | The sign-in limits need one shared cache; `prod.py` uses Redis when `REDIS_URL` is set, but the `redis` package is not installed (new dependency, ask first). Fixed in 3.2: `redis` and `celery` added with the owner's approval. | Phase 2 audit H1 | High before deploy | [x] |
 | S15 | Sub-admins have no `allowed_menus` until 9.3c, so `demo-sub` gets 403 on every admin page. 9.3c must add the field, the seed grants (Finance and People per SPEC 10) and tests; the dashboard already hides people names without People. | Phase 2 audit M9 | Medium | [ ] |
 | S16 | openpyxl parses XML without `defusedxml`. No attack worked against Python 3.13's expat limits; add `defusedxml` as defense in depth when dependencies are next reviewed. | Phase 2 audit | Low | [ ] |
 | S17 | No automated browser test: the 360px layout was checked once with headless Chromium. Add one with the JS test runner (B18). | Phase 2 audit | Low | [ ] |
@@ -228,7 +228,8 @@ Left out of 3.1 on purpose; each has a home in a later item.
 |---|---|---|---|
 | LC1 | All lectures has no date-range filter yet (SPEC 3 lists one). The Today, Upcoming, Past and All tabs and the teacher, batch, subject and status filters are built. Add the range with the schedule views (3.3). | Low | [ ] |
 | LC2 | Row actions View and Cancel, and the teacher's Start, Whiteboard and Attendance, come with lecture states (3.5), the whiteboard and attendance (4.1). 3.1 has Edit and "Open meeting link". | Low | [ ] |
-| LC3 | `seed_demo` has no lectures yet. Add the SPEC 13 demo lectures with the recurring builder (3.2), which makes them in one step. | Low | [ ] |
+| LC3 | `seed_demo` has no lectures yet. Fixed in 3.2: a Mon/Wed/Fri schedule and two single lectures for `demo-teacher@`. Past and live demo lectures need lecture states (LC5). | Low | [x] |
+| LC5 | Past, live and finished demo lectures (SPEC 13) come with lecture states (3.5); the services refuse a start in the past. | Low | [ ] |
 | LC4 | The admin dashboard "lectures today" number and the teacher home lecture count and up-next countdown come with 3.4. | Low | [ ] |
 
 ## Later (deployment hardening, Phase 12)

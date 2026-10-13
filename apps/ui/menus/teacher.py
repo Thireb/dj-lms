@@ -35,8 +35,9 @@ class TeacherMenu:
                     ),
                     MenuItem(
                         "Schedule recurring",
-                        "teacher:lecture_schedule",
+                        "teacher:lecture_schedule_list",
                         "calendar-days",
+                        menu_key="lecture_schedule",
                     ),
                     MenuItem("Schedule", "teacher:schedule", "calendar"),
                     MenuItem(

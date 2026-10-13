@@ -85,7 +85,7 @@ Decision: one user = one role. A person who needs two roles gets two separate ac
 
 Sign-in and sessions (Phase 2 audit):
 - Emails are stored in lower case, and sign-in ignores case. A `Lower(email)` unique constraint blocks two accounts that differ only by case.
-- Failed sign-ins: 5 per 15 minutes per lower-cased email and client IP (`apps/accounts/throttle.py`), shared by the product login and `/django-admin/`; the set-password page is limited per IP. A locked attempt never hashes a password. Counts live in the cache, so production needs Redis (backlog S14). The client IP comes from `TRUSTED_PROXY_IP_HEADER` only when it is set.
+- Failed sign-ins: 5 per 15 minutes per lower-cased email and client IP (`apps/accounts/throttle.py`), shared by the product login and `/django-admin/`; the set-password page is limited per IP. A locked attempt never hashes a password. Counts live in the cache, so production needs Redis (`REDIS_URL`). The client IP comes from `TRUSTED_PROXY_IP_HEADER` only when it is set.
 - Without "remember me" the cookie ends at browser close and the server session after 12 hours; with it, 14 days.
 - Set-password links are one-time and stored as a hash. A new link (super admin "New sign-in link", or `manage.py make_set_password_link <email>`) makes older unused links stop working. Pages that show a link send `Cache-Control: no-store`.
 - A signed-in user without an active institute gets a 403 page with the reason and Sign out.
@@ -149,7 +149,7 @@ Academics:
 
 Operations:
 - `Lecture` (batch, subject(s), teacher, starts_at UTC, duration, status, delivery: manual_link / in_person / zoom later, meeting_url).
-- `RecurringSeries` (rule, start, end) generates `Lecture` rows.
+- `RecurringSchedule` (built in 3.2; first named `RecurringSeries`): teacher, batch, subjects, weekdays, a wall-clock start time in its own `time_zone`, duration, start and end dates, link, status (active, stopped) and `generated_until`. It makes `Lecture` rows up to the horizon setting (default 8 weeks); each lecture keeps `schedule` and `follows_schedule` (false once edited on its own). `for_user`: admins see the institute, a teacher their own; students and guardians see only the lectures.
 - Built in 3.1: `Lecture` has one teacher, one batch and many subjects (`subjects` many-to-many), `starts_at` (UTC) and `duration_minutes`. `for_user`: admins and sub-admins see the institute, a teacher their own lectures, a student or guardian the lectures of a batch and subject their (child's) enrolment has, on the same enrolment row. `lectures.services` checks the teacher's links, the overlap and the link, and locks the teacher row so two saves cannot both pass the overlap check.
 - `Attendance` (lecture, student, status: present/partial/late/absent, source: manual or provider).
 - `Assignment`, `Submission`, `Quiz`, `Question`, `QuizAttempt`.
@@ -174,7 +174,9 @@ Money: `DecimalField(max_digits=12, decimal_places=2)`. Never float.
 
 ## 8. Background jobs (Celery)
 
-- Generate recurring lectures.
+Set up in 3.2: `config/celery.py`, broker `REDIS_URL`, no result backend. Tests and dev run tasks inside the request (`CELERY_TASK_ALWAYS_EAGER`). A task takes ids, never model objects, and opens `tenant_context` itself. Services queue a task with `transaction.on_commit`, so a rolled-back save queues nothing.
+
+- Generate recurring lectures. Built in 3.2: `lectures.tasks.generate_schedule_lectures` after a save, and `extend_all_schedules` nightly at 00:30 UTC (Celery beat).
 - Bulk challan generation.
 - Challan and lecture reminders.
 - Monthly payroll run.

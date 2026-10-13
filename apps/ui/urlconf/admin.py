@@ -100,6 +100,31 @@ urlpatterns = [
         lectures.LectureEditPage.as_view(),
         name="lecture_edit",
     ),
+    path(
+        "lectures/schedules/",
+        lectures.ScheduleListPage.as_view(),
+        name="lecture_schedule_list",
+    ),
+    path(
+        "lectures/schedules/add/",
+        lectures.ScheduleCreatePage.as_view(),
+        name="lecture_schedule_create",
+    ),
+    path(
+        "lectures/schedules/<int:pk>/edit/",
+        lectures.ScheduleEditPage.as_view(),
+        name="lecture_schedule_edit",
+    ),
+    path(
+        "lectures/schedules/<int:pk>/extend/",
+        lectures.ScheduleExtendPage.as_view(),
+        name="lecture_schedule_extend",
+    ),
+    path(
+        "lectures/schedules/<int:pk>/stop/",
+        lectures.ScheduleStopView.as_view(),
+        name="lecture_schedule_stop",
+    ),
     path("portal-access/", people.PortalAccessPage.as_view(), name="portal_access"),
     path(
         "portal-access/<int:pk>/",

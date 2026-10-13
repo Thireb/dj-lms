@@ -1,4 +1,5 @@
-"""Demo data (dev only): Demo Institute on Premium, sign-ins and SPEC 10 people."""
+"""Demo data (dev only): Demo Institute on Premium, sign-ins, SPEC 10 people
+and demo lectures."""
 
 from __future__ import annotations
 
@@ -11,6 +12,7 @@ from apps.accounts.models import User
 from apps.core.features import PLAN_CODE_PREMIUM
 from apps.core.roles import Role
 from apps.institutes.models import Institute, Plan
+from apps.lectures.demo import reset_lectures, seed_lectures
 from apps.people.demo import reset_people, seed_people
 
 DEMO_INSTITUTE_NAME = "Demo Institute"
@@ -47,6 +49,7 @@ class Command(BaseCommand):
             self._upsert_user(email, role, password, institute=institute)
         self._upsert_user(DEMO_SUPER_ADMIN_EMAIL, Role.SUPER_ADMIN, password)
         seed_people(institute, password)
+        seed_lectures(institute)
         self.stdout.write(self.style.SUCCESS("Demo data ready."))
 
     def _demo_institute(self) -> Institute:
@@ -80,6 +83,7 @@ class Command(BaseCommand):
         deleted = 0
         institute = Institute.objects.filter(name=DEMO_INSTITUTE_NAME).first()
         if institute is not None:
+            deleted += reset_lectures(institute)
             deleted += reset_people(institute)
             deleted += User.objects.filter(institute=institute).delete()[0]
         deleted += User.objects.filter(email=DEMO_SUPER_ADMIN_EMAIL).delete()[0]
