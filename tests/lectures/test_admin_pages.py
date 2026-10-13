@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
@@ -218,6 +219,7 @@ def test_add_form_reloads_subjects_when_the_teacher_changes(
 
     assert f'hx-get="{_url("create")}"' in html
     assert 'hx-select="#id_batch_subjects"' in html
+    assert re.search(r'<select name="teacher"[^>]*class="field-control"', html)
     assert "Choose a teacher to see their batches." in html
 
 

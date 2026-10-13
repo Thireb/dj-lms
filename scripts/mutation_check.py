@@ -1702,6 +1702,12 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         '            _value(f) for f in ctx["filters"] if not _get(f, "hidden", False)\n',
         '            _value(f) for f in ctx["filters"]\n',
     ),
+    (
+        "lecture form styles added fields",
+        "apps/lectures/forms.py",
+        "        style_widgets(self)  # the fields added after BaseForm styled the others\n",
+        "",
+    ),
 ]
 
 

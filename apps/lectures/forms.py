@@ -18,7 +18,7 @@ from apps.lectures.models import (
     meeting_url_validator,
 )
 from apps.people.models import ProfileStatus, TeacherProfile
-from apps.ui.forms.base import BaseForm
+from apps.ui.forms.base import BaseForm, style_widgets
 from apps.ui.forms.layout import FormActions, Section
 from apps.ui.forms.widgets import DatePicker, GroupedCheckboxes, TimePicker
 
@@ -121,6 +121,7 @@ class LectureForm(BaseForm):
             kept=self.lecture_pairs(),
             help_text="Pick one or more subjects from one batch.",
         )
+        style_widgets(self)  # the fields added after BaseForm styled the others
 
     def teacher_field(self) -> forms.ModelChoiceField:
         offered = Q(status=ProfileStatus.ACTIVE)
