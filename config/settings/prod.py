@@ -25,8 +25,8 @@ DATABASES = {  # noqa: F405
 }
 
 REDIS_URL = os.environ.get("REDIS_URL", "")
-# Sign-in limits need one cache shared by every worker (audit H1). Django's
-# Redis backend needs the "redis" package, added with deployment (Phase 12).
+# Sign-in limits need one cache shared by every worker (audit H1). The same
+# Redis is the Celery broker (base.py).
 if REDIS_URL:
     CACHES = {
         "default": {

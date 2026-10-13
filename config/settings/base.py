@@ -3,6 +3,8 @@
 import os
 from pathlib import Path
 
+from celery.schedules import crontab
+
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 SECRET_KEY = "django-insecure-change-me"
@@ -126,3 +128,15 @@ STORAGE_SECRET_KEY = ""
 STORAGE_ENDPOINT = ""
 
 SENTRY_DSN = ""
+
+# Celery (background jobs). Redis is the broker; no result backend is used.
+CELERY_BROKER_URL = os.environ.get("REDIS_URL") or "redis://localhost:6379/0"
+CELERY_TASK_IGNORE_RESULT = True
+CELERY_TIMEZONE = "UTC"
+CELERY_BEAT_SCHEDULE = {
+    # Adds the next days of every active recurring schedule (roadmap 3.2).
+    "extend-lecture-schedules": {
+        "task": "apps.lectures.tasks.extend_all_schedules",
+        "schedule": crontab(hour=0, minute=30),
+    },
+}

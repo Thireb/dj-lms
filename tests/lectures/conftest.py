@@ -3,13 +3,20 @@
 from __future__ import annotations
 
 import re
-from datetime import datetime, timedelta
+from datetime import date, datetime, time, timedelta
+from zoneinfo import ZoneInfo
 
 import pytest
 from apps.core.roles import Role
 from apps.core.tenancy import tenant_context
-from apps.lectures.models import DeliveryMode, Lecture
-from apps.lectures.services import LectureDetails, create_lecture
+from apps.lectures.models import DeliveryMode, Lecture, RecurringSchedule
+from apps.lectures.services import (
+    LectureDetails,
+    ScheduleDetails,
+    create_lecture,
+    create_schedule,
+    generate_lectures,
+)
 from django.test import Client
 from django.utils import timezone
 
@@ -78,3 +85,49 @@ def admin_client(institute_a) -> Client:
             institute=institute_a,
         )
     )
+
+
+KARACHI = "Asia/Karachi"
+EVERY_DAY = [0, 1, 2, 3, 4, 5, 6]
+
+
+def karachi_today() -> date:
+    return timezone.localtime(timezone.now(), ZoneInfo(KARACHI)).date()
+
+
+def schedule_details(school, **fields) -> ScheduleDetails:
+    """Teacher 1, Morning/Math, every day 10:00 Karachi, for 7 days from
+    tomorrow."""
+    start = karachi_today() + timedelta(days=1)
+    values = {
+        "title": "Daily algebra",
+        "teacher": school.teacher_1,
+        "batch": school.morning,
+        "subjects": [school.math],
+        "weekdays": EVERY_DAY,
+        "start_time": time(10, 0),
+        "duration_minutes": 60,
+        "start_date": start,
+        "end_date": start + timedelta(days=6),
+        "time_zone": KARACHI,
+        "delivery_mode": DeliveryMode.MANUAL_LINK,
+        "meeting_url": MEET_URL,
+    }
+    values.update(fields)
+    return ScheduleDetails(**values)
+
+
+def add_schedule(school, **fields) -> RecurringSchedule:
+    """Create a schedule and make its lectures (the task runs after commit,
+    which a test transaction never reaches, so call the service here)."""
+    institute = school.morning.institute
+    with tenant_context(institute):
+        schedule = create_schedule(institute, schedule_details(school, **fields))
+        generate_lectures(schedule)
+    schedule.refresh_from_db()
+    return schedule
+
+
+def schedule_lectures(schedule: RecurringSchedule) -> list[Lecture]:
+    # unscoped: test assertion outside a tenant context.
+    return list(Lecture.unscoped.filter(schedule=schedule).order_by("starts_at"))

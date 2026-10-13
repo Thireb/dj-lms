@@ -10,7 +10,7 @@ For each named URL in ``config.urls`` that is not public:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import date, time, timedelta
 from typing import Any
 
 import pytest
@@ -19,7 +19,7 @@ from apps.academics.services import set_teacher_batch_subjects
 from apps.accounts.models import User
 from apps.core.roles import Role
 from apps.core.tenancy import tenant_context
-from apps.lectures.models import Lecture
+from apps.lectures.models import Lecture, RecurringSchedule
 from apps.people.models import StudentProfile, TeacherProfile
 from apps.people.services import create_student_profile, create_teacher_profile
 from apps.ui.views.pages import PortalPageView
@@ -171,6 +171,26 @@ def _lecture(institute) -> int:
     return lecture.pk
 
 
+def _schedule(institute) -> int:
+    lecture = Lecture.unscoped.get(pk=_lecture(institute))
+    with tenant_context(institute):
+        schedule = RecurringSchedule(
+            institute=institute,
+            title="Walker",
+            teacher=lecture.teacher,
+            batch=lecture.batch,
+            weekdays=[0],
+            start_time=time(10, 0),
+            time_zone="Asia/Karachi",
+            duration_minutes=60,
+            start_date=date.today() + timedelta(days=1),
+            end_date=date.today() + timedelta(days=30),
+            meeting_url="https://meet.example.com/walker",
+        )
+        schedule.save()
+    return schedule.pk
+
+
 ROUTE_OBJECTS = {
     **{
         f"admin:{prefix}_{action}": _name_row(model)
@@ -188,6 +208,11 @@ ROUTE_OBJECTS = {
     "admin:portal_access_action": _student,
     "admin:lecture_edit": _lecture,
     "teacher:lecture_edit": _lecture,
+    **{
+        f"{portal}:lecture_schedule_{action}": _schedule
+        for portal in ("admin", "teacher")
+        for action in ("edit", "extend", "stop")
+    },
 }
 
 

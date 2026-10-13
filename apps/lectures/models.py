@@ -9,6 +9,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import Any
 
+from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator, URLValidator
 from django.db import models
@@ -66,6 +67,102 @@ class LectureQuerySet(TenantQuerySet):
         ).distinct()
 
 
+class Weekday(models.IntegerChoices):
+    """Python's numbering: Monday is 0."""
+
+    MONDAY = 0, "Mon"
+    TUESDAY = 1, "Tue"
+    WEDNESDAY = 2, "Wed"
+    THURSDAY = 3, "Thu"
+    FRIDAY = 4, "Fri"
+    SATURDAY = 5, "Sat"
+    SUNDAY = 6, "Sun"
+
+
+class ScheduleStatus(models.TextChoices):
+    ACTIVE = "active", "Active"
+    STOPPED = "stopped", "Stopped"
+
+
+class ScheduleQuerySet(TenantQuerySet):
+    """Admins see the institute, a teacher their own schedules. Students and
+    guardians see the lectures, not the schedules."""
+
+    def for_user(self, user: Any) -> ScheduleQuerySet:
+        scoped = super().for_user(user)
+        role = user_role(user)
+        if role in INSTITUTE_WIDE_ROLES:
+            return scoped
+        if role == Role.TEACHER:
+            return scoped.filter(teacher__user_id=getattr(user, "pk", None))
+        return scoped.none()
+
+
+class RecurringSchedule(TenantModel):
+    """A weekly timetable (SPEC 4.6). The start time is a wall-clock time in
+    ``time_zone`` (the zone of the person who saved it), so a lecture stays at
+    10:00 local time on every date."""
+
+    title = models.CharField(max_length=200)
+    teacher = models.ForeignKey(
+        "people.TeacherProfile", on_delete=models.PROTECT, related_name="schedules"
+    )
+    batch = models.ForeignKey(
+        "academics.Batch", on_delete=models.PROTECT, related_name="schedules"
+    )
+    subjects = models.ManyToManyField("academics.Subject", related_name="schedules")
+    weekdays = ArrayField(models.PositiveSmallIntegerField(choices=Weekday.choices))
+    start_time = models.TimeField()
+    time_zone = models.CharField(max_length=63)
+    duration_minutes = models.PositiveSmallIntegerField(
+        validators=[
+            MinValueValidator(MIN_DURATION),
+            MaxValueValidator(MAX_DURATION),
+        ]
+    )
+    start_date = models.DateField()
+    end_date = models.DateField()
+    delivery_mode = models.CharField(
+        max_length=16, choices=DeliveryMode.choices, default=DeliveryMode.MANUAL_LINK
+    )
+    meeting_url = models.URLField(
+        max_length=500, blank=True, validators=[meeting_url_validator]
+    )
+    description = models.TextField(blank=True)
+    status = models.CharField(
+        max_length=16, choices=ScheduleStatus.choices, default=ScheduleStatus.ACTIVE
+    )
+    # Lectures exist up to this date; the nightly job moves it forward.
+    generated_until = models.DateField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    objects = TenantManager.from_queryset(ScheduleQuerySet)()
+    unscoped = UnscopedTenantManager.from_queryset(ScheduleQuerySet)()
+
+    class Meta:
+        ordering = ["title", "pk"]
+
+    def __str__(self) -> str:
+        return self.title
+
+    def weekday_labels(self) -> str:
+        return ", ".join(Weekday(day).label for day in sorted(self.weekdays))
+
+    def clean(self) -> None:
+        super().clean()
+        for name in ("teacher", "batch"):
+            related = getattr(self, name, None)
+            if related is not None and related.institute_id != self.institute_id:
+                raise ValidationError({name: "Must belong to the same institute."})
+        if self.start_date and self.end_date and self.end_date < self.start_date:
+            raise ValidationError({"end_date": "The end date is before the start."})
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        self.full_clean(validate_unique=False, validate_constraints=False)
+        super().save(*args, **kwargs)
+
+
 class Lecture(TenantModel):
     title = models.CharField(max_length=200)
     teacher = models.ForeignKey(
@@ -92,6 +189,16 @@ class Lecture(TenantModel):
         max_length=500, blank=True, validators=[meeting_url_validator]
     )
     description = models.TextField(blank=True)
+    schedule = models.ForeignKey(
+        RecurringSchedule,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="lectures",
+    )
+    # False once the lecture is edited on its own ("this one"): a schedule
+    # edit then leaves it alone.
+    follows_schedule = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -1,19 +1,28 @@
-"""Create, edit and list lectures (roadmap 3.1, SPEC 4.5 and 6.4)."""
+"""Create, edit and list lectures (roadmap 3.1, SPEC 4.5 and 6.4), and the
+recurring schedules that make them (roadmap 3.2, SPEC 4.6)."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import DateTimeField, DurationField, ExpressionWrapper, F
+from django.db.models import (
+    Count,
+    DateTimeField,
+    DurationField,
+    ExpressionWrapper,
+    F,
+    QuerySet,
+)
 from django.utils import timezone
 
 from apps.academics.models import Batch, Subject, TeacherBatchSubject
 from apps.core.tenancy import require_tenant_context
-from apps.institutes.models import Institute
+from apps.institutes.models import Institute, InstituteSettings
 from apps.lectures.models import (
     MAX_DURATION,
     MIN_DURATION,
@@ -21,6 +30,9 @@ from apps.lectures.models import (
     Lecture,
     LectureQuerySet,
     LectureStatus,
+    RecurringSchedule,
+    ScheduleStatus,
+    Weekday,
     meeting_url_validator,
 )
 from apps.lectures.providers import provider_for
@@ -218,9 +230,13 @@ def create_lecture(institute: Institute, details: LectureDetails) -> SavedLectur
 
 @transaction.atomic
 def update_lecture(lecture: Lecture, details: LectureDetails) -> SavedLecture:
+    """Edit one lecture. A schedule's lecture edited here ("this one") keeps
+    its changes when the schedule is edited later."""
     require_tenant_context(lecture.institute)
     _lock_teacher(details.teacher)
     _check(lecture.institute, details, lecture)
+    if lecture.schedule_id is not None:
+        lecture.follows_schedule = False
     return _apply(lecture, details)
 
 
@@ -258,3 +274,371 @@ def list_lectures(
     elif show == SHOW_UPCOMING:
         lectures = lectures.filter(ends_at_db__gt=now)
     return lectures.order_by("starts_at", "pk")
+
+
+# Recurring schedules (roadmap 3.2, SPEC 4.6 and 6.4)
+
+MAX_SCHEDULE_DAYS = 366
+DEFAULT_HORIZON_WEEKS = 8
+
+
+@dataclass(frozen=True)
+class ScheduleDetails:
+    title: str
+    teacher: TeacherProfile
+    batch: Batch
+    subjects: list[Subject]
+    weekdays: list[int]
+    start_time: time
+    duration_minutes: int
+    start_date: date
+    end_date: date
+    time_zone: str
+    delivery_mode: str
+    meeting_url: str = ""
+    description: str = ""
+
+
+@dataclass(frozen=True)
+class PlannedLecture:
+    starts_at: datetime
+    ends_at: datetime
+    # The teacher already has this lecture then, so the date is skipped.
+    clash: Lecture | None = None
+
+
+@dataclass(frozen=True)
+class SchedulePreview:
+    planned: list[PlannedLecture]
+    # Dates after the horizon; the nightly job adds them as they come near.
+    later_count: int
+    horizon_weeks: int
+
+    @property
+    def created_count(self) -> int:
+        return sum(1 for item in self.planned if item.clash is None)
+
+
+def horizon_weeks(institute: Institute) -> int:
+    weeks = (
+        InstituteSettings.objects.filter(institute=institute)
+        .values_list("recurring_lecture_horizon_weeks", flat=True)
+        .first()
+    )
+    return max(1, weeks or DEFAULT_HORIZON_WEEKS)
+
+
+def schedule_today(time_zone: str, now: datetime) -> date:
+    return timezone.localtime(now, ZoneInfo(time_zone)).date()
+
+
+def occurrences(source: Any, first: date, last: date) -> list[datetime]:
+    """Start times on the chosen weekdays from ``first`` to ``last``, at the
+    wall-clock start time in the schedule's zone (UTC values differ when the
+    zone changes its clocks)."""
+    zone = ZoneInfo(source.time_zone)
+    days = set(source.weekdays)
+    result = []
+    day = first
+    while day <= last:
+        if day.weekday() in days:
+            result.append(datetime.combine(day, source.start_time, tzinfo=zone))
+        day += timedelta(days=1)
+    return result
+
+
+def _window(
+    institute: Institute, source: Any, now: datetime, after: date | None = None
+) -> tuple[date, date]:
+    today = schedule_today(source.time_zone, now)
+    first = max(source.start_date, today)
+    if after is not None:
+        first = max(first, after + timedelta(days=1))
+    last = min(source.end_date, today + timedelta(weeks=horizon_weeks(institute)))
+    return first, last
+
+
+def _busy(teacher: TeacherProfile, first: datetime, last: datetime, skip: Any) -> list:
+    lectures = Lecture.objects.filter(
+        teacher=teacher, starts_at__lt=last + timedelta(days=1)
+    ).exclude(status=LectureStatus.CANCELLED)
+    if skip is not None:
+        lectures = lectures.exclude(pk__in=skip)
+    lectures = lectures.annotate(ends_at_db=ENDS_AT).filter(ends_at_db__gt=first)
+    return list(lectures)
+
+
+def _plan(
+    source: Any, starts: list[datetime], now: datetime, skip: Any = None
+) -> list[PlannedLecture]:
+    starts = [start for start in starts if start > now]
+    if not starts:
+        return []
+    length = timedelta(minutes=source.duration_minutes)
+    busy = _busy(source.teacher, starts[0], starts[-1] + length, skip)
+    planned = []
+    for start in starts:
+        end = start + length
+        clash = next(
+            (lec for lec in busy if lec.starts_at < end and lec.ends_at > start), None
+        )
+        planned.append(PlannedLecture(starts_at=start, ends_at=end, clash=clash))
+    return planned
+
+
+def _future_lectures(schedule: RecurringSchedule, now: datetime) -> Any:
+    """Lectures of the schedule that have not started and still follow it."""
+    return Lecture.objects.filter(
+        schedule=schedule,
+        follows_schedule=True,
+        status=LectureStatus.SCHEDULED,
+        starts_at__gt=now,
+    )
+
+
+def _check_schedule(
+    institute: Institute,
+    details: ScheduleDetails,
+    old: RecurringSchedule | None,
+    now: datetime,
+) -> None:
+    errors = _Errors()
+    if old is not None and old.status != ScheduleStatus.ACTIVE:
+        errors.add("__all__", "A stopped schedule cannot be edited.")
+        errors.raise_any()
+    if not details.title.strip():
+        errors.add("title", "Enter a title.")
+    _check_people(errors, institute, details, old)
+    if not MIN_DURATION <= details.duration_minutes <= MAX_DURATION:
+        errors.add(
+            "duration_minutes",
+            f"Enter a duration from {MIN_DURATION} to {MAX_DURATION} minutes.",
+        )
+    _check_link(errors, details)
+    _check_dates(errors, details, old, now)
+    errors.raise_any()
+
+
+def _check_dates(
+    errors: _Errors,
+    details: ScheduleDetails,
+    old: RecurringSchedule | None,
+    now: datetime,
+) -> None:
+    if not details.weekdays or not set(details.weekdays) <= set(Weekday.values):
+        errors.add("weekdays", "Choose at least one day.")
+        return
+    try:
+        ZoneInfo(details.time_zone)
+    except (ValueError, KeyError):
+        errors.add("__all__", "Unknown time zone.")
+        return
+    moved = old is None or old.start_date != details.start_date
+    if moved and details.start_date < schedule_today(details.time_zone, now):
+        errors.add("start_date", "Choose a start date from today on.")
+    if details.end_date < details.start_date:
+        errors.add("end_date", "The end date is before the start date.")
+        return
+    if (details.end_date - details.start_date).days >= MAX_SCHEDULE_DAYS:
+        errors.add("end_date", "A schedule can run for one year at most.")
+        return
+    if not occurrences(details, details.start_date, details.end_date):
+        errors.add("weekdays", "None of these days falls between the dates.")
+
+
+def _enqueue(schedule: RecurringSchedule) -> None:
+    from apps.lectures.tasks import generate_schedule_lectures
+
+    institute_id, schedule_id = schedule.institute_id, schedule.pk
+    transaction.on_commit(
+        lambda: generate_schedule_lectures.delay(institute_id, schedule_id)
+    )
+
+
+def _apply_schedule(schedule: RecurringSchedule, details: ScheduleDetails) -> None:
+    schedule.title = details.title.strip()
+    schedule.teacher = details.teacher
+    schedule.batch = details.batch
+    schedule.weekdays = sorted(set(details.weekdays))
+    schedule.start_time = details.start_time
+    schedule.time_zone = details.time_zone
+    schedule.duration_minutes = details.duration_minutes
+    schedule.start_date = details.start_date
+    schedule.end_date = details.end_date
+    schedule.delivery_mode = details.delivery_mode
+    schedule.description = details.description.strip()
+    provider = provider_for(details.delivery_mode)
+    schedule.meeting_url = provider.create_meeting(None, details.meeting_url)
+    schedule.save()
+    schedule.subjects.set(details.subjects)
+
+
+def preview_schedule(
+    institute: Institute,
+    details: ScheduleDetails,
+    schedule: RecurringSchedule | None = None,
+    now: datetime | None = None,
+) -> SchedulePreview:
+    """The lectures a save would make now, and how many come later.
+
+    Checks the details first (raises ValidationError like a save)."""
+    require_tenant_context(institute)
+    now = now or timezone.now()
+    _check_schedule(institute, details, schedule, now)
+    first, last = _window(institute, details, now)
+    replaced = _future_lectures(schedule, now) if schedule is not None else None
+    planned = _plan(details, occurrences(details, first, last), now, replaced)
+    after = max(first, last + timedelta(days=1))
+    later = occurrences(details, after, details.end_date)
+    return SchedulePreview(planned, len(later), horizon_weeks(institute))
+
+
+@transaction.atomic
+def create_schedule(
+    institute: Institute, details: ScheduleDetails
+) -> RecurringSchedule:
+    """Save the schedule; a task then makes its lectures up to the horizon."""
+    require_tenant_context(institute)
+    _lock_teacher(details.teacher)
+    _check_schedule(institute, details, None, timezone.now())
+    schedule = RecurringSchedule(institute=institute)
+    _apply_schedule(schedule, details)
+    _enqueue(schedule)
+    return schedule
+
+
+@transaction.atomic
+def update_schedule(schedule: RecurringSchedule, details: ScheduleDetails) -> int:
+    """ "This and all future": lectures not started yet are made again from the
+    new details. Lectures edited on their own stay. Returns how many lectures
+    were removed for remaking."""
+    require_tenant_context(schedule.institute)
+    _lock_teacher(details.teacher)
+    now = timezone.now()
+    _check_schedule(schedule.institute, details, schedule, now)
+    # delete() also counts the subject links, so count the lectures alone.
+    _, deleted = _future_lectures(schedule, now).delete()
+    removed = deleted.get(Lecture._meta.label, 0)
+    schedule.generated_until = None
+    _apply_schedule(schedule, details)
+    _enqueue(schedule)
+    return removed
+
+
+@transaction.atomic
+def extend_schedule(schedule: RecurringSchedule, end_date: date) -> None:
+    require_tenant_context(schedule.institute)
+    errors = _Errors()
+    if schedule.status != ScheduleStatus.ACTIVE:
+        errors.add("__all__", "A stopped schedule cannot be extended.")
+    elif end_date <= schedule.end_date:
+        errors.add("end_date", "Choose a date after the current end date.")
+    elif (end_date - schedule.start_date).days >= MAX_SCHEDULE_DAYS:
+        errors.add("end_date", "A schedule can run for one year at most.")
+    errors.raise_any()
+    schedule.end_date = end_date
+    schedule.save(update_fields=["end_date", "updated_at"])
+    _enqueue(schedule)
+
+
+@transaction.atomic
+def stop_schedule(schedule: RecurringSchedule) -> int:
+    """No more lectures; the ones not started yet are cancelled (they stay in
+    the lists as Cancelled). Returns how many were cancelled."""
+    require_tenant_context(schedule.institute)
+    schedule.status = ScheduleStatus.STOPPED
+    schedule.save(update_fields=["status", "updated_at"])
+    return Lecture.objects.filter(
+        schedule=schedule,
+        status=LectureStatus.SCHEDULED,
+        starts_at__gt=timezone.now(),
+    ).update(status=LectureStatus.CANCELLED)
+
+
+def _still_valid(schedule: RecurringSchedule) -> bool:
+    """The teacher is active and still teaches every subject in the batch."""
+    if schedule.teacher.status != ProfileStatus.ACTIVE:
+        return False
+    taught = set(
+        TeacherBatchSubject.objects.filter(
+            teacher=schedule.teacher, batch=schedule.batch
+        ).values_list("subject_id", flat=True)
+    )
+    return all(subject.pk in taught for subject in schedule.subjects.all())
+
+
+@dataclass(frozen=True)
+class GenerateResult:
+    created: int = 0
+    skipped: int = 0  # the teacher was busy, or the schedule no longer fits
+
+
+@transaction.atomic
+def generate_lectures(
+    schedule: RecurringSchedule, now: datetime | None = None
+) -> GenerateResult:
+    """Make the schedule's lectures up to the horizon. Safe to run again:
+    a date that already has a lecture of this schedule is left alone."""
+    require_tenant_context(schedule.institute)
+    now = now or timezone.now()
+    if schedule.status != ScheduleStatus.ACTIVE:
+        return GenerateResult()
+    _lock_teacher(schedule.teacher)
+    first, last = _window(schedule.institute, schedule, now, schedule.generated_until)
+    starts = occurrences(schedule, first, last)
+    if not _still_valid(schedule):
+        return GenerateResult(skipped=len(starts))
+    zone = ZoneInfo(schedule.time_zone)
+    taken = {
+        timezone.localtime(lecture.starts_at, zone).date()
+        for lecture in Lecture.objects.filter(schedule=schedule)
+    }
+    subjects = list(schedule.subjects.all())
+    created = skipped = 0
+    for item in _plan(schedule, starts, now):
+        if item.starts_at.date() in taken:
+            continue
+        if item.clash is not None:
+            skipped += 1
+            continue
+        _make_lecture(schedule, item.starts_at, subjects)
+        created += 1
+    if first <= last:
+        schedule.generated_until = last
+        schedule.save(update_fields=["generated_until", "updated_at"])
+    return GenerateResult(created=created, skipped=skipped)
+
+
+def _make_lecture(
+    schedule: RecurringSchedule, starts_at: datetime, subjects: list[Subject]
+) -> None:
+    lecture = Lecture(
+        institute=schedule.institute,
+        schedule=schedule,
+        title=schedule.title,
+        teacher=schedule.teacher,
+        batch=schedule.batch,
+        starts_at=starts_at,
+        duration_minutes=schedule.duration_minutes,
+        delivery_mode=schedule.delivery_mode,
+        meeting_url=schedule.meeting_url,
+        description=schedule.description,
+    )
+    lecture.save()
+    lecture.subjects.set(subjects)
+
+
+def list_schedules(
+    user: Any, *, teacher_id: int | None = None, batch_id: int | None = None
+) -> QuerySet:
+    schedules = (
+        RecurringSchedule.objects.for_user(user)
+        .select_related("teacher__user", "batch")
+        .prefetch_related("subjects")
+        .annotate(lecture_count=Count("lectures"))
+    )
+    if teacher_id is not None:
+        schedules = schedules.filter(teacher_id=teacher_id)
+    if batch_id is not None:
+        schedules = schedules.filter(batch_id=batch_id)
+    return schedules.order_by("status", "title", "pk")

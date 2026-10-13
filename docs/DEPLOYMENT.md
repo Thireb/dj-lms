@@ -40,7 +40,7 @@ Listed in `.env.example`. Set real values in Pethost, never in git.
 - `SECRET_KEY`
 - `ALLOWED_HOSTS`
 - `DATABASE_URL`
-- `REDIS_URL` (also the shared cache for sign-in limits; needs the `redis` package, not installed yet)
+- `REDIS_URL` (Celery broker and the shared cache for sign-in limits)
 - `TRUSTED_PROXY_IP_HEADER` (for example `HTTP_X_REAL_IP`, a header the proxy always sets)
 - `STORAGE_*` (bucket, key, secret, endpoint)
 - `EMAIL_*`

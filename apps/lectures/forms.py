@@ -1,7 +1,9 @@
-"""Add and edit lecture form (SPEC 4.5)."""
+"""Lecture form (SPEC 4.5) and recurring schedule form (SPEC 4.6)."""
 
 from __future__ import annotations
 
+import hashlib
+from datetime import timedelta
 from typing import Any
 
 from crispy_forms.layout import Layout
@@ -15,6 +17,7 @@ from apps.lectures.models import (
     MIN_DURATION,
     DeliveryMode,
     Lecture,
+    Weekday,
     meeting_url_validator,
 )
 from apps.people.models import ProfileStatus, TeacherProfile
@@ -105,7 +108,8 @@ class LectureForm(BaseForm):
     ):
         """``teacher`` fixes the teacher (teacher portal); without it the
         form has a teacher choice (admin portal). Changing the teacher
-        reloads the subject choices from ``refresh_url`` (this page)."""
+        reloads the subject choices from ``refresh_url`` (this page).
+        ``lecture`` is the row being edited: a lecture or a schedule."""
         self.user = user
         self.cancel_url = cancel_url
         self.save_label = save_label
@@ -195,6 +199,18 @@ class LectureForm(BaseForm):
         field = self.fields["batch_subjects"]
         return field.selection(self.cleaned_data["batch_subjects"])
 
+    def when_sections(self) -> list[Section]:
+        return [
+            Section(
+                "Date and time",
+                "date",
+                "start_time",
+                "duration_minutes",
+                description="In your time zone. Students see it in theirs.",
+                columns=2,
+            )
+        ]
+
     def get_layout(self) -> Layout:
         who = [] if self.fixed_teacher else ["teacher"]
         return Layout(
@@ -211,14 +227,7 @@ class LectureForm(BaseForm):
                 description="Only the batches and subjects the teacher is "
                 "assigned to are offered.",
             ),
-            Section(
-                "Date and time",
-                "date",
-                "start_time",
-                "duration_minutes",
-                description="In your time zone. Students see it in theirs.",
-                columns=2,
-            ),
+            *self.when_sections(),
             Section(
                 "Delivery",
                 "delivery_mode",
@@ -228,3 +237,99 @@ class LectureForm(BaseForm):
             ),
             FormActions(self.save_label, self.cancel_url),
         )
+
+
+MAX_WEEKS = 52
+
+
+def _text(value: Any) -> str:
+    """A row by its pk (two teachers may share a name), anything else as text."""
+    return f"pk:{value.pk}" if hasattr(value, "pk") else str(value)
+
+
+class ScheduleForm(LectureForm):
+    """Weekly timetable. The first valid submit shows a preview of the
+    lectures; ``confirm`` then carries a fingerprint of what was previewed,
+    and a submit with the same values saves."""
+
+    date = None  # a schedule has days of the week and a date range
+    weekdays = forms.TypedMultipleChoiceField(
+        label="Days",
+        coerce=int,
+        choices=[("", Weekday.choices)],  # one group: one row of day chips
+        widget=GroupedCheckboxes(),
+        error_messages={"required": "Choose at least one day."},
+    )
+    start_date = forms.DateField(label="Start date", widget=DatePicker())
+    end_date = forms.DateField(label="End date", required=False, widget=DatePicker())
+    weeks = forms.IntegerField(
+        label="Or number of weeks",
+        required=False,
+        min_value=1,
+        max_value=MAX_WEEKS,
+        help_text="Leave the end date empty to use this.",
+    )
+    confirm = forms.CharField(label="", required=False, widget=forms.HiddenInput)
+
+    def __init__(self, *args: Any, zone_label: str, **kwargs: Any):
+        self.zone_label = zone_label
+        super().__init__(*args, **kwargs)
+
+    def clean(self) -> dict[str, Any]:
+        cleaned = super().clean()
+        start, end, weeks = (
+            cleaned.get("start_date"),
+            cleaned.get("end_date"),
+            cleaned.get("weeks"),
+        )
+        if end and weeks:
+            self.add_error("weeks", "Enter an end date or a number of weeks.")
+        elif not end and not weeks:
+            self.add_error("end_date", "Enter an end date or a number of weeks.")
+        elif start and weeks:
+            cleaned["end_date"] = start + timedelta(weeks=weeks, days=-1)
+        return cleaned
+
+    def fingerprint(self) -> str:
+        """Changes when any saved value changes, so a preview matches a save."""
+        data = self.cleaned_data
+        values = [
+            _text(data.get(name))
+            for name in sorted(data)
+            if name not in {"confirm", "weeks"}
+        ]
+        return hashlib.sha256("|".join(values).encode()).hexdigest()[:32]
+
+    def is_confirmed(self) -> bool:
+        return self.cleaned_data.get("confirm") == self.fingerprint()
+
+    def when_sections(self) -> list[Section]:
+        return [
+            Section(
+                "Days and time",
+                "weekdays",
+                "start_time",
+                "duration_minutes",
+                description=f"Times are in {self.zone_label}. Students see "
+                "them in their own time zone.",
+            ),
+            Section(
+                "Dates",
+                "start_date",
+                "end_date",
+                "weeks",
+                "confirm",
+                description="Lectures are made for the next weeks at once; "
+                "later dates are added each night.",
+                columns=2,
+            ),
+        ]
+
+
+class ExtendScheduleForm(BaseForm):
+    end_date = forms.DateField(label="New end date", widget=DatePicker())
+
+    def __init__(self, *args: Any, cancel_url: str, **kwargs: Any):
+        self.cancel_url = cancel_url
+        self.save_label = "Extend schedule"
+        super().__init__(*args, **kwargs)

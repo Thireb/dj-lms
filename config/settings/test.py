@@ -30,3 +30,7 @@ MIDDLEWARE = [
     *_MIDDLEWARE,
     "tests.accounts.middleware.SubAdminTestMenuMiddleware",
 ]
+
+# Tasks run at once, without Redis (CI has no Redis).
+CELERY_TASK_ALWAYS_EAGER = True
+CELERY_TASK_EAGER_PROPAGATES = True
