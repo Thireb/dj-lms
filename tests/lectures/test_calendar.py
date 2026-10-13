@@ -190,3 +190,17 @@ def test_unknown_view_and_bad_date_fall_back_to_this_week(school) -> None:
     assert f"{monday.day} " in html
     assert 'aria-current="date"' in html
     assert "calendar-week" in html
+
+
+@pytest.mark.django_db
+def test_week_page_puts_a_lecture_on_the_viewer_date(school) -> None:
+    """01:00 Karachi is 20:00 UTC the day before; the card is the Karachi day."""
+    day = karachi_today() + timedelta(days=2)
+    put_at(add_lecture(school, title="Early"), _karachi(day, 1))
+
+    html = _page(school, date=day.isoformat())
+
+    cards = html.split('class="calendar-day ')[1:]
+    early = [card for card in cards if "Early" in card]
+    assert len(early) == 1
+    assert f">{day.strftime('%a')} {day.day} {day.strftime('%b')}</h3>" in early[0]
