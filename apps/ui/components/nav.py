@@ -8,14 +8,21 @@ class NotificationBell(Component):
         super().__init__(user=user, unread_count=unread_count, **props)
 
 
-def _value(field) -> str:
-    """A filter may be a dict or an object; both carry an optional value."""
+def _get(field, key: str, default=""):
+    """A filter may be a dict or an object."""
     if isinstance(field, dict):
-        return field.get("value", "")
-    return getattr(field, "value", "")
+        return field.get(key, default)
+    return getattr(field, key, default)
+
+
+def _value(field) -> str:
+    return _get(field, "value")
 
 
 class FilterBar(Component):
+    """Search fields and selects; a filter with ``hidden=True`` is a hidden
+    input that keeps a value (such as the chosen tab) when filters apply."""
+
     template_name = "ui/components/filter_bar.html"
 
     def __init__(self, filters=None, **props):
@@ -23,7 +30,11 @@ class FilterBar(Component):
 
     def get_context(self):
         ctx = super().get_context()
-        ctx["active"] = any(_value(f) for f in ctx["filters"])
+        # A hidden field (for example the chosen tab) is kept on submit but
+        # is not a filter the user can clear.
+        ctx["active"] = any(
+            _value(f) for f in ctx["filters"] if not _get(f, "hidden", False)
+        )
         return ctx
 
 

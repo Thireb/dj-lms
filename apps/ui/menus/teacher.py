@@ -21,8 +21,18 @@ class TeacherMenu:
             MenuGroup(
                 label="Academics",
                 items=(
-                    MenuItem("My lectures", "teacher:lecture_list", "video"),
-                    MenuItem("Create lecture", "teacher:lecture_create", "plus"),
+                    MenuItem(
+                        "My lectures",
+                        "teacher:lecture_list",
+                        "video",
+                        menu_key="lectures",
+                    ),
+                    MenuItem(
+                        "Create lecture",
+                        "teacher:lecture_create",
+                        "plus",
+                        menu_key="lecture_create",
+                    ),
                     MenuItem(
                         "Schedule recurring",
                         "teacher:lecture_schedule",

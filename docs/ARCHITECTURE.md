@@ -150,6 +150,7 @@ Academics:
 Operations:
 - `Lecture` (batch, subject(s), teacher, starts_at UTC, duration, status, delivery: manual_link / in_person / zoom later, meeting_url).
 - `RecurringSeries` (rule, start, end) generates `Lecture` rows.
+- Built in 3.1: `Lecture` has one teacher, one batch and many subjects (`subjects` many-to-many), `starts_at` (UTC) and `duration_minutes`. `for_user`: admins and sub-admins see the institute, a teacher their own lectures, a student or guardian the lectures of a batch and subject their (child's) enrolment has, on the same enrolment row. `lectures.services` checks the teacher's links, the overlap and the link, and locks the teacher row so two saves cannot both pass the overlap check.
 - `Attendance` (lecture, student, status: present/partial/late/absent, source: manual or provider).
 - `Assignment`, `Submission`, `Quiz`, `Question`, `QuizAttempt`.
 - `Homework`, `HomeworkSubmission`, `LessonPlan`, `DailyReport` (each with approval status where the institute requires it).

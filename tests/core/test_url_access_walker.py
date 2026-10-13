@@ -10,18 +10,22 @@ For each named URL in ``config.urls`` that is not public:
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import timedelta
 from typing import Any
 
 import pytest
 from apps.academics.models import Batch, ClassLabel, Subject
+from apps.academics.services import set_teacher_batch_subjects
 from apps.accounts.models import User
 from apps.core.roles import Role
 from apps.core.tenancy import tenant_context
+from apps.lectures.models import Lecture
 from apps.people.models import StudentProfile, TeacherProfile
 from apps.people.services import create_student_profile, create_teacher_profile
 from apps.ui.views.pages import PortalPageView
 from django.test import Client
 from django.urls import URLPattern, URLResolver, get_resolver, reverse
+from django.utils import timezone
 
 from tests.conftest import make_user
 
@@ -142,6 +146,31 @@ def _student(institute) -> int:
         return create_student_profile(user, guardian_phone="0300-0000000").pk
 
 
+def _lecture(institute) -> int:
+    # The teacher portal opens only the walker teacher's own lectures.
+    # unscoped: test setup outside a tenant context.
+    walker = TeacherProfile.unscoped.filter(
+        institute=institute, user__email=f"{Role.TEACHER}-walker@example.com"
+    ).first()
+    teacher = walker or TeacherProfile.unscoped.get(pk=_teacher(institute))
+    batch = Batch.unscoped.get(pk=_name_row(Batch)(institute))
+    subject = Subject.unscoped.get(pk=_name_row(Subject)(institute))
+    with tenant_context(institute):
+        set_teacher_batch_subjects(teacher, {batch: [subject]})
+        lecture = Lecture(
+            institute=institute,
+            title="Walker",
+            teacher=teacher,
+            batch=batch,
+            starts_at=timezone.now() + timedelta(days=1),
+            duration_minutes=60,
+            meeting_url="https://meet.example.com/walker",
+        )
+        lecture.save()
+        lecture.subjects.set([subject])
+    return lecture.pk
+
+
 ROUTE_OBJECTS = {
     **{
         f"admin:{prefix}_{action}": _name_row(model)
@@ -157,6 +186,8 @@ ROUTE_OBJECTS = {
     "admin:student_edit": _student,
     "admin:student_status": _student,
     "admin:portal_access_action": _student,
+    "admin:lecture_edit": _lecture,
+    "teacher:lecture_edit": _lecture,
 }
 
 
@@ -179,11 +210,15 @@ def _url(route: Route, institute) -> str:
 
 
 def _user_for(role: str, institute):
-    return make_user(
+    user = make_user(
         email=f"{role}-walker@example.com",
         role=role,
         institute=None if role == Role.SUPER_ADMIN else institute,
     )
+    if role == Role.TEACHER:  # a teacher account always has a profile
+        with tenant_context(institute):
+            create_teacher_profile(user)
+    return user
 
 
 @pytest.mark.django_db

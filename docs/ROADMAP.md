@@ -68,7 +68,8 @@ The product owner did not accept the current look (navigation, tables, forms, si
 
 ## Phase 3: Lectures
 
-- [ ] 3.1 Lecture CRUD with manual meeting link.
+- [x] 3.1 Lecture CRUD with manual meeting link.
+  - Admin All lectures, Add lecture, Edit; teacher My lectures, Create lecture, Edit. Deferred parts are LC1-LC4 in `BACKLOG.md`.
 - [ ] 3.2 Recurring schedule builder (Celery task generates lectures).
 - [ ] 3.3 Teacher, student, guardian schedule views.
 - [ ] 3.4 Countdown card and join button; time zone display.

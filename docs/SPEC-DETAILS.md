@@ -166,6 +166,13 @@ Name*, Amount* (greater than 0), Status.
 ### 4.5 Add lecture
 Title*, Date*, Start time*, Duration (minutes)*, Teacher* (admin only; teacher is fixed when a teacher creates it), Batch*, Subjects* (only those assigned to the chosen teacher in that batch), Delivery mode* (S) Manual link / In person, Meeting link (required if Manual link), Description.
 Validation: no overlap for the same teacher; warn on overlap for the same batch.
+Rules chosen in 3.1 (ASSUMED, compare with the demo):
+- Batch and subjects are one picker, grouped by batch, from the teacher's links. All chosen subjects must be in one batch. In the admin form the picker reloads when the teacher changes.
+- Duration is 10 to 480 minutes. Date and start time are in the viewer's time zone and stored in UTC.
+- The start must be in the future when a lecture is added, and when an edit changes the start.
+- Only a `scheduled` lecture can be edited. A cancelled lecture does not count as an overlap; back-to-back lectures are fine.
+- An inactive teacher, batch or subject cannot be added, but may stay on a lecture that already has it.
+- Lists: Today = starts today in the viewer's zone; Upcoming = not ended yet (default); Past = ended, newest first; All.
 
 ### 4.6 Recurring schedule
 Title*, Teacher*, Batch*, Subjects*, Delivery mode*, Meeting link, Days of week* (checkboxes), Start time*, Duration*, Start date*, End date* (or "number of weeks"). Preview list of lectures before saving. Edit scope: this one / this and all future.

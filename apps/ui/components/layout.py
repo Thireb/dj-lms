@@ -278,6 +278,16 @@ class Tabs(Component):
         super().__init__(tabs=safe_tabs, active=active, **props)
 
 
+class LinkTabs(Tabs):
+    """Tabs that are plain links (each tab is its own page, for example the
+    Today, Upcoming, Past and All lecture lists). ``label`` names the nav."""
+
+    template_name = "ui/components/link_tabs.html"
+
+    def __init__(self, tabs, active=None, label="Views", **props):
+        super().__init__(tabs, active=active, label=label, **props)
+
+
 class Modal(Component):
     template_name = "ui/components/modal.html"
 

@@ -24,7 +24,8 @@ class TimePicker(forms.TimeInput):
         }
         if attrs:
             default_attrs.update(attrs)
-        super().__init__(attrs=default_attrs)
+        # Hours and minutes, the value a browser time input expects.
+        super().__init__(attrs=default_attrs, format="%H:%M")
 
 
 class PasswordInput(forms.PasswordInput):
