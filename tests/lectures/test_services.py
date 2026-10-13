@@ -335,9 +335,9 @@ def _list_titles(user, **kwargs) -> list[str]:
 
 
 @pytest.mark.django_db
-def test_list_views_split_today_upcoming_and_past(school) -> None:
+def test_list_views_split_upcoming_past_and_all(school) -> None:
     now = timezone.now()
-    running = put_at(add_lecture(school, title="Running"), now - timedelta(minutes=30))
+    put_at(add_lecture(school, title="Running"), now - timedelta(minutes=30))
     put_at(add_lecture(school, title="Ended"), now - timedelta(days=3))
     add_lecture(school, title="Next week", starts_at=soon(days=7))
     user = school.teacher_1.user
@@ -345,7 +345,6 @@ def test_list_views_split_today_upcoming_and_past(school) -> None:
     assert _list_titles(user, show="upcoming", now=now) == ["Running", "Next week"]
     assert _list_titles(user, show="past", now=now) == ["Ended"]
     assert _list_titles(user, show="all", now=now) == ["Ended", "Running", "Next week"]
-    assert running.title in _list_titles(user, show="today", now=now)
     assert "Next week" not in _list_titles(user, show="today", now=now)
 
 
@@ -361,6 +360,20 @@ def test_today_follows_the_viewer_time_zone(school) -> None:
         assert _list_titles(user, show="today", now=evening) == ["Late"]
     with timezone.override("Asia/Karachi"):
         assert _list_titles(user, show="today", now=evening) == []
+
+
+@pytest.mark.django_db
+def test_today_uses_the_viewer_date_not_the_utc_date(school) -> None:
+    lecture = add_lecture(school, title="Early", starts_at=soon(days=2, hour=3))
+    # At 20:00 UTC it is already 01:00 the next day in Karachi, the day of
+    # this 03:00 UTC (08:00 Karachi) lecture.
+    late_evening = lecture.starts_at - timedelta(hours=7)
+    user = school.teacher_1.user
+
+    with timezone.override("Asia/Karachi"):
+        assert _list_titles(user, show="today", now=late_evening) == ["Early"]
+    with timezone.override("UTC"):
+        assert _list_titles(user, show="today", now=late_evening) == []
 
 
 @pytest.mark.django_db
