@@ -334,3 +334,14 @@ def test_edit_keeps_the_schedule_time_zone(
     schedule.refresh_from_db()
     assert "Times are in Europe/London." in page
     assert schedule.time_zone == "Europe/London"
+
+
+@pytest.mark.django_db
+def test_preview_marks_a_busy_date_as_skipped(admin_client, school) -> None:
+    add_schedule(school, title="Existing")
+
+    html = admin_client.post(_url("create"), _form(school)).content.decode()
+
+    assert "0 lectures will be added now" in html
+    assert html.count(">Skipped<") == 7
+    assert "The teacher already has Existing then." in html

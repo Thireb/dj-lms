@@ -182,6 +182,7 @@ class SchedulePreviewList(DataTable):
         Column("date", "Date", lambda item: local_date(item.starts_at)),
         Column("time", "Time", lambda item: time_range(item.starts_at, item.ends_at)),
         Column("result", "Result", lambda item: _preview_result(item)),
+        Column("note", "Note", lambda item: _preview_note(item)),
     ]
     empty_title = "No lecture falls in the next weeks."
 
@@ -189,4 +190,11 @@ class SchedulePreviewList(DataTable):
 def _preview_result(item) -> Badge:
     if item.clash is None:
         return Badge("Will be added", tone="success")
-    return Badge(f"Skipped: the teacher has {item.clash.title}", tone="warning")
+    return Badge("Skipped", tone="warning")
+
+
+def _preview_note(item) -> str:
+    # Plain text wraps on phones; a badge with the title did not fit at 360px.
+    if item.clash is None:
+        return ""
+    return f"The teacher already has {item.clash.title} then."
