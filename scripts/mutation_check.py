@@ -686,8 +686,8 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
     (
         "filter bar selects",
         "apps/ui/templates/ui/components/filter_bar.html",
-        "{% if f.options %}",
-        "{% if False %}",
+        "{% elif f.options %}",
+        "{% elif False %}",
     ),
     (
         "student list scoped",
@@ -1381,8 +1381,8 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
     (
         "icon button has aria label",
         "apps/ui/templates/ui/components/icon_button.html",
-        '<a href="{{ url }}" class="icon-btn h-9 w-9" aria-label="{{ label }}"',
-        '<a href="{{ url }}" class="icon-btn h-9 w-9"',
+        '{% endif %} class="icon-btn h-9 w-9" aria-label="{{ label }}"',
+        '{% endif %} class="icon-btn h-9 w-9"',
     ),
     (
         "filter bar clear only when active",
@@ -1393,8 +1393,8 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
     (
         "filter value read from objects",
         "apps/ui/components/nav.py",
-        '    return getattr(field, "value", "")',
-        "    return field.value",
+        "    return getattr(field, key, default)",
+        "    return getattr(field, key)",
     ),
     (
         "pagination shows page numbers",
