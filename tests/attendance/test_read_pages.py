@@ -260,11 +260,30 @@ def test_admin_chooses_a_student(old_school, admin_client) -> None:
 
     assert "Choose a student." in empty
     assert 'name="subject"' not in empty
-    # Student pks are one sequence, so another institute's pk cannot match.
-    assert str(school.student_b.pk) not in select_values(empty, "student")
+    assert 'name="student"' not in empty  # no list of every student (P4-2)
     assert cell(table_row(chosen, "Morning math"), "status") == ["Late"]
     assert ">100%<" in chosen
     assert f"Finished classes of {school.student_1}." in chosen
+    assert 'type="hidden" name="student"' in chosen
+    assert f'href="{ADMIN_URL}"' in chosen  # Choose another student
+
+
+@pytest.mark.django_db
+def test_admin_searches_for_a_student(old_school, admin_client) -> None:
+    """The search lists matching students of this institute only, each
+    with a link to their history (audit P4-2)."""
+    school = old_school
+    code = school.student_1.student_code
+
+    html = _html(admin_client, ADMIN_URL, q=code)
+    link = f"{ADMIN_URL}?student={school.student_1.pk}"
+
+    assert link in html
+    assert f'aria-label="Attendance history of {school.student_1}"' in html
+    assert f"?student={school.student_2.pk}" not in html
+    assert f"?student={school.student_b.pk}" not in html
+    other = _html(admin_client, ADMIN_URL, q=str(school.student_b))
+    assert "No students match this search." in other
 
 
 @pytest.mark.django_db

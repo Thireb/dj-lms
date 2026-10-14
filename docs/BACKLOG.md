@@ -285,7 +285,7 @@ Full review of roadmap 4.1 to 4.3 on `main` ceecf9c: pytest 1771 passed, ruff cl
 | # | Item | Priority | Status |
 |---|---|---|---|
 | P4-1 | A deactivated student (one who left) kept their enrolments, so they stayed on every new roster. The form starts every unmarked student at Present, so each save marked them Present, and they counted in Present / Total. Enrolments of inactive students are now left out; a student with a saved mark stays on that lecture (SPEC 6.3). Tests and a mutation entry added. | Medium | [x] |
-| P4-2 | "Student attendance history" loads every student of the institute into the Student select. Fine for a few hundred; at about 2,000 students the page has a very long list. Use a search field (like All students) when an institute grows. | Low | [ ] |
+| P4-2 | "Student attendance history" loads every student of the institute into the Student select. Fine for a few hundred; at about 2,000 students the page has a very long list. Use a search field (like All students) when an institute grows. Fixed: a search (name, code, email or phone) lists the matches, 25 a page, each with a link to their history; a chosen student has "Choose another student". | Low | [x] |
 | P4-3 | The attendance pages and dashboard % read every finished lecture of the student's batches and page them in Python (no N+1; the query count is fixed). A batch with 5 lectures a day has about 1,500 a year. Revisit with P3-8 (caching) before large institutes. | Low | [ ] |
 
 ## Later (deployment hardening, Phase 12)

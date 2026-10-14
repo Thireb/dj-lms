@@ -2593,8 +2593,8 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
     (
         "admin attendance history scoped students",
         "apps/attendance/views.py",
-        "            StudentProfile.objects.for_user(self.request.user)\n            .select_related",
-        "            StudentProfile.unscoped.all()\n            .select_related",
+        "        students = StudentProfile.objects.for_user(self.request.user)\n",
+        "        students = StudentProfile.unscoped.all()\n",
     ),
     (
         "attendance subject filter lists own subjects",

@@ -23,7 +23,12 @@ from apps.attendance.services import (
     student_subject_ids,
     summarize,
 )
-from apps.attendance.ui import AttendanceTable, SummaryTable, summary_cards
+from apps.attendance.ui import (
+    AttendanceTable,
+    StudentPickTable,
+    SummaryTable,
+    summary_cards,
+)
 from apps.core import menus as menu_keys
 from apps.core.query import id_param, search_param
 from apps.core.roles import Role
@@ -36,7 +41,9 @@ from apps.lectures.views import (
     calendar_day,
 )
 from apps.people.models import StudentProfile
+from apps.people.services import list_students
 from apps.people.views import GuardianChildMixin
+from apps.ui.components.actions import Button
 from apps.ui.components.block_stack import BlockStack
 from apps.ui.components.data import EmptyState
 from apps.ui.components.layout import LinkTabs
@@ -236,7 +243,8 @@ class GuardianAttendancePage(GuardianChildMixin, StudentAttendancePage):
 
 class AdminStudentAttendancePage(StudentAttendancePage):
     """Admin "Student attendance history" (People menu): one student at a
-    time, chosen in the filter or from All students."""
+    time, found with the search or chosen from All students. The search
+    replaces a list of every student (audit P4-2)."""
 
     portal = "admin"
     menu_key = menu_keys.PEOPLE
@@ -245,41 +253,51 @@ class AdminStudentAttendancePage(StudentAttendancePage):
     title = "Student attendance history"
     filter_keys = ("student", "subject", "date_from", "date_to")
 
-    @cached_property
-    def students(self) -> list[StudentProfile]:
-        return list(
-            StudentProfile.objects.for_user(self.request.user)
-            .select_related("user")
-            .order_by("user__first_name", "user__last_name", "pk")
-        )
-
     def get_student(self) -> StudentProfile | None:
         wanted = id_param(search_param(self.request.GET.get("student")))
-        return next((row for row in self.students if row.pk == wanted), None)
+        if wanted is None:
+            return None
+        students = StudentProfile.objects.for_user(self.request.user)
+        return students.select_related("user").filter(pk=wanted).first()
+
+    def get_actions(self) -> list[Any]:
+        if self.student is None:
+            return []
+        return [
+            Button(
+                "Choose another student",
+                variant="secondary",
+                url=self.request.path,
+                icon="search",
+            )
+        ]
 
     def get_components(self) -> dict[str, Any]:
         if self.student is not None:
             return super().get_components()
-        filters = self.get_filters()
-        return {
-            "filters": FilterBar(self.filter_fields(filters)),
-            "table": EmptyState(
-                "Choose a student.",
-                text="Their finished classes and attendance show here.",
-                icon="clipboard-list",
-            ),
+        search = search_param(self.request.GET.get("q"))
+        components: dict[str, Any] = {
+            "filters": FilterBar(
+                [{"name": "q", "label": "Search students", "value": search}]
+            )
         }
+        if not search:
+            components["table"] = EmptyState(
+                "Choose a student.",
+                text="Search by name, student code, email or phone.",
+                icon="clipboard-list",
+            )
+            return components
+        found = list_students(self.request.user, search=search)
+        page = Paginator(found, PAGE_SIZE).get_page(self.request.GET.get("page"))
+        components["table"] = StudentPickTable(
+            list(page.object_list), empty_title="No students match this search."
+        )
+        components["pagination"] = Pagination(page, query=urlencode({"q": search}))
+        return components
 
     def filter_fields(
         self, filters: dict[str, str], view: str = ""
     ) -> list[dict[str, Any]]:
-        student = {
-            "name": "student",
-            "label": "Student",
-            "value": filters["student"],
-            "options": [("", "Choose a student")]
-            + [(str(row.pk), f"{row} ({row.student_code})") for row in self.students],
-        }
-        if self.student is None:
-            return [student]
+        student = {"name": "student", "value": filters["student"], "hidden": True}
         return [student, *super().filter_fields(filters, view)]
