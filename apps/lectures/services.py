@@ -459,11 +459,7 @@ def finish_ended_lectures(institute: Institute, now: datetime | None = None) -> 
     count of both."""
     require_tenant_context(institute)
     now = now or timezone.now()
-    ended = (
-        Lecture.objects.filter(status__in=OPEN_STATUSES)
-        .annotate(ends_at_db=ENDS_AT)
-        .filter(ends_at_db__lte=now)
-    )
+    ended = Lecture.objects.annotate(ends_at_db=ENDS_AT).filter(ends_at_db__lte=now)
     finished = Lecture.objects.filter(
         pk__in=ended.filter(status=LectureStatus.LIVE).values("pk")
     ).update(status=LectureStatus.FINISHED, ended_at=ENDS_AT, updated_at=now)

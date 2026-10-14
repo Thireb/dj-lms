@@ -209,3 +209,16 @@ def test_main_dashboard_links_to_the_monitor_and_add_lecture(admin_client) -> No
 
     assert f'href="{URL}"' in html
     assert f'href="{reverse("admin:lecture_create")}"' in html
+
+
+def test_today_card_note_counts_each_closed_state() -> None:
+    from apps.lectures.services import LectureMonitor
+
+    data = LectureMonitor(
+        live=[], late=[], soon=[], today={"finished": 3, "not_held": 2, "cancelled": 1}
+    )
+
+    html = str(LecturesDashboardPage().stats(data))
+
+    assert "3 finished, 2 not held, 1 cancelled" in html
+    assert re.search(r">5</p><p[^>]*>Lectures today<", html)
