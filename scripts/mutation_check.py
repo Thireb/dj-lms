@@ -2548,6 +2548,54 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "        if can_mark(self.lecture):\n",
         "        if True:\n",
     ),
+    (
+        "guardian switcher refuses unlinked children",
+        "apps/people/views.py",
+        "        if any(child.pk == wanted for child in self.children):\n",
+        "        if True:\n",
+    ),
+    (
+        "guardian switcher goes back only to guardian pages",
+        "apps/people/views.py",
+        "        return wanted if wanted.startswith(home) else home\n",
+        "        return wanted or home\n",
+    ),
+    (
+        "guardian chosen child follows the session",
+        "apps/people/services.py",
+        "    chosen = [child for child in children if child.pk == wanted]\n",
+        "    chosen = []\n",
+    ),
+    (
+        "attendance records only expected lectures",
+        "apps/attendance/services.py",
+        "        if lecture.pk in marks or any(is_expected(lecture, e) for e in enrolments)\n",
+        "        if True\n",
+    ),
+    (
+        "attendance records only finished lectures",
+        "apps/attendance/services.py",
+        "        Lecture.objects.filter(status=LectureStatus.FINISHED)\n        .filter(Q(",
+        "        Lecture.objects.filter()\n        .filter(Q(",
+    ),
+    (
+        "attendance percent counts half of partial",
+        "apps/attendance/services.py",
+        "        attended = self.present + self.late + HALF * self.partial\n",
+        "        attended = self.present + self.late + self.partial\n",
+    ),
+    (
+        "admin attendance history scoped students",
+        "apps/attendance/views.py",
+        "            StudentProfile.objects.for_user(self.request.user)\n            .select_related",
+        "            StudentProfile.unscoped.all()\n            .select_related",
+    ),
+    (
+        "attendance subject filter lists own subjects",
+        "apps/attendance/views.py",
+        "            student_links__student=self.student\n",
+        "            pk__gt=0\n",
+    ),
 ]
 
 

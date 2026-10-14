@@ -16,7 +16,6 @@ from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.utils.cache import patch_cache_control
-from django.utils.http import url_has_allowed_host_and_scheme
 
 from apps.academics.models import Batch, ClassLabel
 from apps.core import menus as menu_keys
@@ -816,8 +815,7 @@ class GuardianChooseChildView(GuardianChildMixin, PortalPageView):
         return HttpResponseRedirect(self.back_url(request.POST.get("next", "")))
 
     def back_url(self, wanted: str) -> str:
+        """Only a guardian page: a path under /guardian/ is always on this
+        site, so "//other.site" or "https://..." go home."""
         home = reverse("guardian:home")
-        safe = url_has_allowed_host_and_scheme(
-            wanted, allowed_hosts={self.request.get_host()}
-        )
-        return wanted if safe and wanted.startswith(home) else home
+        return wanted if wanted.startswith(home) else home
