@@ -27,7 +27,8 @@ from django.utils import timezone
 
 from tests.conftest import cell, make_user, table_row
 from tests.lectures.conftest import MEET_URL, add_lecture, put_at, signed_in, soon
-from tests.school import link_guardian
+from tests.people.conftest import student
+from tests.school import link_guardian, link_student
 
 LIST_URL = reverse("student:lecture_list")
 
@@ -347,3 +348,21 @@ def test_page_clock_shows_the_viewer_zone(school) -> None:
     html = _home(school.teacher_1.user, "teacher:home")
 
     assert re.search(r'class="clock-zone[^"]*" title="Asia/Karachi">PKT<', html)
+
+
+@pytest.mark.django_db
+def test_guardian_class_row_names_only_the_child_in_that_batch(
+    school, institute_a
+) -> None:
+    """A second child takes Math in Evening; a Morning Math lecture is not
+    theirs."""
+    other = student(institute_a, "evening-math@example.com")
+    link_student(other, {school.evening: [school.math]})
+    link_guardian(other, "g1-a@example.com")
+    add_lecture(school, title="Algebra basics")
+
+    html = _home(school.guardian_1.user, "guardian:home")
+
+    row = re.search(r'class="lecture-row.*?</div></div>', html, re.S).group(0)
+    assert str(school.student_1) in row
+    assert str(other) not in row
