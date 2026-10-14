@@ -2209,8 +2209,8 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
     (
         "history newest first",
         "apps/lectures/services.py",
-        '    return lectures.order_by("-starts_at", "-pk")\n\n\n# Calendar',
-        '    return lectures.order_by("starts_at", "pk")\n\n\n# Calendar',
+        '    return lectures.order_by("-starts_at", "-pk")\n\n\n# Live lecture monitor',
+        '    return lectures.order_by("starts_at", "pk")\n\n\n# Live lecture monitor',
     ),
     (
         "history teacher filter",
