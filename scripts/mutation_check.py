@@ -2416,6 +2416,72 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "        not_held = today.get(LectureStatus.NOT_HELD, 0)\n",
         "        not_held = 0\n",
     ),
+    (
+        "broker down makes the lectures now",
+        "apps/lectures/services.py",
+        "    try:\n        generate_schedule_lectures(institute_id, schedule_id)\n    except Exception:\n",
+        "    try:\n        pass\n    except Exception:\n",
+    ),
+    (
+        "broker down is caught",
+        "apps/lectures/services.py",
+        "    except KombuOperationalError:\n",
+        "    except ZeroDivisionError:\n",
+    ),
+    (
+        "inline failure is logged not raised",
+        "apps/lectures/services.py",
+        '    except Exception:\n        logger.exception(\n            "Could not make the lectures',
+        '    except ZeroDivisionError:\n        logger.exception(\n            "Could not make the lectures',
+    ),
+    (
+        "nightly goes on after a schedule fails",
+        "apps/lectures/tasks.py",
+        '                except Exception:\n                    logger.exception(\n                        "Nightly run',
+        '                except ZeroDivisionError:\n                    logger.exception(\n                        "Nightly run',
+    ),
+    (
+        "finish goes on after an institute fails",
+        "apps/lectures/tasks.py",
+        '            except Exception:\n                logger.exception("Finish run',
+        '            except ZeroDivisionError:\n                logger.exception("Finish run',
+    ),
+    (
+        "schedule list flags problems",
+        "apps/lectures/views.py",
+        "        return self.table_class(rows, problems=schedule_problems(rows))\n",
+        "        return self.table_class(rows)\n",
+    ),
+    (
+        "problem: inactive teacher",
+        "apps/lectures/services.py",
+        '    if schedule.teacher.status != ProfileStatus.ACTIVE:\n        return f"{schedule.teacher} is inactive',
+        '    if False:\n        return f"{schedule.teacher} is inactive',
+    ),
+    (
+        "problem: only active schedules",
+        "apps/lectures/services.py",
+        "    active = [row for row in schedules if row.status == ScheduleStatus.ACTIVE]\n",
+        "    active = list(schedules)\n",
+    ),
+    (
+        "meeting link button new tab",
+        "apps/lectures/ui.py",
+        '        "Open meeting link", url=lecture.meeting_url, icon="video", new_tab=True\n',
+        '        "Open meeting link", url=lecture.meeting_url, icon="video"\n',
+    ),
+    (
+        "preview save above the dates",
+        "apps/lectures/views.py",
+        "                blocks=[text, save, schedule_preview_list(preview.planned)]\n",
+        "                blocks=[text, schedule_preview_list(preview.planned)]\n",
+    ),
+    (
+        "button submit type",
+        "apps/ui/templates/ui/components/button.html",
+        "{% if submit %}submit{% else %}button{% endif %}",
+        "button",
+    ),
 ]
 
 
