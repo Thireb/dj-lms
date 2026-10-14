@@ -137,7 +137,7 @@ def test_page_shows_the_numbers_and_three_lists(admin_client, busy_day) -> None:
     assert re.search(r">1</p><p[^>]*>Live now<", html)
     assert re.search(r">1</p><p[^>]*>Late start<", html)
     assert re.search(r">1</p><p[^>]*>Next 2 hours<", html)
-    assert "1 finished" not in html and "0 finished, 1 cancelled" in html
+    assert "1 finished" not in html and "0 finished, 0 not held, 1 cancelled" in html
     assert cell(table_row(html, "Live algebra"), "wait") == ["18", "min"]
     assert cell(table_row(html, "Late algebra"), "wait") == ["7", "min"]
     assert cell(table_row(html, "Soon physics"), "wait") in (
@@ -209,3 +209,16 @@ def test_main_dashboard_links_to_the_monitor_and_add_lecture(admin_client) -> No
 
     assert f'href="{URL}"' in html
     assert f'href="{reverse("admin:lecture_create")}"' in html
+
+
+def test_today_card_note_counts_each_closed_state() -> None:
+    from apps.lectures.services import LectureMonitor
+
+    data = LectureMonitor(
+        live=[], late=[], soon=[], today={"finished": 3, "not_held": 2, "cancelled": 1}
+    )
+
+    html = str(LecturesDashboardPage().stats(data))
+
+    assert "3 finished, 2 not held, 1 cancelled" in html
+    assert re.search(r">5</p><p[^>]*>Lectures today<", html)

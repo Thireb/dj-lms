@@ -2011,8 +2011,8 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
     (
         "join ends with the lecture",
         "apps/lectures/services.py",
-        "    if lecture.status == LectureStatus.FINISHED or now >= lecture.ends_at:\n",
-        "    if lecture.status == LectureStatus.FINISHED:\n",
+        "    if lecture.status in CLOSED_STATUSES or now >= lecture.ends_at:\n",
+        "    if lecture.status in CLOSED_STATUSES:\n",
     ),
     (
         "join none for in person",
@@ -2173,20 +2173,14 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
     (
         "finish only past the end",
         "apps/lectures/services.py",
-        '        .filter(ends_at_db__lte=now)\n    )\n    return Lecture.objects.filter(pk__in=ended.values("pk"))',
-        '    )\n    return Lecture.objects.filter(pk__in=ended.values("pk"))',
-    ),
-    (
-        "finish leaves cancelled alone",
-        "apps/lectures/services.py",
-        "        Lecture.objects.filter(status__in=OPEN_STATUSES)\n        .annotate(ends_at_db=ENDS_AT)\n        .filter(ends_at_db__lte=now)\n",
-        "        Lecture.objects.all()\n        .annotate(ends_at_db=ENDS_AT)\n        .filter(ends_at_db__lte=now)\n",
+        "    ended = Lecture.objects.annotate(ends_at_db=ENDS_AT).filter(ends_at_db__lte=now)\n",
+        "    ended = Lecture.objects.annotate(ends_at_db=ENDS_AT)\n",
     ),
     (
         "finish needs the tenant",
         "apps/lectures/services.py",
-        '    count."""\n    require_tenant_context(institute)\n',
-        '    count."""\n',
+        '    count of both."""\n    require_tenant_context(institute)\n',
+        '    count of both."""\n',
     ),
     (
         "taught minutes from start and end",
@@ -2337,6 +2331,90 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "apps/lectures/ui.py",
         "            return minutes_text(self.now - (lecture.started_at or lecture.starts_at))\n",
         "            return minutes_text(self.now - lecture.starts_at)\n",
+    ),
+    (
+        "schedule lecture keeps its date",
+        "apps/lectures/services.py",
+        "        occurrence_date=starts_at.date(),  # starts_at is in the schedule's zone\n",
+        "",
+    ),
+    (
+        "taken dates use occurrence date",
+        "apps/lectures/services.py",
+        "        lecture.occurrence_date or timezone.localtime(lecture.starts_at, zone).date()\n",
+        "        timezone.localtime(lecture.starts_at, zone).date()\n",
+    ),
+    (
+        "lecture edit reads the locked row",
+        "apps/lectures/services.py",
+        "    _lock_teacher(details.teacher)\n    _lock_and_reload(lecture)\n    _check(lecture.institute, details, lecture)\n",
+        "    _lock_teacher(details.teacher)\n    _check(lecture.institute, details, lecture)\n",
+    ),
+    (
+        "generate reads the locked schedule",
+        "apps/lectures/services.py",
+        "    _lock_teacher(schedule.teacher)\n    _lock_and_reload(schedule)\n    if schedule.status != ScheduleStatus.ACTIVE:\n        return GenerateResult()\n",
+        "    _lock_teacher(schedule.teacher)\n    if schedule.status != ScheduleStatus.ACTIVE:\n        return GenerateResult()\n",
+    ),
+    (
+        "extend reads the locked schedule",
+        "apps/lectures/services.py",
+        "    require_tenant_context(schedule.institute)\n    _lock_and_reload(schedule)\n    errors = _Errors()\n",
+        "    require_tenant_context(schedule.institute)\n    errors = _Errors()\n",
+    ),
+    (
+        "demo seed uses the student's pair",
+        "apps/lectures/demo.py",
+        "        if (link.batch_id, link.subject_id) in shared:\n",
+        "        if False:\n",
+    ),
+    (
+        "closed lecture edit goes back",
+        "apps/lectures/views.py",
+        "        if self.lecture.status != LectureStatus.SCHEDULED:\n            # Audit P3-4",
+        "        if False:\n            # Audit P3-4",
+    ),
+    (
+        "stopped schedule pages go back",
+        "apps/lectures/views.py",
+        '        if self.schedule.status == ScheduleStatus.ACTIVE:\n            return None\n        messages.error(self.request, f"A stopped schedule',
+        '        if True:\n            return None\n        messages.error(self.request, f"A stopped schedule',
+    ),
+    (
+        "finish job: never started is not held",
+        "apps/lectures/services.py",
+        "    ).update(status=LectureStatus.NOT_HELD, updated_at=now)\n",
+        "    ).update(status=LectureStatus.FINISHED, updated_at=now)\n",
+    ),
+    (
+        "finish job: live becomes finished",
+        "apps/lectures/services.py",
+        '        pk__in=ended.filter(status=LectureStatus.LIVE).values("pk")\n',
+        '        pk__in=ended.filter(status=LectureStatus.SCHEDULED).values("pk")\n',
+    ),
+    (
+        "not held is a closed state for join",
+        "apps/lectures/services.py",
+        "CLOSED_STATUSES = (LectureStatus.FINISHED, LectureStatus.NOT_HELD)\n",
+        "CLOSED_STATUSES = (LectureStatus.FINISHED,)\n",
+    ),
+    (
+        "not held badge is amber",
+        "apps/lectures/ui.py",
+        '    LectureStatus.NOT_HELD: "warning",\n',
+        '    LectureStatus.NOT_HELD: "neutral",\n',
+    ),
+    (
+        "migration: only lectures with no start",
+        "apps/lectures/migrations/0008_mark_never_started_not_held.py",
+        '    Lecture.objects.filter(status="finished", started_at__isnull=True).update(\n',
+        '    Lecture.objects.filter(status="finished").update(\n',
+    ),
+    (
+        "monitor note counts not held",
+        "apps/lectures/views.py",
+        "        not_held = today.get(LectureStatus.NOT_HELD, 0)\n",
+        "        not_held = 0\n",
     ),
 ]
 

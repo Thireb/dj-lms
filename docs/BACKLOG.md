@@ -240,6 +240,22 @@ Left out of 3.1 on purpose; each has a home in a later item.
 | LC12 | Admin Lectures dashboard / Live lecture monitor (FEATURES 5, SPEC 8) is not built yet. It is roadmap 3.6. Fixed in 3.6, with a "Late start" list. | Low | [x] |
 | LC13 | The Lectures dashboard has no "Teachers on leave today" (SPEC 8); it needs leave requests (roadmap 9.3). Its lists have no paging; a very large institute may need a limit. | Low | [ ] |
 
+## Phase 3 audit (2026-10-14, fixed in one PR)
+
+Full review of roadmap 3.1 to 3.6 on `main` f1e5ff3: pytest 1620 passed, ruff clean, mutation check 380 caught; 28 pages opened as `demo-admin`, `demo-teacher`, `demo-student` and `demo-guardian` at 1440px and 360px (all 200, no sideways scroll, no console errors).
+
+| # | Item | Priority | Status |
+|---|---|---|---|
+| P3-1 | A schedule edit remade the old date of a lecture moved on its own ("this one"), and the date it moved to lost its own lecture: the generator found taken dates from each lecture's current start. Lectures now keep `occurrence_date` (the schedule date they stand for); a data migration fills it for existing rows (a lecture already moved keeps its new date). Reproduced first, then fixed; test added. | Medium | [x] |
+| P3-2 | `update_lecture` saved every field of the copy read at page load, so an edit saved just after Start, Cancel or the finish job set the status back to scheduled. Stop, edit, extend and the generator also used the schedule copy without a lock (a stop during the nightly run could still get lectures). Each now locks the row and reads it again before it checks and saves; tests added. | Medium | [x] |
+| P3-3 | Demo: `demo-student` and `demo-guardian` saw no lectures, because the seed used the teacher's first batch and subject (Afternoon: Biology) and the demo student takes Afternoon: Physics. The seed now uses a pair the demo student takes; the seed test checks the student sees the live lecture. | Medium | [x] |
+| P3-4 | The edit page of a finished or cancelled lecture, and the edit and extend pages of a stopped schedule, showed a form that could never be saved. They now go back (lecture page or schedule list) with the reason. | Low | [x] |
+| P3-5 | No query budget for the lecture pages. Measured with 3 and 12 lectures (same counts, so no N+1); `tests/lectures/test_page_queries.py` now holds a budget for 10 pages. | Low | [x] |
+| P3-6 | In dev, no beat runs while `CELERY_ALWAYS_EAGER=true`, so lectures past their end stay "Scheduled" and schedules are not extended nightly. README says so; DEPLOYMENT has a beat check. | Low | [x] |
+| P3-7 | The finish job marked a lecture finished even when the teacher never pressed Start, so payroll (Phase 8) would pay a class that never took place. Owner decision 2026-10-14: a new state `not_held` (amber "Not held"). The job now makes a live lecture finished and a never-started one not held; payroll and attendance count only finished lectures, Lecture History lists only finished ones. A data migration moves existing finished lectures with no Start to not held. Demo seed has one. | Medium | [x] |
+| P3-8 | Polling: "Up next" (teacher, student) and the Lectures dashboard reload every 30 seconds. About 8 queries each; at 1,000 open student homes that is about 33 requests a second. Fine for now; revisit with caching or a longer interval before large institutes. | Low | [ ] |
+| P3-9 | Time zones with clock changes: a lecture or schedule time that does not exist on a spring-forward day (for example 01:30 in Europe/London) is saved as Django's `make_aware` reads it, without a warning. Pakistan has no clock changes; add a check when an institute in such a zone signs up. | Low | [ ] |
+
 ## Later (deployment hardening, Phase 12)
 
 | # | Item | Priority | Status |

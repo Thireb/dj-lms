@@ -76,6 +76,7 @@ The product owner did not accept the current look (navigation, tables, forms, si
 - [x] 3.4 Countdown card and join button; time zone display.
 - [x] 3.5 Lecture history and states (scheduled, live, finished, cancelled).
 - [x] 3.6 Live Lecture Monitor for admin.
+- [x] 3.7 Phase 3 audit (findings and fixes in BACKLOG.md "Phase 3 audit"): CLAUDE.md PR review procedure on the whole phase, every page opened as each demo role at 360px and 1440px, every open backlog item re-checked. Phase 4 does not start until it is merged.
 
 ## Phase 4: Attendance
 

@@ -305,10 +305,40 @@ def test_edit_remakes_future_lectures_and_keeps_ones_edited_alone(school) -> Non
     assert alone.follows_schedule is False and alone.title == "Moved one"
     assert started in after
     remade = [lec for lec in after if lec.follows_schedule and lec != started]
-    # The started lecture was moved to today, so its old day is free again:
-    # 7 days less the day edited alone.
-    assert len(remade) == 6
+    # 7 days less the started one and the one edited alone: each still
+    # stands for its schedule date (occurrence_date), so neither is made again.
+    assert len(remade) == 5
     assert {timezone.localtime(lec.starts_at, PKT).hour for lec in remade} == {15}
+
+
+@pytest.mark.django_db
+def test_schedule_edit_does_not_remake_a_moved_lecture_date(school) -> None:
+    """Audit P3-1: a lecture moved to the next day ("this one") keeps its
+    first date. A schedule edit does not make that date again, and the
+    next day keeps its own lecture."""
+    schedule = add_schedule(school)
+    moved = schedule_lectures(schedule)[2]
+    first_day = timezone.localtime(moved.starts_at, PKT).date()
+    next_start = moved.starts_at + timedelta(days=1, hours=8)
+    _in_context(
+        school,
+        update_lecture,
+        moved,
+        details(school, title="Moved", starts_at=next_start),
+    )
+
+    _in_context(
+        school, update_schedule, schedule, schedule_details(school, title="Renamed")
+    )
+    _in_context(school, generate_lectures, schedule)
+
+    days = [
+        timezone.localtime(lec.starts_at, PKT).date()
+        for lec in schedule_lectures(schedule)
+    ]
+    assert days.count(first_day) == 0
+    assert days.count(first_day + timedelta(days=1)) == 2  # its own and the moved one
+    assert len(days) == 7
 
 
 @pytest.mark.django_db
@@ -465,3 +495,32 @@ def test_nightly_task_extends_active_schedules_only(school) -> None:
         .count()
         == 0
     )
+
+
+@pytest.mark.django_db
+def test_backfill_sets_the_occurrence_date_in_the_schedule_zone(school) -> None:
+    """Audit P3-1 data migration: rows made before the field get the start
+    date in the schedule's zone."""
+    import importlib
+
+    from django.apps import apps as django_apps
+
+    migration = importlib.import_module(
+        "apps.lectures.migrations.0006_backfill_occurrence_date"
+    )
+    schedule = add_schedule(school, start_time=time(2, 0))  # 02:00 Karachi
+    # unscoped: test set-up; clear the field as before the migration.
+    Lecture.unscoped.filter(schedule=schedule).update(occurrence_date=None)
+
+    # The live registry has the fail-closed manager (a real migration gets
+    # the plain one), so run it inside the tenant context here.
+    with tenant_context(school.morning.institute):
+        migration.backfill(django_apps, None)
+
+    lectures = schedule_lectures(schedule)
+    assert all(
+        lec.occurrence_date == timezone.localtime(lec.starts_at, PKT).date()
+        for lec in lectures
+    )
+    # 02:00 Karachi is the previous day in UTC: the zone matters.
+    assert lectures[0].occurrence_date != lectures[0].starts_at.date()

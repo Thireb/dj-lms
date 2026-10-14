@@ -39,6 +39,9 @@ class LectureStatus(models.TextChoices):
     SCHEDULED = "scheduled", "Scheduled"
     LIVE = "live", "Live"
     FINISHED = "finished", "Finished"
+    # Past its end, never started by the teacher (Phase 3 audit P3-7):
+    # payroll and attendance count only finished lectures.
+    NOT_HELD = "not_held", "Not held"
     CANCELLED = "cancelled", "Cancelled"
 
 
@@ -199,6 +202,10 @@ class Lecture(TenantModel):
     # False once the lecture is edited on its own ("this one"): a schedule
     # edit then leaves it alone.
     follows_schedule = models.BooleanField(default=True)
+    # The schedule date this lecture stands for, in the schedule's zone. It
+    # stays when the lecture is moved on its own, so the schedule does not
+    # make that date again (Phase 3 audit P3-1).
+    occurrence_date = models.DateField(null=True, blank=True)
     # When the teacher pressed Start and when the lecture ended (End class,
     # or the planned end when it finished on its own).
     started_at = models.DateTimeField(null=True, blank=True)

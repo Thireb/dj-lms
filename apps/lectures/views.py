@@ -814,6 +814,10 @@ class LectureEditPage(LectureFormPage):
             .prefetch_related("subjects")
         )
         self.lecture = get_object_or_404(lectures, pk=self.kwargs["pk"])
+        if self.lecture.status != LectureStatus.SCHEDULED:
+            # Audit P3-4: no form that can never be saved.
+            messages.error(self.request, "Only a scheduled lecture can be edited.")
+            return HttpResponseRedirect(self.url("detail", pk=self.lecture.pk))
         return None
 
     def get_initial(self) -> dict[str, Any]:
@@ -1050,6 +1054,13 @@ class ScheduleCreatePage(ScheduleFormPage):
 class ScheduleObjectMixin:
     """Load the schedule only after the access mixins have passed."""
 
+    def refuse_stopped(self, verb: str) -> HttpResponse | None:
+        """Audit P3-4: a stopped schedule opens no form; back to the list."""
+        if self.schedule.status == ScheduleStatus.ACTIVE:
+            return None
+        messages.error(self.request, f"A stopped schedule cannot be {verb}.")
+        return HttpResponseRedirect(self.schedule_url("list"))
+
     def get_schedule(self) -> RecurringSchedule:
         schedules = RecurringSchedule.objects.for_user(self.request.user)
         schedules = schedules.select_related("teacher__user", "batch")
@@ -1067,7 +1078,7 @@ class ScheduleEditPage(ScheduleObjectMixin, ScheduleFormPage):
         if denied is not None:
             return denied
         self.schedule = self.get_schedule()
-        return None
+        return self.refuse_stopped("edited")
 
     def get_subtitle(self) -> str:
         return (
@@ -1112,11 +1123,13 @@ class ScheduleExtendPage(ScheduleObjectMixin, AdminScheduleMixin, FormPage):
 
     def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
         self.schedule = self.get_schedule()
-        return super().get(request, *args, **kwargs)
+        refused = self.refuse_stopped("extended")
+        return refused or super().get(request, *args, **kwargs)
 
     def post(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
         self.schedule = self.get_schedule()
-        return super().post(request, *args, **kwargs)
+        refused = self.refuse_stopped("extended")
+        return refused or super().post(request, *args, **kwargs)
 
     def get_subtitle(self) -> str:
         end = date_format(self.schedule.end_date, "j M Y")
@@ -1194,6 +1207,7 @@ class LecturesDashboardPage(DashboardPage):
     def stats(self, data: LectureMonitor) -> Grid:
         today = data.today
         finished = today.get(LectureStatus.FINISHED, 0)
+        not_held = today.get(LectureStatus.NOT_HELD, 0)
         cancelled = today.get(LectureStatus.CANCELLED, 0)
         return Grid(
             [
@@ -1206,7 +1220,10 @@ class LecturesDashboardPage(DashboardPage):
                     data.today_total,
                     "Lectures today",
                     icon="calendar-days",
-                    note=f"{finished} finished, {cancelled} cancelled",
+                    note=(
+                        f"{finished} finished, {not_held} not held, "
+                        f"{cancelled} cancelled"
+                    ),
                 ),
             ],
             variant="stats",

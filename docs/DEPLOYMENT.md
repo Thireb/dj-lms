@@ -67,5 +67,6 @@ Listed in `.env.example`. Set real values in Pethost, never in git.
 
 - [ ] Log in as Super Admin and create a test institute.
 - [ ] Check that a Celery task runs (recurring lecture generation).
+- [ ] Check that beat runs: a lecture past its end becomes Finished within 5 minutes.
 - [ ] Check PDF generation and file upload.
 - [ ] Set up uptime monitoring and error tracking.
