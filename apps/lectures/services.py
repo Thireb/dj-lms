@@ -505,11 +505,29 @@ def list_history(
 SOON_WINDOW = timedelta(hours=2)
 
 
+MONITOR_ROWS = 20  # rows per list on the Lectures dashboard (backlog LC13)
+
+
+@dataclass(frozen=True)
+class MonitorList:
+    """The first ``MONITOR_ROWS`` lectures of a list, and how many it has."""
+
+    rows: list[Lecture]
+    total: int
+
+
+def _monitor_list(lectures: Any) -> MonitorList:
+    """One count query only when the list is full."""
+    rows = list(lectures[:MONITOR_ROWS])
+    total = lectures.count() if len(rows) == MONITOR_ROWS else len(rows)
+    return MonitorList(rows, total)
+
+
 @dataclass(frozen=True)
 class LectureMonitor:
-    live: list[Lecture]
-    late: list[Lecture]  # past their start, not started, not ended
-    soon: list[Lecture]  # start within SOON_WINDOW
+    live: MonitorList
+    late: MonitorList  # past their start, not started, not ended
+    soon: MonitorList  # start within SOON_WINDOW
     today: dict[str, int]  # today's lectures by status
 
     @property
@@ -541,9 +559,9 @@ def lecture_monitor(user: Any, *, now: datetime | None = None) -> LectureMonitor
         .order_by()
     )
     return LectureMonitor(
-        live=list(lectures.filter(status=LectureStatus.LIVE)),
-        late=list(scheduled.filter(starts_at__lte=now, ends_at_db__gt=now)),
-        soon=list(
+        live=_monitor_list(lectures.filter(status=LectureStatus.LIVE)),
+        late=_monitor_list(scheduled.filter(starts_at__lte=now, ends_at_db__gt=now)),
+        soon=_monitor_list(
             scheduled.filter(starts_at__gt=now, starts_at__lte=now + SOON_WINDOW)
         ),
         today={row["status"]: row["count"] for row in today},

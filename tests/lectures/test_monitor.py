@@ -76,10 +76,10 @@ def test_monitor_sorts_lectures_into_live_late_and_soon(busy_day) -> None:
 
     data = lecture_monitor(admin)
 
-    assert data.live == [live]
-    assert data.late == [late]
-    assert data.soon == [soon_one]
-    assert later not in data.soon and dropped not in data.soon
+    assert data.live.rows == [live]
+    assert data.late.rows == [late]
+    assert data.soon.rows == [soon_one]
+    assert later not in data.soon.rows and dropped not in data.soon.rows
 
 
 @pytest.mark.django_db
@@ -87,7 +87,7 @@ def test_a_late_lecture_leaves_the_list_at_its_end(school) -> None:
     ended = _at(school, -70, 1, title="Never started")
     user = school.teacher_1.user
 
-    assert ended not in lecture_monitor(user).late
+    assert ended not in lecture_monitor(user).late.rows
 
 
 @pytest.mark.django_db
@@ -115,8 +115,8 @@ def test_monitor_follows_for_user(busy_day) -> None:
 
     data = lecture_monitor(school.teacher_2.user)
 
-    assert data.live == data.late == []
-    assert [lecture.title for lecture in data.soon] == ["Soon physics"]
+    assert data.live.rows == data.late.rows == []
+    assert [lecture.title for lecture in data.soon.rows] == ["Soon physics"]
 
 
 def test_minutes_text() -> None:
@@ -212,13 +212,65 @@ def test_main_dashboard_links_to_the_monitor_and_add_lecture(admin_client) -> No
 
 
 def test_today_card_note_counts_each_closed_state() -> None:
-    from apps.lectures.services import LectureMonitor
+    from apps.lectures.services import LectureMonitor, MonitorList
 
+    empty = MonitorList([], 0)
     data = LectureMonitor(
-        live=[], late=[], soon=[], today={"finished": 3, "not_held": 2, "cancelled": 1}
+        live=empty,
+        late=empty,
+        soon=empty,
+        today={"finished": 3, "not_held": 2, "cancelled": 1},
     )
 
     html = str(LecturesDashboardPage().stats(data))
 
     assert "3 finished, 2 not held, 1 cancelled" in html
     assert re.search(r">5</p><p[^>]*>Lectures today<", html)
+
+
+@pytest.mark.django_db
+def test_long_list_shows_the_first_rows_and_links_to_all(school, monkeypatch) -> None:
+    """Backlog LC13: a list longer than MONITOR_ROWS shows its first rows,
+    the full count, and a link to All lectures."""
+    from apps.lectures import services
+
+    monkeypatch.setattr(services, "MONITOR_ROWS", 2)
+    for days in (1, 2, 3):
+        add_lecture(
+            school,
+            title=f"Soon {days}",
+            starts_at=timezone.now() + timedelta(minutes=20 * days),
+            duration_minutes=15,
+        )
+    data = lecture_monitor(school.teacher_1.user)
+    assert [lecture.title for lecture in data.soon.rows] == ["Soon 1", "Soon 2"]
+    assert data.soon.total == 3
+
+    with tenant_context(school.morning.institute):
+        html = str(
+            LecturesDashboardPage().section(
+                "Soon",
+                "calendar",
+                data.soon,
+                "soon",
+                timezone.now(),
+                {"show": "upcoming", "status": "scheduled"},
+            )
+        )
+    assert "Soon (2 of 3)" in html
+    assert "View all 3" in html
+    assert "/admin/lectures/?show=upcoming&amp;status=scheduled" in html
+
+
+@pytest.mark.django_db
+def test_short_list_has_no_link(school) -> None:
+    add_lecture(school, title="Soon", starts_at=timezone.now() + timedelta(minutes=30))
+    data = lecture_monitor(school.teacher_1.user)
+    with tenant_context(school.morning.institute):
+        html = str(
+            LecturesDashboardPage().section(
+                "Soon", "calendar", data.soon, "soon", timezone.now(), {}
+            )
+        )
+    assert data.soon.total == 1
+    assert "View all" not in html and "of 1" not in html
