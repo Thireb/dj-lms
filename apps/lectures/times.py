@@ -5,7 +5,7 @@ The time zone middleware activates the viewer's zone for each request.
 
 from __future__ import annotations
 
-from datetime import date, datetime, time, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 
 from django.utils import timezone
 from django.utils.dateformat import format as date_format
@@ -30,6 +30,25 @@ def time_range(starts_at: datetime, ends_at: datetime) -> str:
 def combine_local(day: date, at: time) -> datetime:
     """A date and a wall-clock time in the viewer's zone, as an aware datetime."""
     return timezone.make_aware(datetime.combine(day, at))
+
+
+def wall_time_missing(local: datetime) -> bool:
+    """True when ``local`` (a wall-clock time with its zone) does not exist,
+    because the clocks go forward over it (backlog P3-9). Python would move
+    it silently, for example 01:30 to 02:30 in Europe/London. A time that
+    happens twice (clocks go back) is not missing: the first one is used."""
+    back = local.astimezone(UTC).astimezone(local.tzinfo)
+    return back.replace(tzinfo=None) != local.replace(tzinfo=None)
+
+
+def missing_time_message(local: datetime) -> str:
+    """Example: 1:30 AM does not exist on Sun 29 Mar 2026 in Europe/London."""
+    when = date_format(local, "g:i A")
+    day = date_format(local, "D j M Y")
+    return (
+        f"{when} does not exist on {day} in {local.tzinfo}: the clocks go "
+        "forward. Choose another start time."
+    )
 
 
 def local_day_bounds(now: datetime) -> tuple[datetime, datetime]:

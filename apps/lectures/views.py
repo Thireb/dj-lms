@@ -44,6 +44,7 @@ from apps.lectures.services import (
     CalendarRange,
     LectureDetails,
     LectureMonitor,
+    MonitorList,
     SavedLecture,
     ScheduleDetails,
     SchedulePreview,
@@ -1195,11 +1196,11 @@ class LecturesDashboardPage(DashboardPage):
         cancelled = today.get(LectureStatus.CANCELLED, 0)
         return Grid(
             [
-                StatCard(len(data.live), "Live now", icon="video", tone="lead"),
+                StatCard(data.live.total, "Live now", icon="video", tone="lead"),
                 StatCard(
-                    len(data.late), "Late start", icon="clock", note="Not started yet"
+                    data.late.total, "Late start", icon="clock", note="Not started yet"
                 ),
-                StatCard(len(data.soon), "Next 2 hours", icon="calendar"),
+                StatCard(data.soon.total, "Next 2 hours", icon="calendar"),
                 StatCard(
                     data.today_total,
                     "Lectures today",
@@ -1214,19 +1215,38 @@ class LecturesDashboardPage(DashboardPage):
         )
 
     def sections(self, data: LectureMonitor, now: Any) -> Grid:
+        """Each list shows its first rows; a longer one links to All
+        lectures with the matching filters (backlog LC13)."""
+        scheduled = {"show": SHOW_UPCOMING, "status": LectureStatus.SCHEDULED}
         cards = [
-            ("Live now", "video", data.live, "live"),
-            ("Late start", "clock", data.late, "late"),
-            ("Starting in the next 2 hours", "calendar", data.soon, "soon"),
+            ("Live now", "video", data.live, "live", {"show": "all", "status": "live"}),
+            ("Late start", "clock", data.late, "late", scheduled),
+            ("Starting in the next 2 hours", "calendar", data.soon, "soon", scheduled),
         ]
         return Grid(
             [
-                SectionCard(
-                    title=title,
-                    icon=icon,
-                    body=MonitorTable(rows, mode=mode, now=now),
-                )
-                for title, icon, rows, mode in cards
+                self.section(title, icon, found, mode, now, query)
+                for title, icon, found, mode, query in cards
             ],
             variant="stack",
+        )
+
+    def section(
+        self,
+        title: str,
+        icon: str,
+        found: MonitorList,
+        mode: str,
+        now: Any,
+        query: dict[str, str],
+    ) -> SectionCard:
+        more = found.total > len(found.rows)
+        return SectionCard(
+            title=f"{title} ({len(found.rows)} of {found.total})" if more else title,
+            icon=icon,
+            body=MonitorTable(found.rows, mode=mode, now=now),
+            link_url=f"{reverse('admin:lecture_list')}?{urlencode(query)}"
+            if more
+            else None,
+            link_label=f"View all {found.total}",
         )

@@ -196,9 +196,9 @@ Claims the audit tested that did not hold: overlong cells do not give a 500 on i
 
 | # | Item | Source | Priority | Status |
 |---|---|---|---|---|
-| S11 | `SECURE_PROXY_SSL_HEADER` is not set; behind a TLS proxy `SECURE_SSL_REDIRECT` would loop. Set it with the proxy setup. | Phase 2 audit M7 | High before deploy | [ ] |
+| S11 | `SECURE_PROXY_SSL_HEADER` is not set; behind a TLS proxy `SECURE_SSL_REDIRECT` would loop. Set it with the proxy setup. Fixed: `TRUSTED_PROXY_SSL_HEADER` names the proxy's scheme header (for example `HTTP_X_FORWARDED_PROTO`); a wrong name stops the start. | Phase 2 audit M7 | High before deploy | [x] |
 | S12 | WhiteNoise is not installed, so static files do not load with `DEBUG=False`. New dependency (ask first). | Phase 2 audit M7 | High before deploy | [ ] |
-| S13 | No `/health/` route for the uptime check. | Phase 2 audit M7 | High before deploy | [ ] |
+| S13 | No `/health/` route for the uptime check. Fixed: `/health/` checks the database (200 or 503, no details), open to everyone, not cached, not redirected to https. | Phase 2 audit M7 | High before deploy | [x] |
 | S14 | The sign-in limits need one shared cache; `prod.py` uses Redis when `REDIS_URL` is set, but the `redis` package is not installed (new dependency, ask first). Fixed in 3.2: `redis` and `celery` added with the owner's approval. | Phase 2 audit H1 | High before deploy | [x] |
 | S15 | Sub-admins have no `allowed_menus` until 9.3c, so `demo-sub` gets 403 on every admin page. 9.3c must add the field, the seed grants (Finance and People per SPEC 10) and tests; the dashboard already hides people names without People. | Phase 2 audit M9 | Medium | [ ] |
 | S16 | openpyxl parses XML without `defusedxml`. No attack worked against Python 3.13's expat limits; add `defusedxml` as defense in depth when dependencies are next reviewed. | Phase 2 audit | Low | [ ] |
@@ -217,7 +217,7 @@ The audit called these L1-L8; renamed RA1-RA8 because L1-L12 are already used ab
 | RA4 | Checkboxes were a 20px target. The whole row is one label, 40px tall. | Low | [x] |
 | RA5 | The logo link's `aria-label="LEXICON home"` did not match its visible text (axe label-content-name-mismatch). The label is gone; the name is the visible "LEXICON" plus a screen-reader-only "home". | Low | [x] |
 | RA6 | The sign-in panel promised live classes, homework and challans, which do not exist yet. It now lists what exists and says the rest is coming. | Low | [x] |
-| RA7 | No `/health/` route. Already S13 (Phase 12). | High before deploy | [ ] see S13 |
+| RA7 | No `/health/` route. Already S13 (Phase 12). Fixed with S13. | High before deploy | [x] |
 | RA8 | No query-count tests. `tests/people/test_dashboard_queries.py` sets a budget per dashboard (admin 13, teacher 7, student 7, guardian 8) with more people than the pages list, so an N+1 query fails it. | Low | [x] |
 
 ## Build of 3.1 (lectures)
@@ -238,7 +238,7 @@ Left out of 3.1 on purpose; each has a home in a later item.
 | LC9 | A calendar entry opens only a scheduled lecture (its edit page). Finished and cancelled entries do not link until a lecture detail page exists (3.5). Fixed in 3.5: every entry opens the lecture page. | Low | [x] |
 | LC11 | No notifications exist yet: there is no model or service, and the header bell (`NotificationBell`) always shows 0. The lecture events in SPEC 7 (created or changed, starts in 15 minutes, started, cancelled) are hooked in by roadmap 6.1 and 6.2. The lecture services (`create_lecture`, `update_lecture`, `start_lecture`, `cancel_lecture`) are the places to hook them. | Low | [ ] |
 | LC12 | Admin Lectures dashboard / Live lecture monitor (FEATURES 5, SPEC 8) is not built yet. It is roadmap 3.6. Fixed in 3.6, with a "Late start" list. | Low | [x] |
-| LC13 | The Lectures dashboard has no "Teachers on leave today" (SPEC 8); it needs leave requests (roadmap 9.3). Its lists have no paging; a very large institute may need a limit. | Low | [ ] |
+| LC13 | The Lectures dashboard has no "Teachers on leave today" (SPEC 8); it needs leave requests (roadmap 9.3). Its lists have no paging; a very large institute may need a limit. Limit fixed: each list shows its first 20 lectures, the title says "(20 of 57)" and "View all 57" opens All lectures with the matching filters; the cards keep the full counts. "Teachers on leave today" stays open for 9.3. | Low | [ ] |
 
 ## Phase 3 audit (2026-10-14, fixed in one PR)
 
@@ -254,7 +254,7 @@ Full review of roadmap 3.1 to 3.6 on `main` f1e5ff3: pytest 1620 passed, ruff cl
 | P3-6 | In dev, no beat runs while `CELERY_ALWAYS_EAGER=true`, so lectures past their end stay "Scheduled" and schedules are not extended nightly. README says so; DEPLOYMENT has a beat check. | Low | [x] |
 | P3-7 | The finish job marked a lecture finished even when the teacher never pressed Start, so payroll (Phase 8) would pay a class that never took place. Owner decision 2026-10-14: a new state `not_held` (amber "Not held"). The job now makes a live lecture finished and a never-started one not held; payroll and attendance count only finished lectures, Lecture History lists only finished ones. A data migration moves existing finished lectures with no Start to not held. Demo seed has one. | Medium | [x] |
 | P3-8 | Polling: "Up next" (teacher, student) and the Lectures dashboard reload every 30 seconds. About 8 queries each; at 1,000 open student homes that is about 33 requests a second. Fine for now; revisit with caching or a longer interval before large institutes. | Low | [ ] |
-| P3-9 | Time zones with clock changes: a lecture or schedule time that does not exist on a spring-forward day (for example 01:30 in Europe/London) is saved as Django's `make_aware` reads it, without a warning. Pakistan has no clock changes; add a check when an institute in such a zone signs up. | Low | [ ] |
+| P3-9 | Time zones with clock changes: a lecture or schedule time that does not exist on a spring-forward day (for example 01:30 in Europe/London) is saved as Django's `make_aware` reads it, without a warning. Pakistan has no clock changes; add a check when an institute in such a zone signs up. Fixed: the lecture form and the schedule check refuse such a time with the day and zone ("1:30 AM does not exist on Sun 28 Mar 2027 in Europe/London: the clocks go forward"); a time that happens twice uses the first one. | Low | [x] |
 
 ## External audit of Phase 3 (2026-10-14, after PR #49)
 
@@ -275,7 +275,7 @@ Left out of 4.1 to 4.3 on purpose, or found while building.
 | # | Item | Priority | Status |
 |---|---|---|---|
 | AT1 | Teacher "My students" (SPEC 3: ID, Name, Batch, Attendance %, Guardian phone) has no page and no roadmap item; the menu link is disabled. `attendance.services.student_summaries` gives the % for a page of students in 4 queries. Add a roadmap item or build it with the teacher dashboard numbers (FEATURES 14). | Low | [ ] |
-| AT2 | A teacher sees no count of finished lectures without marks ("attendance to take"). The lecture page and Lecture history show "Take attendance" and "Not taken" one lecture at a time. A dashboard card fits with the teacher analytics (FEATURES 14). | Low | [ ] |
+| AT2 | A teacher sees no count of finished lectures without marks ("attendance to take"). The lecture page and Lecture history show "Take attendance" and "Not taken" one lecture at a time. A dashboard card fits with the teacher analytics (FEATURES 14). Fixed: the teacher dashboard card "Attendance to take" counts finished lectures with at least one expected student and no marks (4 queries for any number). | Low | [x] |
 | AT3 | The admin cannot correct a mark; only the lecture's teacher can (owner approved 4.1 defaults). If the teacher leaves, nobody can fix old marks. Decide with payroll or leave (Phase 8 and 9). | Low | [ ] |
 
 ## Phase 4 audit (2026-10-14, after PR #51)
@@ -285,7 +285,7 @@ Full review of roadmap 4.1 to 4.3 on `main` ceecf9c: pytest 1771 passed, ruff cl
 | # | Item | Priority | Status |
 |---|---|---|---|
 | P4-1 | A deactivated student (one who left) kept their enrolments, so they stayed on every new roster. The form starts every unmarked student at Present, so each save marked them Present, and they counted in Present / Total. Enrolments of inactive students are now left out; a student with a saved mark stays on that lecture (SPEC 6.3). Tests and a mutation entry added. | Medium | [x] |
-| P4-2 | "Student attendance history" loads every student of the institute into the Student select. Fine for a few hundred; at about 2,000 students the page has a very long list. Use a search field (like All students) when an institute grows. | Low | [ ] |
+| P4-2 | "Student attendance history" loads every student of the institute into the Student select. Fine for a few hundred; at about 2,000 students the page has a very long list. Use a search field (like All students) when an institute grows. Fixed: a search (name, code, email or phone) lists the matches, 25 a page, each with a link to their history; a chosen student has "Choose another student". | Low | [x] |
 | P4-3 | The attendance pages and dashboard % read every finished lecture of the student's batches and page them in Python (no N+1; the query count is fixed). A batch with 5 lectures a day has about 1,500 a year. Revisit with P3-8 (caching) before large institutes. | Low | [ ] |
 
 ## Later (deployment hardening, Phase 12)

@@ -1807,8 +1807,8 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
     (
         "schedule needs a date on its days",
         "apps/lectures/services.py",
-        "    if not occurrences(details, details.start_date, details.end_date):\n",
-        "    if False:\n",
+        '    if not starts:\n        errors.add("weekdays"',
+        '    if False:\n        errors.add("weekdays"',
     ),
     (
         "extend needs a later date",
@@ -2263,14 +2263,14 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
     (
         "monitor late needs past the start",
         "apps/lectures/services.py",
-        "        late=list(scheduled.filter(starts_at__lte=now, ends_at_db__gt=now)),\n",
-        "        late=list(scheduled.filter(ends_at_db__gt=now)),\n",
+        "        late=_monitor_list(scheduled.filter(starts_at__lte=now, ends_at_db__gt=now)),\n",
+        "        late=_monitor_list(scheduled.filter(ends_at_db__gt=now)),\n",
     ),
     (
         "monitor late leaves at the end",
         "apps/lectures/services.py",
-        "        late=list(scheduled.filter(starts_at__lte=now, ends_at_db__gt=now)),\n",
-        "        late=list(scheduled.filter(starts_at__lte=now)),\n",
+        "        late=_monitor_list(scheduled.filter(starts_at__lte=now, ends_at_db__gt=now)),\n",
+        "        late=_monitor_list(scheduled.filter(starts_at__lte=now)),\n",
     ),
     (
         "monitor late only scheduled",
@@ -2593,8 +2593,8 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
     (
         "admin attendance history scoped students",
         "apps/attendance/views.py",
-        "            StudentProfile.objects.for_user(self.request.user)\n            .select_related",
-        "            StudentProfile.unscoped.all()\n            .select_related",
+        "        students = StudentProfile.objects.for_user(self.request.user)\n",
+        "        students = StudentProfile.unscoped.all()\n",
     ),
     (
         "attendance subject filter lists own subjects",
@@ -2625,6 +2625,54 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "apps/attendance/services.py",
         "    active = rows.filter(student__status=ProfileStatus.ACTIVE)\n",
         "    active = rows\n",
+    ),
+    (
+        "health check is 503 when the database fails (S13)",
+        "apps/core/health.py",
+        '        return JsonResponse({"status": "error"}, status=503)\n',
+        '        return JsonResponse({"status": "ok"})\n',
+    ),
+    (
+        "proxy ssl header refuses a wrong name (S11)",
+        "config/settings/proxy.py",
+        "    if not HEADER_NAME.fullmatch(header):\n",
+        "    if False:\n",
+    ),
+    (
+        "proxy ssl header empty means no proxy (S11)",
+        "config/settings/proxy.py",
+        "    if not header:\n        return None\n",
+        "    if not header:\n        pass\n",
+    ),
+    (
+        "attendance to take only unmarked lectures (AT2)",
+        "apps/attendance/services.py",
+        "        .filter(status=LectureStatus.FINISHED, attendance__isnull=True)\n",
+        "        .filter(status=LectureStatus.FINISHED)\n",
+    ),
+    (
+        "attendance to take needs an expected student (AT2)",
+        "apps/attendance/services.py",
+        "    return [lecture for lecture in lectures if counts[lecture.pk].total]\n",
+        "    return lectures\n",
+    ),
+    (
+        "lecture form refuses a skipped time (P3-9)",
+        "apps/lectures/forms.py",
+        "            if wall_time_missing(local):\n",
+        "            if False:\n",
+    ),
+    (
+        "schedule refuses a skipped time (P3-9)",
+        "apps/lectures/services.py",
+        "    if missing is not None:\n",
+        "    if False:\n",
+    ),
+    (
+        "monitor lists show the first rows (LC13)",
+        "apps/lectures/services.py",
+        "    rows = list(lectures[:MONITOR_ROWS])\n",
+        "    rows = list(lectures)\n",
     ),
 ]
 

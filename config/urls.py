@@ -1,11 +1,13 @@
 """Root URL configuration."""
 
 from apps.accounts.views import root_redirect
+from apps.core.health import health
 from django.urls import include, path
 
 from config.developer_admin_site import developer_admin_site
 
 urlpatterns = [
+    path("health/", health, name="health"),
     path("django-admin/", developer_admin_site.urls),
     path("accounts/", include("apps.accounts.urls")),
     path("admin/", include("apps.ui.urlconf.admin")),

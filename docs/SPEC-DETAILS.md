@@ -170,6 +170,7 @@ Validation: no overlap for the same teacher; warn on overlap for the same batch.
 Rules chosen in 3.1 (ASSUMED, compare with the demo):
 - Batch and subjects are one picker, grouped by batch, from the teacher's links. All chosen subjects must be in one batch. In the admin form the picker reloads when the teacher changes.
 - Duration is 10 to 480 minutes. Date and start time are in the viewer's time zone and stored in UTC.
+- A start time that does not exist because the clocks go forward (for example 01:30 on the spring day in Europe/London) is refused, for a lecture and for any date of a schedule. A time that happens twice (clocks go back) uses the first one. (assumed, backlog P3-9)
 - The start must be in the future when a lecture is added, and when an edit changes the start.
 - Only a `scheduled` lecture can be edited. A cancelled lecture does not count as an overlap; back-to-back lectures are fine.
 - An inactive teacher, batch or subject cannot be added, but may stay on a lecture that already has it.

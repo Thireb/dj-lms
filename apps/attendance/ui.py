@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 from decimal import Decimal
+from urllib.parse import urlencode
+
+from django.urls import reverse
 
 from apps.attendance.models import AttendanceStatus
 from apps.attendance.services import (
@@ -13,6 +16,9 @@ from apps.attendance.services import (
     Summary,
 )
 from apps.lectures.times import local_date, time_range
+from apps.people.models import StudentProfile
+from apps.people.ui import StudentTable
+from apps.ui.components.actions import IconButton
 from apps.ui.components.data import Badge, Column, DataTable, PersonCell, StatCard
 from apps.ui.components.layout import Grid
 
@@ -156,3 +162,27 @@ class SummaryTable(DataTable):
                 "percent", "Attendance", lambda row: percent_text(row.summary.percent)
             ),
         ]
+
+
+def _history_button(student: StudentProfile) -> IconButton:
+    """The same link as the row action on All students."""
+    history = reverse("admin:student_attendance_history")
+    return IconButton(
+        "clipboard-list",
+        f"Attendance history of {student}",
+        url=f"{history}?{urlencode({'student': student.pk})}",
+    )
+
+
+class StudentPickTable(StudentTable):
+    """Search results on Student attendance history (audit P4-2): the
+    All students columns that tell students apart, and one link each."""
+
+    columns = [
+        *(
+            c
+            for c in StudentTable.columns
+            if c.key in {"name", "class_label", "batches"}
+        ),
+        Column("actions", "", _history_button),
+    ]
