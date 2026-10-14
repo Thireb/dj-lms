@@ -2482,6 +2482,72 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "{% if submit %}submit{% else %}button{% endif %}",
         "button",
     ),
+    (
+        "attendance save needs a finished lecture",
+        "apps/attendance/services.py",
+        "        if not can_mark(lecture):\n",
+        "        if False:\n",
+    ),
+    (
+        "attendance save checks the roster",
+        "apps/attendance/services.py",
+        "        if not set(marks) <= expected:\n",
+        "        if False:\n",
+    ),
+    (
+        "attendance save checks the status",
+        "apps/attendance/services.py",
+        "        if not set(marks.values()) <= STATUS_KEYS:\n",
+        "        if False:\n",
+    ),
+    (
+        "attendance only for finished lectures",
+        "apps/attendance/services.py",
+        "    return lecture.status == LectureStatus.FINISHED\n",
+        "    return True\n",
+    ),
+    (
+        "attendance roster enrolled before the end",
+        "apps/attendance/services.py",
+        "        and enrolment.enrolled_at < lecture.ends_at\n",
+        "        and True\n",
+    ),
+    (
+        "attendance roster needs a lecture subject",
+        "apps/attendance/services.py",
+        "        and enrolment.subject_id in subject_ids\n",
+        "        and True\n",
+    ),
+    (
+        "attendance roster keeps marked students",
+        "apps/attendance/services.py",
+        "    return enrolled | set(marks)\n",
+        "    return enrolled\n",
+    ),
+    (
+        "attendance partial counts as attended",
+        "apps/attendance/services.py",
+        "ATTENDED = {AttendanceStatus.PRESENT, AttendanceStatus.LATE, AttendanceStatus.PARTIAL}\n",
+        "ATTENDED = {AttendanceStatus.PRESENT, AttendanceStatus.LATE}\n",
+    ),
+    (
+        "attendance for_user role scope",
+        "apps/attendance/models.py",
+        "        if role in INSTITUTE_WIDE_ROLES:\n            return scoped\n",
+        "        if True:\n            return scoped\n",
+    ),
+    (
+        "attendance for_user guardian link",
+        "apps/attendance/models.py",
+        '    Role.GUARDIAN: "student__guardian_links__guardian__user_id",\n',
+        '    Role.GUARDIAN: "student__guardian_links__guardian__institute_id",\n',
+    ),
+    (
+        "take attendance page refuses open lectures",
+        "apps/attendance/views.py",
+        "        if can_mark(self.lecture):\n",
+        "        if True:\n",
+    ),
 ]
 
 
