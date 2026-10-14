@@ -18,6 +18,8 @@ from django.utils import timezone
 from django.utils.dateformat import format as date_format
 
 from apps.academics.models import Batch, Subject
+from apps.attendance.services import can_mark, lecture_counts, roster
+from apps.attendance.ui import RosterTable
 from apps.core import menus as menu_keys
 from apps.core.query import id_param, search_param
 from apps.core.responses import forbidden_response
@@ -78,6 +80,7 @@ from apps.lectures.ui import (
     StudentLectureTable,
     TeacherLectureTable,
     TeacherScheduleTable,
+    attendance_button,
     calendar_days,
     can_cancel,
     cancel_dialog,
@@ -91,7 +94,8 @@ from apps.lectures.ui import (
     stop_dialog,
     up_next_card,
 )
-from apps.people.models import StudentProfile, TeacherProfile
+from apps.people.models import TeacherProfile
+from apps.people.views import GuardianChildMixin
 from apps.ui.components.actions import Button
 from apps.ui.components.block_stack import BlockStack
 from apps.ui.components.data import DetailList, EmptyState, StatCard
@@ -324,59 +328,19 @@ class StudentLectureListPage(LectureListPage):
         return {"join_window": join_window_minutes(self.get_institute())}
 
 
-class GuardianLectureListPage(StudentLectureListPage):
-    """Guardian "Lectures schedule": the student list for one child. With
-    more than one child, a filter chooses the child (the first by default)."""
+class GuardianLectureListPage(GuardianChildMixin, StudentLectureListPage):
+    """Guardian "Lectures schedule": the student list for the child chosen
+    in the header (backlog LC7)."""
 
     portal = "guardian"
     active_item = "lecture_schedule"
     allowed_roles = [Role.GUARDIAN]
     title = "Lectures schedule"
-    filter_keys = ("child", "subject")
+    filter_keys = ("subject",)
     empty_text = "Your child's lectures show here once they are scheduled."
-
-    @cached_property
-    def children(self) -> list[StudentProfile]:
-        return list(
-            StudentProfile.objects.for_user(self.request.user)
-            .select_related("user")
-            .order_by("user__first_name", "user__last_name", "pk")
-        )
-
-    @cached_property
-    def child(self) -> StudentProfile | None:
-        wanted = id_param(search_param(self.request.GET.get("child")))
-        chosen = [child for child in self.children if child.pk == wanted]
-        return (chosen or self.children or [None])[0]
 
     def get_subtitle(self) -> str:
         return f"Lectures for {self.child}." if self.child else ""
-
-    def get_filters(self) -> dict[str, str]:
-        filters = super().get_filters()
-        filters["child"] = str(self.child.pk) if self.child else ""
-        return filters
-
-    def date_from_filter(self, value: str) -> dict[str, Any]:
-        return {"name": "date_from", "label": "From", "value": value, **DATE_FIELD}
-
-    def date_to_filter(self, value: str) -> dict[str, Any]:
-        return {"name": "date_to", "label": "To", "value": value, **DATE_FIELD}
-
-    def filter_fields(self, filters: dict[str, str]) -> list[dict[str, Any]]:
-        fields = super().filter_fields(filters)
-        if len(self.children) < 2:
-            return [field for field in fields if field["name"] != "child"]
-        return fields
-
-    def child_filter(self, value: str) -> dict[str, Any]:
-        return {
-            "name": "child",
-            "label": "Child",
-            "value": value,
-            "kept": True,
-            "options": [(str(child.pk), str(child)) for child in self.children],
-        }
 
     def subject_rows(self) -> Any:
         if self.child is None:
@@ -457,9 +421,22 @@ class LectureDetailPage(LectureObjectMixin, AdminLectureMixin, DetailPage):
             return [cancel_dialog(self.lecture)]
         return []
 
+    @cached_property
+    def roster(self) -> list[Any]:
+        return roster(self.lecture) if can_mark(self.lecture) else []
+
     def get_primary_cards(self) -> list[Any]:
         rows = lecture_detail_rows(self.lecture, show_teacher=self.portal == "admin")
-        return [SectionCard(title="Details", icon="video", body=DetailList(rows))]
+        cards = [SectionCard(title="Details", icon="video", body=DetailList(rows))]
+        if can_mark(self.lecture):
+            cards.append(
+                SectionCard(
+                    title="Attendance",
+                    icon="clipboard-check",
+                    body=RosterTable(self.roster),
+                )
+            )
+        return cards
 
 
 class TeacherLectureDetailPage(TeacherLectureMixin, LectureDetailPage):
@@ -469,6 +446,9 @@ class TeacherLectureDetailPage(TeacherLectureMixin, LectureDetailPage):
             return [start_button(lecture)]
         if lecture.status == LectureStatus.LIVE:
             return [end_dialog(lecture)]
+        if can_mark(lecture):
+            marked = any(entry.status for entry in self.roster)
+            return [attendance_button(lecture, marked=marked)]
         return []
 
 
@@ -549,9 +529,10 @@ class TeacherLectureHistoryPage(LectureListPage):
         fields = [
             getattr(self, f"{key}_filter")(filters[key]) for key in self.filter_keys
         ]
+        rows = list(page.object_list)
         return {
             "filters": FilterBar(fields),
-            "table": self.history_table(list(page.object_list)),
+            "table": self.history_table(rows, counts=lecture_counts(rows)),
             "pagination": Pagination(page, query=query),
         }
 

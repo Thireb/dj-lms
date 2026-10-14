@@ -110,7 +110,9 @@ def test_student_home_shows_code_and_pairs(school) -> None:
     assert school.student_1.student_code in page
     assert ">Morning: Physics</li>" in page
     assert ">Up next<" in page
-    assert "stat-card" not in page  # its KPIs come with later phases
+    # Roadmap 4.3: attendance % (a dash before the first finished class).
+    assert ">Attendance<" in page and "0 finished classes" in page
+    assert ">Lectures today<" in page
 
 
 @pytest.mark.django_db

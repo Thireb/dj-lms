@@ -63,8 +63,11 @@ def test_admin_dashboard_query_budget(
     ("who", "name", "budget"),
     [
         ("teacher_1", "teacher:home", 11),
-        ("student_1", "student:home", 10),
-        ("guardian_1", "guardian:home", 10),
+        # +4 (roadmap 4.3): the attendance % (enrolments, marks, lectures,
+        # their subjects) and "Lectures today"; the same for any number of
+        # children.
+        ("student_1", "student:home", 15),
+        ("guardian_1", "guardian:home", 14),
     ],
 )
 def test_portal_home_query_budget(

@@ -6,16 +6,20 @@ what exists now: batches and subjects, and a guardian's children.
 
 from __future__ import annotations
 
+from functools import cached_property
 from typing import Any
 
 from django.utils import timezone
 
+from apps.attendance.services import student_summaries
+from apps.attendance.ui import percent_text
 from apps.core.roles import Role
 from apps.lectures.services import lectures_today_count, upcoming_lectures
 from apps.lectures.ui import lecture_status_badge, lecture_summary, lecture_when
 from apps.lectures.views import up_next_body
 from apps.people.home import greeting, guardian_home, student_home, teacher_home
 from apps.people.ui import profile_status_badge
+from apps.people.views import GuardianChildMixin
 from apps.ui.brand import initials
 from apps.ui.components.block_stack import BlockStack
 from apps.ui.components.data import EmptyState, PersonCell, PersonList, StatCard
@@ -135,8 +139,27 @@ class StudentPortalHomePage(PortalHomePage):
     def get_chips(self) -> list[str]:
         return self.data.pairs
 
+    def get_stat_cards(self) -> list[Any]:
+        profile = self.data.profile
+        if profile is None:
+            return []
+        summary = student_summaries([profile])[profile.pk]
+        classes = "class" if summary.total == 1 else "classes"
+        return [
+            StatCard(
+                percent_text(summary.percent),
+                "Attendance",
+                note=f"{summary.total} finished {classes}",
+                icon="clipboard-check",
+                tone="lead",
+            ),
+            StatCard(
+                lectures_today_count(self.request.user), "Lectures today", icon="video"
+            ),
+        ]
 
-class GuardianPortalHomePage(PortalHomePage):
+
+class GuardianPortalHomePage(GuardianChildMixin, PortalHomePage):
     portal = "guardian"
     allowed_roles = [Role.GUARDIAN]
     section_columns = 2
@@ -144,6 +167,15 @@ class GuardianPortalHomePage(PortalHomePage):
 
     def load(self, user: Any) -> Any:
         return guardian_home(user)
+
+    @cached_property
+    def children(self) -> list[Any]:
+        """The switcher reuses the children the home already loaded."""
+        return self.data.children
+
+    @cached_property
+    def summaries(self) -> dict[int, Any]:
+        return student_summaries(self.data.children)
 
     def up_next_body(self) -> Any:
         lectures = upcoming_lectures(self.request.user, limit=UPCOMING_COUNT)
@@ -173,7 +205,8 @@ class GuardianPortalHomePage(PortalHomePage):
         batches = ", ".join(
             sorted({link.batch.name for link in child.batch_subjects.all()})
         )
-        detail = _code_line(child.student_code, label, batches)
+        percent = percent_text(self.summaries[child.pk].percent)
+        detail = _code_line(child.student_code, label, batches, f"Attendance {percent}")
         return PersonCell(str(child), detail=detail), profile_status_badge(child)
 
     def get_sections(self) -> list[Any]:

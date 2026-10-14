@@ -68,3 +68,19 @@ class GroupedCheckboxes(forms.CheckboxSelectMultiple):
         context = super().get_context(name, value, attrs)
         context["widget"]["empty_text"] = self.empty_text
         return context
+
+
+class ChipRadios(forms.RadioSelect):
+    """One choice as a row of chips (for example a student's attendance
+    mark). ``group_label`` names the group for screen readers."""
+
+    template_name = "ui/forms/widgets/chip_radios.html"
+
+    def __init__(self, attrs=None, group_label: str = ""):
+        super().__init__(attrs=attrs)
+        self.group_label = group_label
+
+    def get_context(self, name, value, attrs):
+        context = super().get_context(name, value, attrs)
+        context["widget"]["group_label"] = self.group_label
+        return context

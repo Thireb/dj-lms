@@ -27,7 +27,12 @@ class StudentMenu:
                         "video",
                         menu_key="lectures",
                     ),
-                    MenuItem("My attendance", "student:attendance", "clipboard-check"),
+                    MenuItem(
+                        "My attendance",
+                        "student:attendance",
+                        "clipboard-check",
+                        menu_key="attendance",
+                    ),
                     MenuItem(
                         "Leave requests",
                         "student:leave_list",

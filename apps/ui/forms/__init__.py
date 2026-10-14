@@ -6,10 +6,11 @@ from apps.ui.forms.base import (
     Section,
     TenantModelForm,
 )
-from apps.ui.forms.widgets import DatePicker, MoneyInput, TimePicker
+from apps.ui.forms.widgets import ChipRadios, DatePicker, MoneyInput, TimePicker
 
 __all__ = [
     "BaseForm",
+    "ChipRadios",
     "DatePicker",
     "FormActions",
     "HtmxModalForm",

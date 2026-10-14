@@ -87,6 +87,12 @@ def _actions(profile: Profile) -> ButtonRow:
         history = reverse("admin:teacher_lecture_history")
         url = f"{history}?{urlencode({'teacher': profile.pk})}"
         items.append(IconButton("history", f"Lecture history of {profile}", url=url))
+    else:
+        history = reverse("admin:student_attendance_history")
+        url = f"{history}?{urlencode({'student': profile.pk})}"
+        items.append(
+            IconButton("clipboard-list", f"Attendance history of {profile}", url=url)
+        )
     items.append(profile_status_dialog(profile))
     return ButtonRow(items=items)
 

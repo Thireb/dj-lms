@@ -227,3 +227,30 @@ def test_reset_removes_demo_lectures(demo_env) -> None:
 
     lectures, schedules = _demo_lectures()
     assert lectures.count() == schedules.count() == 0
+
+
+@pytest.mark.django_db
+def test_seed_demo_marks_two_lectures_once(demo_env) -> None:
+    from apps.attendance.models import Attendance
+
+    call_command("seed_demo")
+    institute = Institute.objects.get(name="Demo Institute")
+    # unscoped: test assertion outside a tenant context.
+    marks = Attendance.unscoped.filter(institute=institute)
+    first = marks.count()
+    call_command("seed_demo")
+
+    assert marks.count() == first > 0
+    assert marks.values("lecture").distinct().count() == 2
+    assert marks.filter(student__user__email="demo-student@example.com").count() == 2
+    assert set(marks.values_list("status", flat=True)) == {
+        "present",
+        "late",
+        "partial",
+        "absent",
+    }
+    lectures, _ = _demo_lectures()
+    newest = lectures.filter(status="finished").order_by("-starts_at").first()
+    assert not marks.filter(lecture=newest).exists()
+    call_command("seed_demo", "--reset")
+    assert not marks.exists()

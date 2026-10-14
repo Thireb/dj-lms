@@ -55,7 +55,7 @@ Setup order the reference teaches: Campus, Classes, Batches, Subjects, Fee Plans
 - [ ] Edit student: change batches, subjects, fee plans, contacts. Built in 2.5b except fee plans (Phase 7).
 - [x] All Students list with Active/Inactive status.
 - [x] Bulk upload from an Excel template (one student per row; error rows reported). Fee plan columns come with Phase 7.
-- [ ] Student Attendance History.
+- [x] Student Attendance History. Built in 4.2: one student at a time (a filter, or the row action on All students).
 - [ ] **Portal Access:** block a student from the student portal (for example unpaid fees); automatic blocking of fee defaulters can be on or off; single students can be exempted. Blocked student sees a "blocked" page. Built in 2.7: manual block and unblock, exemptions, the Access paused page. Automatic blocking of defaulters comes with roadmap 7.6 (backlog S9).
 
 ## 4. Teachers (Admin)
@@ -70,21 +70,21 @@ Setup order the reference teaches: Campus, Classes, Batches, Subjects, Fee Plans
 - [ ] Delivery mode: Zoom API (later), Manual Link (paste any link), In-Person. Built in 3.1: Manual link and In person.
 - [x] Recurring schedules: weekly (or custom) timetable creates every lecture in one step. Built in 3.2: weekly days, a date range (or number of weeks) and a preview; "custom" rules beyond weekdays are not built.
 - [x] Lecture lists with tabs: Today, Upcoming, Past, All; filter by subject. Built in 3.1 for the admin (All lectures) and teacher (My lectures). Built in 3.3: student "My lectures" and guardian "Lectures schedule" (read only, for one chosen child), and a date range on All lectures.
-- [ ] Teacher actions on a lecture: Start class, open whiteboard, take manual attendance. Built in 3.5: Start class and End class (list row, lecture page and "Up next"). The whiteboard and attendance come with Phase 4.
+- [ ] Teacher actions on a lecture: Start class, open whiteboard, take manual attendance. Built in 3.5: Start class and End class (list row, lecture page and "Up next"). Built in 4.1: Take attendance (lecture page and list row) for a finished lecture. The whiteboard comes later (ROADMAP "Live whiteboard").
 - [ ] Student actions: Join (enabled once the teacher starts), "Waiting for host" state, "Join opens soon" state. Built in 3.4: the states and the Join button on "My lectures" and "Up next"; Join posts to the server, which checks the state again and opens the link. The teacher starts a lecture in 3.5, so until then Join stays at "Waiting for host".
-- [ ] Teacher calendar view (Schedule) and Lecture History. Built in 3.3: the Schedule calendar (week and month; a scheduled lecture opens its edit page). Built in 3.5: Lecture history (finished lectures, filter by batch); its Present / Total column fills with attendance (Phase 4).
+- [ ] Teacher calendar view (Schedule) and Lecture History. Built in 3.3: the Schedule calendar (week and month; a scheduled lecture opens its edit page). Built in 3.5: Lecture history (finished lectures, filter by batch); its Present / Total column fills with attendance (built in 4.1).
 - [x] Admin Lectures Dashboard / Live Lecture Monitor: live and upcoming classes. Built in 3.6: Dashboards > Lectures with live now, late start (past its start, not started), the next 2 hours and today by status; it reloads every 30 seconds. "Teachers on leave today" comes with leave (9.3).
 - [x] Up-next card with countdown on teacher and student dashboards. Built in 3.4: the card refreshes itself every 30 seconds; the teacher card has "Open meeting link" (Start class comes with 3.5); the guardian home lists the next 5 classes with the child's name.
 - [x] Lecture states: scheduled, live, finished, cancelled, and not held (Phase 3 audit: past its end, never started). Built in 3.5: the teacher starts and ends a class, the admin cancels a lecture, and a job finishes lectures past their end every 5 minutes.
 
 ## 6. Attendance (B)
 
-- [ ] Statuses: Present, Partial, Late, Absent.
-- [ ] Manual attendance by the teacher for any lecture.
+- [x] Statuses: Present, Partial, Late, Absent. Built in 4.1; no mark shows as "Not marked".
+- [x] Manual attendance by the teacher for any lecture. Built in 4.1: for any of their finished lectures, and editable later. The admin sees the marks on the lecture page (read only).
 - [ ] Auto attendance from the meeting provider (needs Zoom, later). Unknown names must be matched to a student or ignored.
-- [ ] Student "My Attendance" with percentage.
-- [ ] Guardian "Class Attendance" for the chosen child.
-- [ ] Admin attendance history per student.
+- [x] Student "My Attendance" with percentage. Built in 4.2.
+- [x] Guardian "Class Attendance" for the chosen child. Built in 4.2, with the header child switcher.
+- [x] Admin attendance history per student. Built in 4.2 ("Student attendance history", People menu).
 
 ## 7. Academic work
 
@@ -155,17 +155,17 @@ Main dashboard: campus hero, clock, 4 stat cards (students, teachers, batches, l
 Dashboard: welcome banner, subject/batch chips, up-next card with countdown, 4 stat cards (lectures, students, batches, subjects), quick actions. Built in R4c: welcome banner with chips, an empty up-next card, and stat cards for students, batches and subjects. Built in 3.4: the up-next card with a countdown and a "Lectures today" card. Quick actions come later.
 
 **Student (left sidebar):** Dashboard | Academics (My Lectures, My Attendance, Leave Requests, Homework, Lesson Plans, Assignments, Quizzes & Exams, Documents) | Messages | Finance (Fee Details) | Account (My Profile, Settings, Sign Out).
-Dashboard: attendance %, homework done %, upcoming count, fee paid %, up-next card, fee KPIs (billed, paid, due, pending challans). Built in R4c: welcome banner with code, class and batch/subject chips, and an up-next card (with a countdown and Join since 3.4). The KPIs come with their phases.
+Dashboard: attendance %, homework done %, upcoming count, fee paid %, up-next card, fee KPIs (billed, paid, due, pending challans). Built in R4c: welcome banner with code, class and batch/subject chips, and an up-next card (with a countdown and Join since 3.4). Built in 4.3: attendance % and "Lectures today" cards. The other KPIs come with their phases.
 
 **Guardian (left sidebar):** Dashboard | Academics (Lectures Schedule, Homework, Lesson Plans, Quizzes & Exams, Class Attendance) | Finance (Fee & Challans, Fee Pay) | Communication (Messages) | Account (Student Profile, Account Settings, Sign Out).
-Dashboard: child switcher in the header, billed / paid / outstanding / upcoming classes, homework progress and 6-month trend chart. One guardian login can cover several children; every page follows the chosen child. Built in R4c: welcome banner, a "Your children" card (code, class, batches, status) and an upcoming classes card (the next 5 classes with the child's name since 3.4). The child switcher and the KPIs come with their phases.
+Dashboard: child switcher in the header, billed / paid / outstanding / upcoming classes, homework progress and 6-month trend chart. One guardian login can cover several children; every page follows the chosen child. Built in R4c: welcome banner, a "Your children" card (code, class, batches, status) and an upcoming classes card (the next 5 classes with the child's name since 3.4). The child switcher is built in 4.2 (header, kept in the session; shown with two or more children). Built in 4.3: each child's attendance % in "Your children". The other KPIs come with their phases.
 
 ## 14. Analytics
 
 - [ ] Admin: students, fee collection, unpaid, discounts, payroll, lectures.
 - [ ] Teacher: batch and attendance numbers on the dashboard.
-- [ ] Student: attendance %, homework %, fee paid %.
-- [ ] Guardian: homework trend, fees, attendance.
+- [ ] Student: attendance %, homework %, fee paid %. Attendance % built in 4.3.
+- [ ] Guardian: homework trend, fees, attendance. Attendance % per child built in 4.3.
 
 ## 15. Out of scope for now (integrations)
 

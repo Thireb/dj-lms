@@ -137,12 +137,20 @@ def two_children(school):
     return school
 
 
+def _choose(client, child) -> None:
+    """Pick a child in the header switcher (backlog LC7)."""
+    response = client.post(
+        reverse("guardian:choose_child"), {"child": child.pk, "next": GUARDIAN_URL}
+    )
+    assert response.status_code == 302
+
+
 @pytest.mark.django_db
 def test_guardian_with_two_children_chooses_one(two_children) -> None:
     school = two_children
     add_lecture(school, title="Algebra basics")
     _evening(school)
-    guardian = school.guardian_1.user
+    client = signed_in(school.guardian_1.user)
     first, second = sorted(
         [school.student_1, school.student_2],
         key=lambda child: (child.user.first_name, child.user.last_name, child.pk),
@@ -152,33 +160,49 @@ def test_guardian_with_two_children_chooses_one(two_children) -> None:
         school.student_2.pk: "Evening physics",
     }
 
-    default = _html(guardian, GUARDIAN_URL)
-    chosen = _html(guardian, GUARDIAN_URL, child=second.pk)
+    default = client.get(GUARDIAN_URL).content.decode()
+    _choose(client, second)
+    chosen = client.get(GUARDIAN_URL).content.decode()
 
     assert select_values(default, "child") == [str(first.pk), str(second.pk)]
     assert titles[first.pk] in default and titles[second.pk] not in default
     assert titles[second.pk] in chosen and titles[first.pk] not in chosen
-    # The tabs keep the chosen child.
-    assert f"child={second.pk}" in chosen.split('aria-label="Lecture lists"')[1]
+    # The tabs do not carry the child: the session keeps it.
+    assert "child=" not in chosen.split('aria-label="Lecture lists"')[1]
 
 
 @pytest.mark.django_db
 def test_guardian_subjects_are_the_child_subjects(two_children) -> None:
     school = two_children
+    client = signed_in(school.guardian_1.user)
+    _choose(client, school.student_2)
 
-    html = _html(school.guardian_1.user, GUARDIAN_URL, child=school.student_2.pk)
+    html = client.get(GUARDIAN_URL).content.decode()
 
     assert select_values(html, "subject") == ["", str(school.physics.pk)]
 
 
 @pytest.mark.django_db
+def test_guardian_child_query_is_ignored(two_children) -> None:
+    """The old ?child= filter is gone; the header switcher chooses."""
+    school = two_children
+    _evening(school)
+
+    html = _html(school.guardian_1.user, GUARDIAN_URL, child=school.student_2.pk)
+
+    assert "Evening physics" not in html
+
+
+@pytest.mark.django_db
 def test_guardian_cannot_choose_another_student(school, institute_a) -> None:
-    """An unlinked student in the same batch falls back to the own child."""
+    """An unlinked student in the same batch is refused; the own child stays."""
     other = student(institute_a, "other-s@example.com")
     link_student(other, {school.evening: [school.physics]})
     _evening(school)
+    client = signed_in(school.guardian_1.user)
 
-    html = _html(school.guardian_1.user, GUARDIAN_URL, child=other.pk)
+    client.post(reverse("guardian:choose_child"), {"child": other.pk})
+    html = client.get(GUARDIAN_URL).content.decode()
 
     assert "Evening physics" not in html
     assert f"Lectures for {school.student_1}." in html
@@ -196,14 +220,14 @@ def test_guardian_with_no_children(institute_a) -> None:
 
 
 @pytest.mark.django_db
-def test_guardian_clear_keeps_the_chosen_child(two_children) -> None:
+def test_guardian_clear_shows_only_with_a_filter(two_children) -> None:
     school = two_children
-    child = school.student_2.pk
+    client = signed_in(school.guardian_1.user)
+    _choose(client, school.student_2)
 
-    plain = _html(school.guardian_1.user, GUARDIAN_URL, child=child)
-    filtered = _html(
-        school.guardian_1.user, GUARDIAN_URL, child=child, subject=school.physics.pk
-    )
+    plain = client.get(GUARDIAN_URL).content.decode()
+    filtered = client.get(GUARDIAN_URL, {"subject": school.physics.pk})
+    filtered = filtered.content.decode()
 
     assert ">Clear<" not in plain
-    assert f'href="?child={child}" class="btn btn-ghost">Clear<' in filtered
+    assert 'href="?" class="btn btn-ghost">Clear<' in filtered

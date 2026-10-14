@@ -1,9 +1,9 @@
-"""FilterBar selects and the GroupedCheckboxes widget."""
+"""FilterBar selects and the GroupedCheckboxes and ChipRadios widgets."""
 
 from __future__ import annotations
 
 from apps.ui.components.nav import FilterBar
-from apps.ui.forms.widgets import GroupedCheckboxes
+from apps.ui.forms.widgets import ChipRadios, GroupedCheckboxes
 from django import forms
 
 
@@ -56,3 +56,20 @@ def test_grouped_checkboxes_show_empty_text() -> None:
         )
 
     assert "Add batches first." in str(Demo()["pairs"])
+
+
+def test_chip_radios_render_one_named_group() -> None:
+    class Demo(forms.Form):
+        mark = forms.ChoiceField(
+            choices=[("present", "Present"), ("absent", "<b>Absent")],
+            widget=ChipRadios(group_label="Attendance for <Sara>"),
+        )
+
+    html = str(Demo(initial={"mark": "absent"})["mark"])
+
+    assert html.count('role="radiogroup"') == 1
+    assert 'aria-label="Attendance for &lt;Sara&gt;"' in html
+    assert html.count('type="radio"') == 2
+    assert 'value="absent" id="id_mark_1" checked' in html
+    assert 'value="present" id="id_mark_0">' in html
+    assert "&lt;b&gt;Absent" in html

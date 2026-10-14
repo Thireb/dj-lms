@@ -138,7 +138,7 @@ Menu key `institute`: `institute_admin`, and a `sub_admin` granted Institute.
 ### Guardian
 
 Same lists as the student for the chosen child, plus:
-- 3.3 (assumed until the header child switcher exists): "Lectures schedule" has a Child filter when the guardian has two or more children; the first child by name is the default, and a child that is not the guardian's falls back to the default.
+- 4.2 (assumed, replaces the 3.3 Child filter): the header child switcher shows when the guardian has two or more children. The choice is kept in the session and every guardian page follows it; the first child by name is the default, and a child that is not the guardian's is refused. After a choice the guardian goes back to the same guardian page.
 - **Fee and Challans:** Challan no., Month, Amount, Paid, Due date, Status, Print.
 - **Fee Pay:** form (section 4.17) plus a history list of submissions with status.
 - **Class Attendance:** same as student My Attendance.
@@ -278,6 +278,9 @@ Full name*, Institute name*, Phone*, Email, Website, Message*. Saved for Super A
 - Provider-based (later): time joined divided by lecture duration. At least Present threshold = Present; at least Partial threshold = Partial; below = Absent. Joining after the Late minutes sets Late if otherwise Present.
 - Attendance % = (Present + Late + 0.5 x Partial) divided by finished lectures the student was expected in.
 - Only finished lectures count. A cancelled lecture never counts.
+- 4.3 (assumed): the attendance pages have three views: Classes, By month (months in the viewer's zone, newest first) and By subject. A lecture with several subjects counts once for each of them the student takes; when the student takes none of them any more, it counts for all of them. Each row shows Classes, Present, Late, Partial, Absent, Not marked and the %. The student dashboard and the guardian's "Your children" show the % of all finished classes.
+- 4.2 (assumed): My Attendance, Class Attendance and Student Attendance History list the expected finished lectures, newest first, with the mark or "Not marked", and filter by subject and date range. The summary cards (%, Present with Late, Partial, Absent with Not marked) count the filtered rows, so a subject filter gives the per-subject %. The admin page shows one student at a time.
+- 4.1 (assumed, owner approved 2026-10-14): the teacher marks only a finished lecture (not a scheduled, live, not-held or cancelled one) and can change the marks later. The admin sees the marks on the lecture page and does not mark. A student is expected in a lecture when an enrolment of theirs has the lecture's batch and one of its subjects, made before the lecture ended; a student who already has a mark stays expected after the enrolment is removed. An expected student with no mark shows "Not marked" and counts as absent in the %. The form starts every unmarked student at Present, so the teacher changes only the others. Lecture History "Present / Total" = students marked Present, Late or Partial / expected students; "Not taken" before the first mark.
 
 ### 6.4 Lectures
 - Join opens at start minus join window. Student Join button states: `Join opens soon` (before window), `Waiting for host` (window open, teacher not started), `Join` (teacher started), `Ended`.
