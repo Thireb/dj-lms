@@ -592,6 +592,13 @@ class AdminDashboardPage(DashboardPage):
     # (label, icon, url name, menu key the link needs)
     QUICK_ACTIONS = [
         ("Enrol student", "user-plus", "admin:student_create", menu_keys.PEOPLE),
+        ("Add lecture", "plus", "admin:lecture_create", menu_keys.ONLINE_LECTURES),
+        (
+            "Lecture monitor",
+            "video",
+            "admin:dashboard_lectures",
+            menu_keys.DASHBOARDS,
+        ),
         ("Add teacher", "presentation", "admin:teacher_create", menu_keys.PEOPLE),
         ("Bulk upload", "upload", "admin:student_bulk_upload", menu_keys.PEOPLE),
         ("Add batch", "users", "admin:batch_create", menu_keys.INSTITUTE),

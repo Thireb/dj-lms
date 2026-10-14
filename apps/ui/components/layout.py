@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 from django.contrib.messages import get_messages
 
 from apps.ui.brand import BRAND_MARK, BRAND_NAME, user_badge
@@ -259,6 +261,56 @@ class SectionCard(Component):
         body = ctx.get("body")
         if request is not None and body is not None and hasattr(body, "render"):
             ctx["body"] = body.render(request=request)
+        return render_component_template(self, ctx, request=request)
+
+
+GRID_CLASSES = {
+    # Four numbers in two rows on phones, one row from lg (dashboard stats).
+    "stats": "grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4",
+    # Section cards side by side from lg.
+    "sections": "grid gap-5 lg:grid-cols-2 lg:items-start",
+    "stack": "grid gap-5",
+}
+
+
+class Grid(Component):
+    """Components in a grid; ``variant`` is ``stats``, ``sections`` or
+    ``stack`` (one column)."""
+
+    template_name = "ui/components/grid.html"
+
+    def __init__(self, items, variant="stack", **props):
+        super().__init__(items=items, variant=variant, **props)
+
+    def render(self, request=None):
+        ctx = self.get_context()
+        ctx["items"] = [render_child(item, request) for item in ctx["items"]]
+        ctx["grid_class"] = GRID_CLASSES.get(ctx["variant"], GRID_CLASSES["stack"])
+        return render_component_template(self, ctx, request=request)
+
+
+class LiveRegion(Component):
+    """A block that reloads itself every ``seconds`` (HTMX): it fetches
+    ``url`` (usually the page itself) and swaps in the element with the same
+    ``region_id``, so no extra endpoint is needed. ``region_id`` must be a
+    plain slug."""
+
+    template_name = "ui/components/live_region.html"
+
+    def __init__(self, region_id, body, url, seconds=30, **props):
+        if not re.fullmatch(r"[a-z][a-z0-9-]*", str(region_id)):
+            raise ValueError("region_id must be a lowercase slug.")
+        super().__init__(
+            region_id=region_id,
+            body=body,
+            url=safe_url(url),
+            seconds=int(seconds),
+            **props,
+        )
+
+    def render(self, request=None):
+        ctx = self.get_context()
+        ctx["body"] = render_child(ctx["body"], request)
         return render_component_template(self, ctx, request=request)
 
 

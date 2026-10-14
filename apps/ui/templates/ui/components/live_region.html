@@ -1,0 +1,1 @@
+<div id="{{ region_id }}" class="live-region"{% if url %} hx-get="{{ url }}" hx-trigger="every {{ seconds }}s" hx-select="#{{ region_id }}" hx-swap="outerHTML"{% endif %}>{{ body }}</div>

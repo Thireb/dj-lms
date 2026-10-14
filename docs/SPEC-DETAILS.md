@@ -367,7 +367,7 @@ Lectures counted = lectures with status `finished` in the month, taught by the t
 
 **Admin main:** students (total, active, inactive), teachers (total, active), batches (running = batches with at least one active student), lectures today, plus recent 5 students and recent teachers, fee strip (billed this month, collected, outstanding), pending approvals count, waiting receipts count.
 **Salary dashboard:** payroll this month (gross, advances, net), paid vs unpaid teachers, top lecture counts.
-**Lectures dashboard:** live now, starting in the next 2 hours, today by status, teachers on leave today.
+**Lectures dashboard:** live now, starting in the next 2 hours, today by status, teachers on leave today. Built in 3.6, plus a "Late start" list (owner request 2026-10-14): scheduled lectures past their start that the teacher has not started, until their planned end. "Lectures today" leaves out cancelled lectures; the note shows finished and cancelled. Teachers on leave today waits for leave (9.3).
 **Challan dashboard:** billed, collected, outstanding this month, challans by status, waiting receipts, defaulters count.
 **Teacher:** next lecture (countdown), lectures today and this week, students, batches, subjects, pending reviews (homework and assignments to grade).
 **Student:** attendance %, homework done % (submitted divided by assigned in last 30 days), upcoming lectures (7 days), fee paid % (this academic year), up-next card, fee KPIs (billed, paid, due, pending challans).

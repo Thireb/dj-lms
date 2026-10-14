@@ -245,6 +245,8 @@ Every item here is a class. Names are fixed.
 | `SectionCard` | layout | titled card with "View all"; optional icon tile before the title | `title`, `body`, `link_url`, `link_label`, `icon` |
 | `Tabs` | layout | tabs with HTMX swap (not used by a page yet) | `tabs`, `active` |
 | `LinkTabs` | layout | tabs that are plain links (each tab is its own list, for example Today, Upcoming, Past, All); the current tab has `aria-current="page"`; 40px tall; scrolls sideways on phones | `tabs`, `active`, `label` (the nav name) |
+| `Grid` | layout | components in a grid: `stats` (2 columns, 4 from lg), `sections` (2 columns from lg) or `stack` | `items`, `variant` |
+| `LiveRegion` | layout | a block that reloads itself every `seconds` with HTMX: it fetches `url` (usually the page itself) and swaps in the element with the same `region_id` (`hx-select`), so no extra endpoint is needed; `region_id` must be a lowercase slug | `region_id`, `body`, `url`, `seconds` |
 | `Modal` | layout | dialog (Alpine + HTMX; not used by a page yet) | `id`, `title`, `body` |
 | `PublicFormShell` | layout | public page: `split` (form left, band right; short band on phones) or `notice` (whole page is the band, centred message with an icon) | `page_title`, `header`, `content`, `variant`, `icon` |
 | `CrispyForm` | forms | crispy form body (`form_tag=False` inside a parent form) | `form` |

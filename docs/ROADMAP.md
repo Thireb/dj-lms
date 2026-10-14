@@ -75,7 +75,7 @@ The product owner did not accept the current look (navigation, tables, forms, si
 - [x] 3.3 Teacher, student, guardian schedule views.
 - [x] 3.4 Countdown card and join button; time zone display.
 - [x] 3.5 Lecture history and states (scheduled, live, finished, cancelled).
-- [ ] 3.6 Live Lecture Monitor for admin.
+- [x] 3.6 Live Lecture Monitor for admin.
 
 ## Phase 4: Attendance
 

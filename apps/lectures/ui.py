@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Callable, Iterable
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -481,3 +481,78 @@ def _preview_note(item) -> str:
     if item.clash is None:
         return ""
     return f"The teacher already has {item.clash.title} then."
+
+
+# Live lecture monitor (roadmap 3.6)
+
+
+def minutes_text(delta: timedelta) -> str:
+    """Example: 25 min, 1 h 05 min; under a minute is "Just now"."""
+    minutes = int(delta.total_seconds() // 60)
+    if minutes < 1:
+        return "Just now"
+    if minutes < 60:
+        return f"{minutes} min"
+    return f"{minutes // 60} h {minutes % 60:02d} min"
+
+
+class MonitorTable(DataTable):
+    """One list of the Lectures dashboard. ``mode``: ``live`` (started at,
+    running for), ``late`` (planned start, late by) or ``soon`` (time,
+    starts in)."""
+
+    MODES = {
+        "live": ("No lecture is live now.", "Started", "Running for"),
+        "late": ("No lecture is late.", "Planned start", "Late by"),
+        "soon": ("Nothing starts in the next 2 hours.", "Time", "Starts in"),
+    }
+
+    def __init__(self, rows: list[Lecture], *, mode: str, now: datetime, **props):
+        self.mode = mode
+        self.now = now
+        super().__init__(rows=rows, empty_title=self.MODES[mode][0], **props)
+
+    @property
+    def columns(self) -> list[Column]:  # type: ignore[override]
+        _, when_label, wait_label = self.MODES[self.mode]
+        return [
+            Column("title", "Lecture"),
+            Column("teacher", "Teacher", lecture_teacher),
+            Column("batch", "Batch and subjects", lecture_summary),
+            Column("when", when_label, self.when),
+            Column("wait", wait_label, self.wait),
+            Column("actions", "", self.actions),
+        ]
+
+    def when(self, lecture: Lecture) -> str:
+        if self.mode == "live" and lecture.started_at:
+            return local_time(lecture.started_at)
+        if self.mode == "soon":
+            return lecture_time(lecture)
+        return local_time(lecture.starts_at)
+
+    def wait(self, lecture: Lecture) -> str:
+        if self.mode == "live":
+            return minutes_text(self.now - (lecture.started_at or lecture.starts_at))
+        if self.mode == "late":
+            return minutes_text(self.now - lecture.starts_at)
+        return minutes_text(lecture.starts_at - self.now)
+
+    def actions(self, lecture: Lecture) -> ButtonRow:
+        items: list[Any] = [
+            IconButton(
+                "eye",
+                f"View {lecture.title}",
+                url=lecture_url("admin", "detail", lecture),
+            )
+        ]
+        if has_open_link(lecture):
+            items.append(
+                IconButton(
+                    "video",
+                    f"Open meeting link for {lecture.title}",
+                    url=lecture.meeting_url,
+                    new_tab=True,
+                )
+            )
+        return ButtonRow(items=items)

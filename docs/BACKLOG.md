@@ -237,7 +237,8 @@ Left out of 3.1 on purpose; each has a home in a later item.
 | LC10 | Join does not record anything yet. Attendance from joins (SPEC 6.3, provider-based) comes with Phase 4; the join view is the place to log it. | Low | [ ] |
 | LC9 | A calendar entry opens only a scheduled lecture (its edit page). Finished and cancelled entries do not link until a lecture detail page exists (3.5). Fixed in 3.5: every entry opens the lecture page. | Low | [x] |
 | LC11 | No notifications exist yet: there is no model or service, and the header bell (`NotificationBell`) always shows 0. The lecture events in SPEC 7 (created or changed, starts in 15 minutes, started, cancelled) are hooked in by roadmap 6.1 and 6.2. The lecture services (`create_lecture`, `update_lecture`, `start_lecture`, `cancel_lecture`) are the places to hook them. | Low | [ ] |
-| LC12 | Admin Lectures dashboard / Live lecture monitor (FEATURES 5, SPEC 8) is not built yet. It is roadmap 3.6. | Low | [ ] |
+| LC12 | Admin Lectures dashboard / Live lecture monitor (FEATURES 5, SPEC 8) is not built yet. It is roadmap 3.6. Fixed in 3.6, with a "Late start" list. | Low | [x] |
+| LC13 | The Lectures dashboard has no "Teachers on leave today" (SPEC 8); it needs leave requests (roadmap 9.3). Its lists have no paging; a very large institute may need a limit. | Low | [ ] |
 
 ## Later (deployment hardening, Phase 12)
 

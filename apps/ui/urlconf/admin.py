@@ -12,6 +12,11 @@ app_name = "admin"
 urlpatterns = [
     path("", people.AdminDashboardPage.as_view(), name="home"),
     path("dashboard/", people.AdminDashboardPage.as_view(), name="dashboard_main"),
+    path(
+        "dashboard/lectures/",
+        lectures.LecturesDashboardPage.as_view(),
+        name="dashboard_lectures",
+    ),
     path("campus/", CampusProfilePage.as_view(), name="campus"),
     path(
         "settings/institute/",
