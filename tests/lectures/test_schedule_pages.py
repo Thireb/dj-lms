@@ -413,3 +413,49 @@ def test_list_flags_an_inactive_teacher_but_not_a_stopped_schedule(
         html, "Daily algebra"
     )
     assert cell(table_row(html, "Old algebra"), "status") == ["Stopped"]
+
+
+# Phase 4 re-audit
+
+
+@pytest.mark.django_db
+def test_preview_lists_the_first_ten_dates(admin_client, school) -> None:
+    """P4-6: 21 dates were 3799px tall at 360px. The list shows 10 and
+    says how many more; the card title keeps the full count."""
+    start = karachi_today() + timedelta(days=1)
+    data = _form(school, end_date=(start + timedelta(days=20)).isoformat())
+
+    html = admin_client.post(_url("create"), data).content.decode()
+
+    assert "21 lectures will be added now" in html
+    assert html.count('class="lecture-row') == 10
+    assert "and 11 more dates." in html
+
+
+@pytest.mark.django_db
+def test_preview_says_how_many_hidden_dates_are_skipped(admin_client, school) -> None:
+    start = karachi_today() + timedelta(days=1)
+    last = start + timedelta(days=13)
+    add_schedule(
+        school,
+        title="Existing",
+        weekdays=[0, 1, 2, 3, 4, 5, 6],
+        start_date=start + timedelta(days=12),
+        end_date=last,
+    )
+
+    html = admin_client.post(
+        _url("create"), _form(school, end_date=last.isoformat())
+    ).content.decode()
+
+    assert "12 lectures will be added now" in html
+    assert "and 4 more dates, 2 of them skipped." in html
+
+
+@pytest.mark.django_db
+def test_preview_of_ten_dates_has_no_more_line(admin_client, school) -> None:
+    start = karachi_today() + timedelta(days=1)
+    data = _form(school, end_date=(start + timedelta(days=9)).isoformat())
+    html = admin_client.post(_url("create"), data).content.decode()
+    assert html.count('class="lecture-row') == 10
+    assert "more date" not in html

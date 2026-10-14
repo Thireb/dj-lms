@@ -2722,6 +2722,18 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "    waiting = False\n",
         "    waiting = True\n",
     ),
+    (
+        "schedule preview lists the first dates (P4-6)",
+        "apps/lectures/ui.py",
+        "            for item in planned[:PREVIEW_ROWS]\n",
+        "            for item in planned\n",
+    ),
+    (
+        "schedule preview counts hidden skipped dates (P4-6)",
+        "apps/lectures/ui.py",
+        '    if not skipped:\n        return f"and {len(rest)} more {noun}."\n',
+        '    if True:\n        return f"and {len(rest)} more {noun}."\n',
+    ),
 ]
 
 
