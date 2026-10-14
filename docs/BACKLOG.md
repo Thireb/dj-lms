@@ -275,7 +275,7 @@ Left out of 4.1 to 4.3 on purpose, or found while building.
 | # | Item | Priority | Status |
 |---|---|---|---|
 | AT1 | Teacher "My students" (SPEC 3: ID, Name, Batch, Attendance %, Guardian phone) has no page and no roadmap item; the menu link is disabled. `attendance.services.student_summaries` gives the % for a page of students in 4 queries. Add a roadmap item or build it with the teacher dashboard numbers (FEATURES 14). | Low | [ ] |
-| AT2 | A teacher sees no count of finished lectures without marks ("attendance to take"). The lecture page and Lecture history show "Take attendance" and "Not taken" one lecture at a time. A dashboard card fits with the teacher analytics (FEATURES 14). | Low | [ ] |
+| AT2 | A teacher sees no count of finished lectures without marks ("attendance to take"). The lecture page and Lecture history show "Take attendance" and "Not taken" one lecture at a time. A dashboard card fits with the teacher analytics (FEATURES 14). Fixed: the teacher dashboard card "Attendance to take" counts finished lectures with at least one expected student and no marks (4 queries for any number). | Low | [x] |
 | AT3 | The admin cannot correct a mark; only the lecture's teacher can (owner approved 4.1 defaults). If the teacher leaves, nobody can fix old marks. Decide with payroll or leave (Phase 8 and 9). | Low | [ ] |
 
 ## Phase 4 audit (2026-10-14, after PR #51)

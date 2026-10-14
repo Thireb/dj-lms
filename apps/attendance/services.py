@@ -171,6 +171,18 @@ def lecture_counts(lectures: list[Lecture]) -> dict[int, LectureCount]:
     return counts
 
 
+def lectures_to_mark(user: Any) -> list[Lecture]:
+    """The viewer's finished lectures with no marks yet and at least one
+    expected student (backlog AT2), in 4 queries."""
+    lectures = list(
+        Lecture.objects.for_user(user)
+        .filter(status=LectureStatus.FINISHED, attendance__isnull=True)
+        .prefetch_related("subjects")
+    )
+    counts = lecture_counts(lectures)
+    return [lecture for lecture in lectures if counts[lecture.pk].total]
+
+
 # One student (roadmap 4.2 and 4.3)
 
 

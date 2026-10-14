@@ -11,7 +11,7 @@ from typing import Any
 
 from django.utils import timezone
 
-from apps.attendance.services import student_summaries
+from apps.attendance.services import lectures_to_mark, student_summaries
 from apps.attendance.ui import percent_text
 from apps.core.roles import Role
 from apps.lectures.services import lectures_today_count, upcoming_lectures
@@ -116,6 +116,12 @@ class TeacherPortalHomePage(PortalHomePage):
         today = lectures_today_count(self.request.user)
         return [
             StatCard(today, "Lectures today", icon="video", tone="lead"),
+            StatCard(
+                len(lectures_to_mark(self.request.user)),
+                "Attendance to take",
+                note="Finished lectures with no marks",
+                icon="clipboard-check",
+            ),
             StatCard(data.student_count, "My students", icon="users"),
             StatCard(data.batch_count, "Batches", icon="layers"),
             StatCard(data.subject_count, "Subjects", icon="book-open"),

@@ -11,6 +11,7 @@ from apps.core.roles import Role
 from django.test import Client
 from django.urls import reverse
 
+from tests.attendance.conftest import backdate_enrolments, finished
 from tests.conftest import make_user
 from tests.lectures.conftest import add_lecture, soon
 from tests.people.conftest import student
@@ -37,6 +38,14 @@ def busy_school(school, institute_a):
             subjects=[school.physics],
             starts_at=soon(days=days, hour=12),
         )
+    # Finished lectures with students and no marks, for the attendance
+    # numbers (a query per lecture shows).
+    backdate_enrolments()
+    for days in (1, 2, 3):
+        # Made in a free slot first; finished() then moves it into the past.
+        finished(
+            school, title=f"Done {days}", days_ago=days, starts_at=soon(days=10 + days)
+        )
     return school
 
 
@@ -62,7 +71,9 @@ def test_admin_dashboard_query_budget(
 @pytest.mark.parametrize(
     ("who", "name", "budget"),
     [
-        ("teacher_1", "teacher:home", 11),
+        # +4 (backlog AT2): "Attendance to take" (finished lectures, their
+        # subjects, enrolments, marks); the same for any number of lectures.
+        ("teacher_1", "teacher:home", 15),
         # +4 (roadmap 4.3): the attendance % (enrolments, marks, lectures,
         # their subjects) and "Lectures today"; the same for any number of
         # children.

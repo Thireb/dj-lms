@@ -152,7 +152,7 @@ Profile menu: Account Settings, Toolbar Settings, Default Portal, Institute Sett
 Main dashboard: campus hero, clock, 4 stat cards (students, teachers, batches, lectures today), quick actions (Enrol Student, New Lecture, Generate Challan, Live Lecture Monitor), students and teachers sections with active/inactive counts and a ring chart. Built in 2.4: hero with today's date (no live clock), stat cards for students, teachers and running batches, quick actions the user may open, active bars instead of a ring chart (no chart library yet), recent students and teachers. Lectures today and the lecture and fee quick actions come with Phases 3 and 7 (3.6 adds "Add lecture" and "Lecture monitor"). Redesigned in R4c: the hero holds the quick actions and the numbers (students, teachers, running batches), and the students and teachers cards have a ring chart (plain SVG) and the five newest people; the date moved to the live clock in the page header.
 
 **Teacher (left sidebar):** Dashboard | Academics (My Lectures, Create Lecture, Schedule Recurring, Schedule, Lecture History, Documents) | Planning (Lesson Plans, Homework, Submit Report) | Assignments | Quizzes & Exams | Messages | People (My Students) | Leave (Apply Leave) | Finance (My Salary) | Account (My Profile, Account Settings, Sign Out).
-Dashboard: welcome banner, subject/batch chips, up-next card with countdown, 4 stat cards (lectures, students, batches, subjects), quick actions. Built in R4c: welcome banner with chips, an empty up-next card, and stat cards for students, batches and subjects. Built in 3.4: the up-next card with a countdown and a "Lectures today" card. Quick actions come later.
+Dashboard: welcome banner, subject/batch chips, up-next card with countdown, 4 stat cards (lectures, students, batches, subjects), quick actions. Built in R4c: welcome banner with chips, an empty up-next card, and stat cards for students, batches and subjects. Built in 3.4: the up-next card with a countdown and a "Lectures today" card. Built for backlog AT2: a fifth card, "Attendance to take" (finished lectures with students and no marks). Quick actions come later.
 
 **Student (left sidebar):** Dashboard | Academics (My Lectures, My Attendance, Leave Requests, Homework, Lesson Plans, Assignments, Quizzes & Exams, Documents) | Messages | Finance (Fee Details) | Account (My Profile, Settings, Sign Out).
 Dashboard: attendance %, homework done %, upcoming count, fee paid %, up-next card, fee KPIs (billed, paid, due, pending challans). Built in R4c: welcome banner with code, class and batch/subject chips, and an up-next card (with a countdown and Join since 3.4). Built in 4.3: attendance % and "Lectures today" cards. The other KPIs come with their phases.
@@ -163,7 +163,7 @@ Dashboard: child switcher in the header, billed / paid / outstanding / upcoming 
 ## 14. Analytics
 
 - [ ] Admin: students, fee collection, unpaid, discounts, payroll, lectures.
-- [ ] Teacher: batch and attendance numbers on the dashboard.
+- [ ] Teacher: batch and attendance numbers on the dashboard. "Attendance to take" built (backlog AT2).
 - [ ] Student: attendance %, homework %, fee paid %. Attendance % built in 4.3.
 - [ ] Guardian: homework trend, fees, attendance. Attendance % per child built in 4.3.
 
