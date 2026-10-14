@@ -2626,6 +2626,54 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "    active = rows.filter(student__status=ProfileStatus.ACTIVE)\n",
         "    active = rows\n",
     ),
+    (
+        "health check is 503 when the database fails (S13)",
+        "apps/core/health.py",
+        '        return JsonResponse({"status": "error"}, status=503)\n',
+        '        return JsonResponse({"status": "ok"})\n',
+    ),
+    (
+        "proxy ssl header refuses a wrong name (S11)",
+        "config/settings/proxy.py",
+        "    if not HEADER_NAME.fullmatch(header):\n",
+        "    if False:\n",
+    ),
+    (
+        "proxy ssl header empty means no proxy (S11)",
+        "config/settings/proxy.py",
+        "    if not header:\n        return None\n",
+        "    if not header:\n        pass\n",
+    ),
+    (
+        "attendance to take only unmarked lectures (AT2)",
+        "apps/attendance/services.py",
+        "        .filter(status=LectureStatus.FINISHED, attendance__isnull=True)\n",
+        "        .filter(status=LectureStatus.FINISHED)\n",
+    ),
+    (
+        "attendance to take needs an expected student (AT2)",
+        "apps/attendance/services.py",
+        "    return [lecture for lecture in lectures if counts[lecture.pk].total]\n",
+        "    return lectures\n",
+    ),
+    (
+        "lecture form refuses a skipped time (P3-9)",
+        "apps/lectures/forms.py",
+        "            if wall_time_missing(local):\n",
+        "            if False:\n",
+    ),
+    (
+        "schedule refuses a skipped time (P3-9)",
+        "apps/lectures/services.py",
+        "    if missing is not None:\n",
+        "    if False:\n",
+    ),
+    (
+        "monitor lists show the first rows (LC13)",
+        "apps/lectures/services.py",
+        "    rows = list(lectures[:MONITOR_ROWS])\n",
+        "    rows = list(lectures)\n",
+    ),
 ]
 
 
