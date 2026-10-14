@@ -4,13 +4,24 @@ from apps.ui.safe_url import safe_url
 
 class Button(Component):
     """A link (with ``url``) or a plain button. ``disabled=True`` shows a
-    state that cannot be clicked yet; ``title`` explains it."""
+    state that cannot be clicked yet; ``title`` explains it. ``new_tab=True``
+    opens the link in a new tab without an opener (meeting links).
+    ``submit=True`` (no ``url``) submits the form it is in."""
 
     template_name = "ui/components/button.html"
     variant = "primary"
 
     def __init__(
-        self, label, variant=None, url=None, icon="", disabled=False, title="", **props
+        self,
+        label,
+        variant=None,
+        url=None,
+        icon="",
+        disabled=False,
+        title="",
+        new_tab=False,
+        submit=False,
+        **props,
     ):
         super().__init__(
             label=label,
@@ -19,6 +30,8 @@ class Button(Component):
             icon=icon,
             disabled=disabled,
             title=title,
+            new_tab=new_tab,
+            submit=submit,
             **props,
         )
 

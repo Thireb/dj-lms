@@ -93,3 +93,13 @@ def test_live_region_reloads_itself() -> None:
     assert "hx-get" not in unsafe and "javascript:" not in unsafe
     with pytest.raises(ValueError):
         LiveRegion('x" onclick="alert(1)', "x", url="/a/")
+
+
+def test_sidebar_group_headings_have_enough_contrast() -> None:
+    """External audit L2: axe flagged text-white/55 on the indigo sidebar."""
+    from pathlib import Path
+
+    template = Path("apps/ui/templates/ui/components/sidebar.html").read_text()
+
+    assert "text-white/55" not in template
+    assert 'text-white/70">{{ group.label }}' in template

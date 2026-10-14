@@ -62,6 +62,7 @@ from apps.lectures.services import (
     list_schedules,
     next_lecture,
     preview_schedule,
+    schedule_problems,
     start_lecture,
     stop_schedule,
     update_lecture,
@@ -73,7 +74,6 @@ from apps.lectures.ui import (
     HistoryTable,
     LectureTable,
     MonitorTable,
-    SchedulePreviewList,
     ScheduleTable,
     StudentLectureTable,
     TeacherLectureTable,
@@ -86,6 +86,7 @@ from apps.lectures.ui import (
     lecture_detail_rows,
     lecture_summary,
     meeting_link_button,
+    schedule_preview_list,
     start_button,
     stop_dialog,
     up_next_card,
@@ -906,12 +907,6 @@ class ScheduleListPage(AdminScheduleMixin, LectureListPage):
             "pagination": Pagination(page, query=query),
         }
 
-    def date_from_filter(self, value: str) -> dict[str, Any]:
-        return {"name": "date_from", "label": "From", "value": value, **DATE_FIELD}
-
-    def date_to_filter(self, value: str) -> dict[str, Any]:
-        return {"name": "date_to", "label": "To", "value": value, **DATE_FIELD}
-
     def filter_fields(self, filters: dict[str, str]) -> list[dict[str, Any]]:
         fields = []
         if "teacher" in self.filter_keys:
@@ -929,7 +924,7 @@ class ScheduleListPage(AdminScheduleMixin, LectureListPage):
                     "Add your first schedule", url=self.schedule_url("create")
                 ),
             )
-        return self.table_class(rows)
+        return self.table_class(rows, problems=schedule_problems(rows))
 
 
 class TeacherScheduleListPage(TeacherScheduleMixin, ScheduleListPage):
@@ -1002,6 +997,7 @@ class ScheduleFormPage(AdminScheduleMixin, LectureFormPage):
         return HttpResponseRedirect(self.schedule_url("list"))
 
     def show_preview(self, form: ScheduleForm, details: ScheduleDetails) -> Any:
+        self.preview_minutes = details.duration_minutes
         try:
             self.preview = preview_schedule(
                 self.get_institute(), details, self.schedule
@@ -1032,14 +1028,21 @@ class ScheduleFormPage(AdminScheduleMixin, LectureFormPage):
             if preview.later_count
             else ""
         )
+        minutes = self.preview_minutes
         text = (
-            "Check the dates, then save below. If you change a value, the "
-            "preview is made again." + later
+            f"Each lecture is {minutes} minutes. New: the lecture is made. "
+            "Skipped: the teacher already has a lecture then. Check the dates, "
+            "then save. If you change a value below, the preview is made again." + later
         )
+        # Save sits above the dates too, so phones need not scroll the whole
+        # list and form to reach it (external audit L3).
+        save = Button(self.save_label, icon="check", submit=True)
         return SectionCard(
             title=f"{preview.created_count} lectures will be added now",
             icon="calendar-days",
-            body=BlockStack(blocks=[text, SchedulePreviewList(preview.planned)]),
+            body=BlockStack(
+                blocks=[text, save, schedule_preview_list(preview.planned)]
+            ),
         )
 
     def save_schedule(self, details: ScheduleDetails) -> str:

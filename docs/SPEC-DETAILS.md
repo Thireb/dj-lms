@@ -180,8 +180,8 @@ Title*, Teacher*, Batch*, Subjects*, Delivery mode*, Meeting link, Days of week*
 Rules chosen in 3.2 (ASSUMED, compare with the demo):
 - The start time is wall-clock time in the zone of the person who added the schedule; every lecture is at that local time, also across clock changes.
 - The start date is today or later; a schedule runs one year at most. "Number of weeks" (1 to 52) sets the end date when the end date is empty.
-- The first valid submit shows the preview (dates, and "Skipped" where the teacher already has a lecture). Sending the same values again saves; a changed value shows a new preview.
-- Lectures are made up to the horizon setting (default 8 weeks) after a save; a nightly job adds the next days. A date where the teacher already has a lecture is skipped. If the teacher becomes inactive or no longer teaches a subject, no new lectures are made.
+- The first valid submit shows the preview (dates, and "Skipped" where the teacher already has a lecture). External audit: one line per date ("New" or "Skipped"), with a Save button above the dates as well as below the form. Sending the same values again saves; a changed value shows a new preview.
+- Lectures are made up to the horizon setting (default 8 weeks) after a save; a nightly job adds the next days. A date where the teacher already has a lecture is skipped. If the teacher becomes inactive or no longer teaches a subject, no new lectures are made, and the schedule list shows "Needs attention" with the reason (external audit L5). If the queue (Redis) is down at a save, the lectures are made during the request instead; if that fails too, the nightly job makes them.
 - "This one" is the lecture edit page; such a lecture keeps its changes. "This and all future" is the schedule edit page: lectures that have not started are made again from the new values.
 - Extend sets a later end date. Stop makes no more lectures and cancels the schedule's lectures that have not started; a stopped schedule cannot be edited or extended.
 

@@ -736,3 +736,56 @@ def test_migration_marks_finished_lectures_without_a_start_not_held(school) -> N
     taught.refresh_from_db()
     assert never.status == LectureStatus.NOT_HELD and never.ended_at is None
     assert taught.status == LectureStatus.FINISHED
+
+
+@pytest.mark.django_db
+def test_finish_task_goes_on_after_one_institute_fails(
+    school, institute_b, monkeypatch, caplog
+) -> None:
+    """External audit L1: one bad institute does not stop the others."""
+    import logging
+
+    from apps.lectures import tasks
+
+    missed = _in(school, -120)
+    # unscoped: test set-up in another institute, outside a tenant context.
+    other = Lecture.unscoped.create(
+        institute=institute_b,
+        title="Other institute",
+        teacher=school.teacher_b,
+        batch=school.batch_b,
+        starts_at=timezone.now() - timedelta(hours=3),
+        duration_minutes=60,
+        delivery_mode=DeliveryMode.IN_PERSON,
+    )
+    real = tasks.finish_ended_lectures
+
+    def failing_for_a(institute, *args, **kwargs):
+        if institute.pk == school.morning.institute_id:
+            raise RuntimeError("bad institute")
+        return real(institute, *args, **kwargs)
+
+    monkeypatch.setattr(tasks, "finish_ended_lectures", failing_for_a)
+    with caplog.at_level(logging.ERROR, logger="apps.lectures.tasks"):
+        closed = finish_all_ended_lectures()
+
+    missed.refresh_from_db()
+    other.refresh_from_db()
+    assert closed == 1
+    assert other.status == LectureStatus.NOT_HELD
+    assert missed.status == LectureStatus.SCHEDULED
+    assert f"institute {school.morning.institute_id}" in caplog.text
+
+
+@pytest.mark.django_db
+def test_meeting_link_button_opens_a_new_tab(school) -> None:
+    """External audit L4: like the student Join, the teacher's and admin's
+    meeting link opens a new tab without an opener."""
+    lecture = _set(_in(school, -5), status=LectureStatus.LIVE)
+
+    page = signed_in(school.teacher_1.user).get(_url("teacher", "detail", lecture))
+
+    link = re.search(
+        rf'<a href="{re.escape(lecture.meeting_url)}"[^>]*>', page.content.decode()
+    )
+    assert link and 'target="_blank" rel="noopener noreferrer"' in link.group(0)

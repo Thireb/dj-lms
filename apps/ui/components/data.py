@@ -112,6 +112,21 @@ class Badge(Component):
         super().__init__(text=text, tone=tone or self.tone, **props)
 
 
+class BadgeNote(Component):
+    """A badge with a short explanation under it (a table cell that needs a
+    reason, such as "Needs attention")."""
+
+    template_name = "ui/components/badge_note.html"
+
+    def __init__(self, badge, note, **props):
+        super().__init__(badge=badge, note=note, **props)
+
+    def render(self, request=None):
+        ctx = self.get_context()
+        ctx["badge"] = render_child(ctx["badge"], request)
+        return render_component_template(self, ctx, request=request)
+
+
 class Avatar(Component):
     """Initials in a soft circle; the tint is stable per name."""
 
