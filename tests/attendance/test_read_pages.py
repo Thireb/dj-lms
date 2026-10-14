@@ -214,6 +214,7 @@ def test_guardian_cannot_choose_an_unlinked_student(two_children, institute_a) -
         "//evil.example.com/guardian/",
         "/admin/",
         "",
+        "/guardian/\r\nSet-Cookie: x=1",
     ],
 )
 def test_switcher_goes_back_only_to_a_guardian_page(two_children, wanted) -> None:

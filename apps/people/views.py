@@ -816,6 +816,7 @@ class GuardianChooseChildView(GuardianChildMixin, PortalPageView):
 
     def back_url(self, wanted: str) -> str:
         """Only a guardian page: a path under /guardian/ is always on this
-        site, so "//other.site" or "https://..." go home."""
+        site, so "//other.site" or "https://..." go home. A line break in a
+        header value is an error, so it goes home too."""
         home = reverse("guardian:home")
-        return wanted if wanted.startswith(home) else home
+        return wanted if wanted.startswith(home) and wanted.isprintable() else home

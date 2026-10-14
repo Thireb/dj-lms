@@ -2557,8 +2557,14 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
     (
         "guardian switcher goes back only to guardian pages",
         "apps/people/views.py",
-        "        return wanted if wanted.startswith(home) else home\n",
+        "        return wanted if wanted.startswith(home) and wanted.isprintable() else home\n",
         "        return wanted or home\n",
+    ),
+    (
+        "guardian switcher refuses control characters",
+        "apps/people/views.py",
+        "        return wanted if wanted.startswith(home) and wanted.isprintable() else home\n",
+        "        return wanted if wanted.startswith(home) else home\n",
     ),
     (
         "guardian chosen child follows the session",
