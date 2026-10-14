@@ -3,6 +3,7 @@
 from django.urls import path
 
 from apps.academics import views as academics
+from apps.attendance import views as attendance
 from apps.institutes.views import CampusProfilePage, InstituteSettingsPage
 from apps.lectures import views as lectures
 from apps.people import views as people
@@ -144,6 +145,11 @@ urlpatterns = [
         "lectures/schedules/<int:pk>/stop/",
         lectures.ScheduleStopView.as_view(),
         name="lecture_schedule_stop",
+    ),
+    path(
+        "students/attendance/",
+        attendance.AdminStudentAttendancePage.as_view(),
+        name="student_attendance_history",
     ),
     path("portal-access/", people.PortalAccessPage.as_view(), name="portal_access"),
     path(

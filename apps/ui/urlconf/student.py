@@ -1,5 +1,6 @@
 from django.urls import path
 
+from apps.attendance import views as attendance
 from apps.lectures import views as lectures
 from apps.ui.views import portal_home
 
@@ -14,4 +15,5 @@ urlpatterns = [
     ),
     path("up-next/", lectures.StudentUpNextCardView.as_view(), name="up_next"),
     path("lectures/", lectures.StudentLectureListPage.as_view(), name="lecture_list"),
+    path("attendance/", attendance.StudentAttendancePage.as_view(), name="attendance"),
 ]

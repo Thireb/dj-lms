@@ -55,7 +55,7 @@ Setup order the reference teaches: Campus, Classes, Batches, Subjects, Fee Plans
 - [ ] Edit student: change batches, subjects, fee plans, contacts. Built in 2.5b except fee plans (Phase 7).
 - [x] All Students list with Active/Inactive status.
 - [x] Bulk upload from an Excel template (one student per row; error rows reported). Fee plan columns come with Phase 7.
-- [ ] Student Attendance History.
+- [x] Student Attendance History. Built in 4.2: one student at a time (a filter, or the row action on All students).
 - [ ] **Portal Access:** block a student from the student portal (for example unpaid fees); automatic blocking of fee defaulters can be on or off; single students can be exempted. Blocked student sees a "blocked" page. Built in 2.7: manual block and unblock, exemptions, the Access paused page. Automatic blocking of defaulters comes with roadmap 7.6 (backlog S9).
 
 ## 4. Teachers (Admin)
@@ -82,9 +82,9 @@ Setup order the reference teaches: Campus, Classes, Batches, Subjects, Fee Plans
 - [x] Statuses: Present, Partial, Late, Absent. Built in 4.1; no mark shows as "Not marked".
 - [x] Manual attendance by the teacher for any lecture. Built in 4.1: for any of their finished lectures, and editable later. The admin sees the marks on the lecture page (read only).
 - [ ] Auto attendance from the meeting provider (needs Zoom, later). Unknown names must be matched to a student or ignored.
-- [ ] Student "My Attendance" with percentage.
-- [ ] Guardian "Class Attendance" for the chosen child.
-- [ ] Admin attendance history per student.
+- [x] Student "My Attendance" with percentage. Built in 4.2.
+- [x] Guardian "Class Attendance" for the chosen child. Built in 4.2, with the header child switcher.
+- [x] Admin attendance history per student. Built in 4.2 ("Student attendance history", People menu).
 
 ## 7. Academic work
 
@@ -158,7 +158,7 @@ Dashboard: welcome banner, subject/batch chips, up-next card with countdown, 4 s
 Dashboard: attendance %, homework done %, upcoming count, fee paid %, up-next card, fee KPIs (billed, paid, due, pending challans). Built in R4c: welcome banner with code, class and batch/subject chips, and an up-next card (with a countdown and Join since 3.4). The KPIs come with their phases.
 
 **Guardian (left sidebar):** Dashboard | Academics (Lectures Schedule, Homework, Lesson Plans, Quizzes & Exams, Class Attendance) | Finance (Fee & Challans, Fee Pay) | Communication (Messages) | Account (Student Profile, Account Settings, Sign Out).
-Dashboard: child switcher in the header, billed / paid / outstanding / upcoming classes, homework progress and 6-month trend chart. One guardian login can cover several children; every page follows the chosen child. Built in R4c: welcome banner, a "Your children" card (code, class, batches, status) and an upcoming classes card (the next 5 classes with the child's name since 3.4). The child switcher and the KPIs come with their phases.
+Dashboard: child switcher in the header, billed / paid / outstanding / upcoming classes, homework progress and 6-month trend chart. One guardian login can cover several children; every page follows the chosen child. Built in R4c: welcome banner, a "Your children" card (code, class, batches, status) and an upcoming classes card (the next 5 classes with the child's name since 3.4). The child switcher is built in 4.2 (header, kept in the session; shown with two or more children). The KPIs come with their phases.
 
 ## 14. Analytics
 

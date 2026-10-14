@@ -81,7 +81,7 @@ The product owner did not accept the current look (navigation, tables, forms, si
 ## Phase 4: Attendance
 
 - [x] 4.1 Teacher marks attendance per lecture. Built: the `attendance` app (`Attendance`, one row per lecture and student), "Take attendance" for a finished lecture (form starts at Present), the marks on the lecture page, the "Attendance" row action and Lecture history Present / Total.
-- [ ] 4.2 Student and guardian attendance views.
+- [x] 4.2 Student and guardian attendance views. Built: student "My attendance", guardian "Class attendance" and admin "Student attendance history" (finished classes with marks, the % and filters), and the guardian header child switcher (backlog LC7) that "Lectures schedule" now follows too.
 - [ ] 4.3 Monthly summary and percentages.
 
 ## Phase 5: Assessments

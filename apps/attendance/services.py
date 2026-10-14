@@ -11,16 +11,18 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import datetime
-from decimal import Decimal
+from datetime import date, datetime, time, timedelta
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.db.models import Q
 
 from apps.academics.models import StudentBatchSubject
 from apps.attendance.models import Attendance, AttendanceSource, AttendanceStatus
 from apps.lectures.models import Lecture, LectureStatus
+from apps.lectures.times import combine_local
 from apps.people.models import StudentProfile
 
 STATUS_KEYS = {key for key, _ in AttendanceStatus.choices}
@@ -161,3 +163,86 @@ def lecture_counts(lectures: list[Lecture]) -> dict[int, LectureCount]:
             total=len(expected | set(own)),
         )
     return counts
+
+
+# One student (roadmap 4.2 and 4.3)
+
+
+@dataclass(frozen=True)
+class Record:
+    lecture: Lecture
+    status: str  # "" when not marked
+
+
+def student_records(
+    student: StudentProfile,
+    *,
+    subject_id: int | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
+) -> list[Record]:
+    """The finished lectures a student was expected in, newest first, with
+    their marks. The caller checks that the viewer may see the student.
+    ``date_from`` and ``date_to`` are days in the viewer's zone, both in."""
+    enrolments = _enrolments(StudentBatchSubject.objects.filter(student=student))
+    marks = dict(
+        Attendance.objects.filter(student=student).values_list("lecture_id", "status")
+    )
+    lectures = (
+        Lecture.objects.filter(status=LectureStatus.FINISHED)
+        .filter(Q(batch_id__in={e.batch_id for e in enrolments}) | Q(pk__in=marks))
+        .select_related("teacher__user", "batch")
+        .prefetch_related("subjects")
+        .order_by("-starts_at", "-pk")
+    )
+    if subject_id is not None:
+        lectures = lectures.filter(subjects__id=subject_id)
+    if date_from is not None:
+        lectures = lectures.filter(starts_at__gte=combine_local(date_from, time.min))
+    if date_to is not None:
+        day_after = date_to + timedelta(days=1)
+        lectures = lectures.filter(starts_at__lt=combine_local(day_after, time.min))
+    return [
+        Record(lecture, marks.get(lecture.pk, ""))
+        for lecture in lectures
+        if lecture.pk in marks or any(is_expected(lecture, e) for e in enrolments)
+    ]
+
+
+@dataclass(frozen=True)
+class Summary:
+    present: int = 0
+    late: int = 0
+    partial: int = 0
+    absent: int = 0
+    not_marked: int = 0
+
+    @property
+    def total(self) -> int:
+        return self.present + self.late + self.partial + self.absent + self.not_marked
+
+    @property
+    def percent(self) -> Decimal | None:
+        """SPEC 6.3: (Present + Late + 0.5 x Partial) / expected lectures,
+        to one decimal; None before the first finished lecture."""
+        if not self.total:
+            return None
+        attended = self.present + self.late + HALF * self.partial
+        share = attended * 100 / self.total
+        return share.quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)
+
+
+SUMMARY_FIELDS = {
+    AttendanceStatus.PRESENT: "present",
+    AttendanceStatus.LATE: "late",
+    AttendanceStatus.PARTIAL: "partial",
+    AttendanceStatus.ABSENT: "absent",
+    "": "not_marked",
+}
+
+
+def summarize(records: list[Record]) -> Summary:
+    counts = dict.fromkeys(SUMMARY_FIELDS.values(), 0)
+    for record in records:
+        counts[SUMMARY_FIELDS[record.status]] += 1
+    return Summary(**counts)

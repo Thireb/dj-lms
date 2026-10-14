@@ -6,6 +6,7 @@ what exists now: batches and subjects, and a guardian's children.
 
 from __future__ import annotations
 
+from functools import cached_property
 from typing import Any
 
 from django.utils import timezone
@@ -16,6 +17,7 @@ from apps.lectures.ui import lecture_status_badge, lecture_summary, lecture_when
 from apps.lectures.views import up_next_body
 from apps.people.home import greeting, guardian_home, student_home, teacher_home
 from apps.people.ui import profile_status_badge
+from apps.people.views import GuardianChildMixin
 from apps.ui.brand import initials
 from apps.ui.components.block_stack import BlockStack
 from apps.ui.components.data import EmptyState, PersonCell, PersonList, StatCard
@@ -136,7 +138,7 @@ class StudentPortalHomePage(PortalHomePage):
         return self.data.pairs
 
 
-class GuardianPortalHomePage(PortalHomePage):
+class GuardianPortalHomePage(GuardianChildMixin, PortalHomePage):
     portal = "guardian"
     allowed_roles = [Role.GUARDIAN]
     section_columns = 2
@@ -144,6 +146,11 @@ class GuardianPortalHomePage(PortalHomePage):
 
     def load(self, user: Any) -> Any:
         return guardian_home(user)
+
+    @cached_property
+    def children(self) -> list[Any]:
+        """The switcher reuses the children the home already loaded."""
+        return self.data.children
 
     def up_next_body(self) -> Any:
         lectures = upcoming_lectures(self.request.user, limit=UPCOMING_COUNT)

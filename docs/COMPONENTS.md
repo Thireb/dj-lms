@@ -31,7 +31,7 @@ apps/ui/
                    # ProgressRing, ChartCard, EmptyState
     actions.py     # Button, IconButton, QuickAction, ConfirmDialog, CopyField, Toast
     lectures.py    # CountdownCard, LectureRow, Calendar
-    nav.py         # NotificationBell, FilterBar, Pagination
+    nav.py         # NotificationBell, ChildSwitcher, FilterBar, Pagination
     pdf.py         # PdfHeader
   forms/
     base.py        # BaseForm, TenantModelForm, HtmxModalForm
@@ -237,7 +237,7 @@ Every item here is a class. Names are fixed.
 | Class | File | Purpose | Main props |
 |---|---|---|---|
 | `TopNavShell` | layout | admin shell: top menu bar with dropdown groups; below md a Menu button shows the groups as a collapsible list | `portal`, `user`, `active` |
-| `SidebarShell` | layout | teacher/student/guardian shell: sidebar + top bar; below md the sidebar is hidden and a Menu button opens it as a full-screen panel (Escape or a tap outside closes it) | `portal`, `user`, `active` |
+| `SidebarShell` | layout | teacher/student/guardian shell: sidebar + top bar; below md the sidebar is hidden and a Menu button opens it as a full-screen panel (Escape or a tap outside closes it); `child_switcher` goes in the top bar (the brand hides below md to make room) | `portal`, `user`, `active` |
 | `TopNav` | layout | grouped dropdown menu from a menu config | `portal`, `active` |
 | `Sidebar` | layout | grouped sidebar menu from a menu config | `portal`, `active` |
 | `HeroBanner` | layout | dashboard banner on the Lexicon band (gradient + waves): title, subtitle, chips, actions (`Button` `light` first, then `glass`); `stats` adds glass number tiles on the right (admin campus hero); `initials` adds a large avatar (portal welcome) | `title`, `subtitle`, `chips`, `actions`, `stats` (list of value, label, note), `initials` |
@@ -280,6 +280,7 @@ Every item here is a class. Names are fixed.
 | `LectureRow` | lectures | one lecture in a short list (guardian "Upcoming classes", the schedule preview); `when` and `detail` show only when set | `title`, `when`, `detail`, `trailing` |
 | `Calendar` | lectures | week (seven day cards, side by side from lg) or month (a grid of weeks from md; on phones a list of the month's days that have entries), with previous, Today and next links; each day is a `CalendarDay` (`day`, `items`, `is_today`, `in_month`) and each entry a `CalendarItem` (`time`, `title`, `detail`, `status`, `tone`: `info`, `success`, `warning`, `neutral` or `danger`, `url`); an unsafe item `url` renders as plain text | `days`, `view` (`week`, `month`), `label`, `previous_url`, `today_url`, `next_url`, `empty_text`, `empty_day_text` |
 | `NotificationBell` | nav | bell + unread count | `user` |
+| `ChildSwitcher` | nav | guardian top bar: a POST form with a "Child" select that sends on change ("Show" button without JavaScript); `options` (value, label), `chosen`, `url`, `next_url`. Pages get it from `GuardianChildMixin.get_child_switcher()` | `options`, `chosen`, `url`, `next_url` |
 | `FilterBar` | nav | search field with an icon + selects and "Apply filters"; "Clear" shows when a filter has a value. Each filter (dict or object) has `name`, `label`, optional `value`, `placeholder`; a filter with `options` (list of value, label) renders a select; a filter with `hidden=True` is a hidden input that keeps a value (such as the chosen tab) and does not count for "Clear"; a select with `kept=True` (a guardian's chosen child) does not count for "Clear", and "Clear" keeps its value; `input_type="date"` renders a date field | `filters` |
 | `Pagination` | nav | "Showing X to Y of N", then previous, page numbers (elided when long) and next; `query` keeps the current filters | `page_obj`, `query` |
 | `PdfHeader` | pdf | institute header for PDFs | `institute` |

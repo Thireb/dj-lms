@@ -59,6 +59,10 @@ class PortalPageView(
     def get_subtitle(self) -> str:
         return ""
 
+    def get_child_switcher(self) -> Any | None:
+        """The guardian header's child switcher (``GuardianChildMixin``)."""
+        return None
+
     def get_actions(self) -> list[Any]:
         return []
 
@@ -125,6 +129,7 @@ class PortalPageView(
             institute=self.get_institute(),
             page_title=self.title,
             content=body,
+            child_switcher=self.get_child_switcher(),
         )
         return HttpResponse(shell.render(request=self.request), **response_kwargs)
 

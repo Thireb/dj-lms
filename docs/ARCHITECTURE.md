@@ -135,6 +135,7 @@ People:
 - `CodeSequence` (institute, prefix, last number) gives `STU-001` and `TCH-001` codes in `people.services.next_code`. It locks the row, so two saves never get the same code, and numbers never go down.
 - `GuardianStudentLink` (guardian, student), one row per pair. `people.services.enrol_guardian` creates the guardian account and profile, or reuses a guardian of the same institute with that email, and adds the link.
 - `for_user` on profiles: admins and sub-admins see the institute. A student, teacher or guardian sees their own profile. A guardian also sees linked students; a student also sees their linked guardians. A teacher also sees every student enrolled in a batch they teach. A student or guardian also sees the teachers of their (child's) batches. Teachers do not see guardians yet (messaging, Phase 6).
+- Guardian pages follow one child (built in 4.2, backlog LC7): `GuardianChildMixin` (`people.views`) gives `children` (through `for_user`) and `child` (the session choice, else the first by name), and `get_child_switcher()` puts the `ChildSwitcher` in the top bar. `PortalPageView.get_child_switcher()` returns None for every other page.
 
 - Status: activating or deactivating a student or teacher changes `profile.status` and `User.is_active` together, in one service call (decided 2026-10-07). An inactive person cannot sign in, and an open session ends on the next request.
 - Names: forms take one "Full name"; the service splits it at the first space into `first_name` and `last_name`.

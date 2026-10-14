@@ -5,6 +5,7 @@ from __future__ import annotations
 import secrets
 import time
 from collections.abc import Callable
+from functools import cached_property
 from typing import Any
 from urllib.parse import urlencode
 
@@ -15,6 +16,7 @@ from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.utils.cache import patch_cache_control
+from django.utils.http import url_has_allowed_host_and_scheme
 
 from apps.academics.models import Batch, ClassLabel
 from apps.core import menus as menu_keys
@@ -41,8 +43,10 @@ from apps.people.forms import (
 from apps.people.models import ProfileStatus, StudentProfile, TeacherProfile
 from apps.people.services import (
     StudentDetails,
+    chosen_child,
     create_teacher,
     enrol_student,
+    guardian_children,
     list_portal_access,
     list_students,
     list_teachers,
@@ -75,7 +79,7 @@ from apps.ui.components.layout import (
     PublicFormShell,
     SectionCard,
 )
-from apps.ui.components.nav import FilterBar, Pagination
+from apps.ui.components.nav import ChildSwitcher, FilterBar, Pagination
 from apps.ui.views.pages import (
     DashboardPage,
     DetailPage,
@@ -764,3 +768,56 @@ class PortalAccessActionView(ProfileObjectMixin, PortalPageView):
             setter(student, **values)
             messages.success(request, done.format(name=student))
         return HttpResponseRedirect(reverse("admin:portal_access"))
+
+
+# Guardian child switcher (backlog LC7, UI-GUIDELINES: guardian top bar)
+
+GUARDIAN_CHILD_KEY = "guardian_child_id"
+
+
+class GuardianChildMixin:
+    """Guardian pages follow the child chosen in the header. The choice is
+    kept in the session; a child that is not the guardian's (or none yet)
+    falls back to the first child by name."""
+
+    @cached_property
+    def children(self) -> list[StudentProfile]:
+        return guardian_children(self.request.user)
+
+    @cached_property
+    def child(self) -> StudentProfile | None:
+        wanted = self.request.session.get(GUARDIAN_CHILD_KEY)
+        return chosen_child(self.children, wanted)
+
+    def get_child_switcher(self) -> ChildSwitcher | None:
+        if len(self.children) < 2:
+            return None
+        return ChildSwitcher(
+            [(child.pk, str(child)) for child in self.children],
+            chosen=self.child.pk,
+            url=reverse("guardian:choose_child"),
+            next_url=self.request.get_full_path(),
+        )
+
+
+class GuardianChooseChildView(GuardianChildMixin, PortalPageView):
+    """POST from the header switcher: keep the child, go back to the page."""
+
+    portal = "guardian"
+    allowed_roles = [Role.GUARDIAN]
+    http_method_names = ["post"]
+
+    def post(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        wanted = id_param(search_param(request.POST.get("child")))
+        if any(child.pk == wanted for child in self.children):
+            request.session[GUARDIAN_CHILD_KEY] = wanted
+        else:
+            messages.error(request, "Choose one of your children.")
+        return HttpResponseRedirect(self.back_url(request.POST.get("next", "")))
+
+    def back_url(self, wanted: str) -> str:
+        home = reverse("guardian:home")
+        safe = url_has_allowed_host_and_scheme(
+            wanted, allowed_hosts={self.request.get_host()}
+        )
+        return wanted if safe and wanted.startswith(home) else home

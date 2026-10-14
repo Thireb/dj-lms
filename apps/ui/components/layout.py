@@ -169,6 +169,9 @@ class SidebarShell(Component):
         if request is not None:
             ctx["sidebar"] = ctx["sidebar"].render(request=request)
             ctx["notification_bell"] = ctx["notification_bell"].render(request=request)
+            ctx["child_switcher"] = render_child(
+                self.props.get("child_switcher"), request
+            )
             content = ctx.get("content")
             if content is not None and hasattr(content, "render"):
                 ctx["content"] = content.render(request=request)

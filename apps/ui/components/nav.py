@@ -1,6 +1,25 @@
 from urllib.parse import urlencode
 
 from apps.ui.components.base import Component
+from apps.ui.safe_url import safe_url
+
+
+class ChildSwitcher(Component):
+    """Guardian header: choose the child that every guardian page follows.
+    A POST form (CSRF when rendered with ``request``); the select sends it
+    on change, and a "Show" button does it without JavaScript. ``options``
+    is a list of (value, label); ``next_url`` is where to go back."""
+
+    template_name = "ui/components/child_switcher.html"
+
+    def __init__(self, options, chosen, url, next_url, **props):
+        super().__init__(
+            options=[(str(value), label) for value, label in options],
+            chosen=str(chosen),
+            url=safe_url(url),
+            next_url=next_url,
+            **props,
+        )
 
 
 class NotificationBell(Component):

@@ -48,6 +48,7 @@ class GuardianMenu:
                         "Class attendance",
                         "guardian:attendance",
                         "clipboard-check",
+                        menu_key="attendance",
                     ),
                 ),
             ),

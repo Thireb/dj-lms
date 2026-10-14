@@ -493,3 +493,20 @@ def list_portal_access(
                 Q(access_rule__isnull=True) | Q(**{f"access_rule__{name}": False})
             )
     return students
+
+
+def guardian_children(user: Any) -> list[StudentProfile]:
+    """A guardian's linked children, by name (the header child switcher)."""
+    return list(
+        StudentProfile.objects.for_user(user)
+        .select_related("user")
+        .order_by("user__first_name", "user__last_name", "pk")
+    )
+
+
+def chosen_child(
+    children: list[StudentProfile], wanted: int | None
+) -> StudentProfile | None:
+    """The wanted child when it is one of ``children``, else the first."""
+    chosen = [child for child in children if child.pk == wanted]
+    return (chosen or children or [None])[0]

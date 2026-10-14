@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
+
 from apps.attendance.models import AttendanceStatus
-from apps.attendance.services import LectureCount, RosterEntry
-from apps.ui.components.data import Badge, Column, DataTable, PersonCell
+from apps.attendance.services import LectureCount, Record, RosterEntry, Summary
+from apps.lectures.times import local_date, time_range
+from apps.ui.components.data import Badge, Column, DataTable, PersonCell, StatCard
+from apps.ui.components.layout import Grid
 
 # SPEC table of statuses: green, amber, amber, red.
 STATUS_TONES = {
@@ -51,5 +55,74 @@ class RosterTable(DataTable):
             ),
             Column(
                 "status", "Attendance", lambda entry: attendance_badge(entry.status)
+            ),
+        ]
+
+
+def percent_text(percent: Decimal | None) -> str:
+    """Example: 87.5%, 100%; a dash before the first finished class."""
+    if percent is None:
+        return "-"
+    text = f"{percent:.1f}"
+    return f"{text.removesuffix('.0')}%"
+
+
+def summary_cards(summary: Summary) -> Grid:
+    """Attendance %, Present, Partial and Absent for a student (SPEC 6.3)."""
+    absent_note = f"{summary.not_marked} not marked" if summary.not_marked else ""
+    classes = "class" if summary.total == 1 else "classes"
+    return Grid(
+        [
+            StatCard(
+                percent_text(summary.percent),
+                "Attendance",
+                note=f"{summary.total} finished {classes}",
+                icon="clipboard-check",
+                tone="lead",
+            ),
+            StatCard(
+                summary.present, "Present", note=f"{summary.late} late", icon="check"
+            ),
+            StatCard(summary.partial, "Partial", note="Counts as half", icon="clock"),
+            StatCard(
+                summary.absent + summary.not_marked,
+                "Absent",
+                note=absent_note,
+                icon="x",
+            ),
+        ],
+        variant="stats",
+    )
+
+
+def _subjects(record: Record) -> str:
+    return ", ".join(sorted(subject.name for subject in record.lecture.subjects.all()))
+
+
+class AttendanceTable(DataTable):
+    """A student's finished lectures with their marks (My attendance, Class
+    attendance, Student attendance history)."""
+
+    empty_title = "No finished classes match these filters."
+
+    def __init__(self, rows: list[Record], **props):
+        super().__init__(rows=rows, **props)
+
+    @property
+    def columns(self) -> list[Column]:  # type: ignore[override]
+        return [
+            Column("date", "Date", lambda record: local_date(record.lecture.starts_at)),
+            Column(
+                "time",
+                "Time",
+                lambda record: time_range(
+                    record.lecture.starts_at, record.lecture.ends_at
+                ),
+            ),
+            Column("title", "Lecture", lambda record: record.lecture.title),
+            Column("subjects", "Subjects", _subjects),
+            Column("teacher", "Teacher", lambda record: str(record.lecture.teacher)),
+            Column(
+                "status", "Attendance", lambda record: attendance_badge(record.status)
             ),
         ]
