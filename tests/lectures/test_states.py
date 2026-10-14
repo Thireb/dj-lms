@@ -508,3 +508,55 @@ def test_closed_lecture_has_no_meeting_link(admin_client, school, status) -> Non
 
     assert lecture.meeting_url not in page
     assert lecture.meeting_url not in rows.content.decode()
+
+
+@pytest.mark.django_db
+def test_rows_offer_only_the_actions_the_state_allows(admin_client, school) -> None:
+    tomorrow = add_lecture(school, title="Tomorrow class")
+    live = _set(
+        _in(school, -10, title="Live class", starts_at=soon(days=2)),
+        status=LectureStatus.LIVE,
+    )
+
+    admin = admin_client.get(reverse("admin:lecture_list")).content.decode()
+    teacher = signed_in(school.teacher_1.user).get(reverse("teacher:lecture_list"))
+    teacher = teacher.content.decode()
+
+    assert "/cancel/" not in table_row(admin, "Live class")
+    assert _url("admin", "cancel", tomorrow) in table_row(admin, "Tomorrow class")
+    teacher_row = table_row(teacher, "Tomorrow class")
+    assert "/cancel/" not in teacher_row
+    assert "/start/" not in teacher_row
+    assert _url("teacher", "start", live) not in teacher
+
+
+@pytest.mark.django_db
+def test_teacher_page_of_a_later_lecture_has_no_end(school) -> None:
+    lecture = add_lecture(school)
+
+    html = signed_in(school.teacher_1.user).get(_url("teacher", "detail", lecture))
+    html = html.content.decode()
+
+    assert "/end/" not in html
+    assert "/start/" not in html
+
+
+@pytest.mark.django_db
+def test_finish_task_skips_inactive_institutes(school, institute_b) -> None:
+    # unscoped: test set-up in another institute, outside a tenant context.
+    other = Lecture.unscoped.create(
+        institute=institute_b,
+        title="Other institute",
+        teacher=school.teacher_b,
+        batch=school.batch_b,
+        starts_at=timezone.now() - timedelta(hours=3),
+        duration_minutes=60,
+        delivery_mode=DeliveryMode.IN_PERSON,
+    )
+    institute_b.is_active = False
+    institute_b.save(update_fields=["is_active"])
+
+    finish_all_ended_lectures()
+
+    other.refresh_from_db()
+    assert other.status == LectureStatus.SCHEDULED
