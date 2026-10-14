@@ -2386,6 +2386,42 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         '        if self.schedule.status == ScheduleStatus.ACTIVE:\n            return None\n        messages.error(self.request, f"A stopped schedule',
         '        if True:\n            return None\n        messages.error(self.request, f"A stopped schedule',
     ),
+    (
+        "finish job: never started is not held",
+        "apps/lectures/services.py",
+        "    ).update(status=LectureStatus.NOT_HELD, updated_at=now)\n",
+        "    ).update(status=LectureStatus.FINISHED, updated_at=now)\n",
+    ),
+    (
+        "finish job: live becomes finished",
+        "apps/lectures/services.py",
+        '        pk__in=ended.filter(status=LectureStatus.LIVE).values("pk")\n',
+        '        pk__in=ended.filter(status=LectureStatus.SCHEDULED).values("pk")\n',
+    ),
+    (
+        "not held is a closed state for join",
+        "apps/lectures/services.py",
+        "CLOSED_STATUSES = (LectureStatus.FINISHED, LectureStatus.NOT_HELD)\n",
+        "CLOSED_STATUSES = (LectureStatus.FINISHED,)\n",
+    ),
+    (
+        "not held badge is amber",
+        "apps/lectures/ui.py",
+        '    LectureStatus.NOT_HELD: "warning",\n',
+        '    LectureStatus.NOT_HELD: "neutral",\n',
+    ),
+    (
+        "migration: only lectures with no start",
+        "apps/lectures/migrations/0008_mark_never_started_not_held.py",
+        '    Lecture.objects.filter(status="finished", started_at__isnull=True).update(\n',
+        '    Lecture.objects.filter(status="finished").update(\n',
+    ),
+    (
+        "monitor note counts not held",
+        "apps/lectures/views.py",
+        "        not_held = today.get(LectureStatus.NOT_HELD, 0)\n",
+        "        not_held = 0\n",
+    ),
 ]
 
 
