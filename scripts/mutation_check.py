@@ -2257,8 +2257,8 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
     (
         "finish task only active institutes",
         "apps/lectures/tasks.py",
-        "    finished = 0\n    for institute in Institute.objects.filter(is_active=True):\n",
-        "    finished = 0\n    for institute in Institute.objects.all():\n",
+        "    closed = 0\n    for institute in Institute.objects.filter(is_active=True):\n",
+        "    closed = 0\n    for institute in Institute.objects.all():\n",
     ),
     (
         "monitor late needs past the start",
