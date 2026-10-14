@@ -12,7 +12,7 @@ from django.utils import timezone
 
 from apps.core.roles import Role
 from apps.lectures.services import lectures_today_count, upcoming_lectures
-from apps.lectures.ui import lecture_detail, lecture_status_badge, lecture_when
+from apps.lectures.ui import lecture_status_badge, lecture_summary, lecture_when
 from apps.lectures.views import up_next_body
 from apps.people.home import greeting, guardian_home, student_home, teacher_home
 from apps.people.ui import profile_status_badge
@@ -158,7 +158,7 @@ class GuardianPortalHomePage(PortalHomePage):
 
     def class_row(self, lecture: Any) -> LectureRow:
         names = children_in(lecture, self.data.children)
-        detail = lecture_detail(lecture)
+        detail = lecture_summary(lecture)
         if len(self.data.children) > 1:
             detail = " · ".join([", ".join(names), detail])
         return LectureRow(

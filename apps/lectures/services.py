@@ -36,7 +36,13 @@ from apps.lectures.models import (
     meeting_url_validator,
 )
 from apps.lectures.providers import provider_for
-from apps.lectures.times import combine_local, local_date, local_day_bounds, time_range
+from apps.lectures.times import (
+    combine_local,
+    local_date,
+    local_day_bounds,
+    local_time,
+    time_range,
+)
 from apps.people.models import ProfileStatus, TeacherProfile
 
 SHOW_UPCOMING = "upcoming"
@@ -369,6 +375,111 @@ def lectures_today_count(user: Any, *, now: datetime | None = None) -> int:
         .exclude(status=LectureStatus.CANCELLED)
         .count()
     )
+
+
+# Lecture states (roadmap 3.5, SPEC 6.4)
+
+
+def can_start(lecture: Lecture, *, now: datetime, window: int) -> bool:
+    """The teacher may start a scheduled lecture from the join window until
+    its planned end."""
+    return (
+        lecture.status == LectureStatus.SCHEDULED
+        and join_opens_at(lecture, window) <= now < lecture.ends_at
+    )
+
+
+def _locked(lecture: Lecture) -> Lecture:
+    """The row again, locked, so two clicks cannot both change it."""
+    return Lecture.objects.select_for_update().get(pk=lecture.pk)
+
+
+def start_lecture(
+    lecture: Lecture, *, window: int, now: datetime | None = None
+) -> Lecture:
+    now = now or timezone.now()
+    with transaction.atomic():
+        lecture = _locked(lecture)
+        if not can_start(lecture, now=now, window=window):
+            opens = local_time(join_opens_at(lecture, window))
+            raise ValidationError(
+                f"Only a scheduled lecture can be started, from {opens} "
+                "until its end time."
+            )
+        lecture.status = LectureStatus.LIVE
+        lecture.started_at = now
+        lecture.save(update_fields=["status", "started_at", "updated_at"])
+    return lecture
+
+
+def end_lecture(lecture: Lecture, *, now: datetime | None = None) -> Lecture:
+    now = now or timezone.now()
+    with transaction.atomic():
+        lecture = _locked(lecture)
+        if lecture.status != LectureStatus.LIVE:
+            raise ValidationError("Only a live lecture can be ended.")
+        lecture.status = LectureStatus.FINISHED
+        lecture.ended_at = now
+        lecture.save(update_fields=["status", "ended_at", "updated_at"])
+    return lecture
+
+
+def cancel_lecture(lecture: Lecture, *, now: datetime | None = None) -> Lecture:
+    """Cancel a scheduled lecture that has not ended. A schedule edit or the
+    nightly job does not bring it back."""
+    now = now or timezone.now()
+    with transaction.atomic():
+        lecture = _locked(lecture)
+        if lecture.status != LectureStatus.SCHEDULED or now >= lecture.ends_at:
+            raise ValidationError(
+                "Only a scheduled lecture that has not ended can be cancelled."
+            )
+        lecture.status = LectureStatus.CANCELLED
+        lecture.follows_schedule = False
+        lecture.save(update_fields=["status", "follows_schedule", "updated_at"])
+    return lecture
+
+
+def finish_ended_lectures(institute: Institute, now: datetime | None = None) -> int:
+    """Scheduled and live lectures past their planned end become finished
+    (SPEC 6.4: "Finish sets finished automatically after the end time unless
+    ended earlier"). Runs in the institute's tenant context; returns the
+    count."""
+    require_tenant_context(institute)
+    now = now or timezone.now()
+    ended = (
+        Lecture.objects.filter(status__in=OPEN_STATUSES)
+        .annotate(ends_at_db=ENDS_AT)
+        .filter(ends_at_db__lte=now)
+    )
+    return Lecture.objects.filter(pk__in=ended.values("pk")).update(
+        status=LectureStatus.FINISHED, ended_at=ENDS_AT, updated_at=now
+    )
+
+
+def taught_minutes(lecture: Lecture) -> int:
+    """Minutes from Start to end when both are known, else the plan."""
+    if lecture.started_at and lecture.ended_at:
+        seconds = (lecture.ended_at - lecture.started_at).total_seconds()
+        return max(0, round(seconds / 60))
+    return lecture.duration_minutes
+
+
+def list_history(
+    user: Any, *, teacher_id: int | None = None, batch_id: int | None = None
+) -> LectureQuerySet:
+    """Finished lectures the user may see, newest first (Lecture History)."""
+    lectures = (
+        Lecture.objects.for_user(user)
+        .filter(status=LectureStatus.FINISHED)
+        .select_related("teacher__user", "batch")
+        .prefetch_related("subjects")
+    )
+    if teacher_id is not None:
+        lectures = lectures.filter(teacher_id=teacher_id)
+    if batch_id is not None:
+        lectures = lectures.filter(batch_id=batch_id)
+    return lectures.order_by("-starts_at", "-pk")
 
 
 # Calendar (roadmap 3.3, SPEC 3: teacher Schedule)

@@ -62,7 +62,7 @@ def test_admin_dashboard_query_budget(
 @pytest.mark.parametrize(
     ("who", "name", "budget"),
     [
-        ("teacher_1", "teacher:home", 10),
+        ("teacher_1", "teacher:home", 11),
         ("student_1", "student:home", 10),
         ("guardian_1", "guardian:home", 10),
     ],

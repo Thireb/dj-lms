@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from urllib.parse import urlencode
+
 from django.urls import reverse
 
 from apps.people.dashboard import PeopleCounts
@@ -80,12 +82,13 @@ def person(profile: Profile) -> PersonCell:
 def _actions(profile: Profile) -> ButtonRow:
     prefix = _url_prefix(profile)
     edit_url = reverse(f"admin:{prefix}_edit", kwargs={"pk": profile.pk})
-    return ButtonRow(
-        items=[
-            IconButton("square-pen", f"Edit {profile}", url=edit_url),
-            profile_status_dialog(profile),
-        ]
-    )
+    items: list = [IconButton("square-pen", f"Edit {profile}", url=edit_url)]
+    if prefix == "teacher":
+        history = reverse("admin:teacher_lecture_history")
+        url = f"{history}?{urlencode({'teacher': profile.pk})}"
+        items.append(IconButton("history", f"Lecture history of {profile}", url=url))
+    items.append(profile_status_dialog(profile))
+    return ButtonRow(items=items)
 
 
 class TeacherTable(DataTable):

@@ -264,12 +264,13 @@ Every item here is a class. Names are fixed.
 | `KpiSummary` | data | one big number, its label, status chips and an optional `ProgressRing` | `value`, `label`, `chips`, `ring` |
 | `PersonList` | data | short list of `PersonCell` rows with a chip on the right (dashboard "Recently enrolled") | `rows` (person, trailing), `title`, `empty_text` |
 | `ChartCard` | data | Chart.js card | `title`, `chart_id`, `data_url` |
+| `DetailList` | data | label and value pairs for a detail page (`<dl>`); a value may be a component; an empty value shows a dash | `rows` (label, value) |
 | `EmptyState` | data | icon tile, message and one action; `framed=False` drops the dashed box inside a card | `title`, `text`, `action`, `icon`, `framed` |
 | `IconButton` | actions | icon-only link (with `url`) or button; `label` is the `aria-label` and tooltip; `new_tab=True` adds `target="_blank" rel="noopener noreferrer"` (links to other sites, such as meeting links) | `icon`, `label`, `url`, `new_tab` |
 | `Button` | actions | `primary`, `secondary`, `danger`, `ghost`, `light`, `glass` (the last two on the band); Lucide icon before the label; `disabled=True` is a state that cannot be clicked (never a link), `title` explains it | `label`, `variant`, `url`, `icon`, `disabled`, `title` |
 | `PostButton` | actions | one-button POST form with CSRF (when rendered with `request`); `new_tab=True` adds `target="_blank" rel="noopener noreferrer"` (Join) | `label`, `url`, `variant`, `icon`, `new_tab` |
 | `QuickAction` | actions | dashboard tile | `label`, `icon`, `url` |
-| `ConfirmDialog` | actions | confirm actions in a centred modal (`role="alertdialog"`, backdrop, Escape and click outside close it); renders a POST form with CSRF (when rendered with `request`) and Cancel | `message`, `confirm_label`, `url`, `trigger_label`, `variant` (`danger`/`primary`), `fields` (hidden name/value pairs) |
+| `ConfirmDialog` | actions | confirm actions in a centred modal (`role="alertdialog"`, backdrop, Escape and click outside close it); renders a POST form with CSRF (when rendered with `request`) and a close button (`dismiss_label`, default Cancel; "Keep lecture" when the action is itself a cancel) | `message`, `confirm_label`, `url`, `trigger_label`, `variant` (`danger`/`primary`), `fields` (hidden name/value pairs), `dismiss_label` |
 | `CopyField` | actions | read-only value with a copy button (one-time links) | `label`, `value` |
 | `Toast` | actions | success, warning or error message (`tone` is the Django message level tag) | `message`, `tone` |
 | `CountdownCard` | lectures | "Up next": title, when and detail lines, "Starts in 1:02:03" (then "Started") and one action; `starts_at` is validated to a UTC ISO string in `data-scheduled-at`, read by `countdownCard` in `static/js/app.js`; with `refresh_url` the card reloads itself every 30 seconds (HTMX) | `title`, `starts_at`, `when`, `detail`, `action`, `refresh_url` |

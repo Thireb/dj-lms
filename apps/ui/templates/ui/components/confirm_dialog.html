@@ -6,7 +6,7 @@
       <form method="post" action="{{ url }}" class="mt-5 flex flex-wrap justify-end gap-2">
         {% if csrf_token %}{% csrf_token %}{% endif %}
         {% for name, value in fields %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
-        <button type="button" @click="open = false" class="btn btn-secondary">Cancel</button>
+        <button type="button" @click="open = false" class="btn btn-secondary">{{ dismiss_label }}</button>
         <button type="submit" class="btn {% if variant == 'primary' %}btn-primary{% else %}btn-danger{% endif %}">{{ confirm_label }}</button>
       </form>
     </div>

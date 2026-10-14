@@ -199,6 +199,10 @@ class Lecture(TenantModel):
     # False once the lecture is edited on its own ("this one"): a schedule
     # edit then leaves it alone.
     follows_schedule = models.BooleanField(default=True)
+    # When the teacher pressed Start and when the lecture ended (End class,
+    # or the planned end when it finished on its own).
+    started_at = models.DateTimeField(null=True, blank=True)
+    ended_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -210,6 +214,7 @@ class Lecture(TenantModel):
         indexes = [
             models.Index(fields=["institute", "starts_at"]),
             models.Index(fields=["teacher", "starts_at"]),
+            models.Index(fields=["status", "starts_at"]),
         ]
 
     def __str__(self) -> str:

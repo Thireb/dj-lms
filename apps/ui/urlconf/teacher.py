@@ -16,9 +16,29 @@ urlpatterns = [
         name="lecture_create",
     ),
     path(
+        "lectures/<int:pk>/",
+        lectures.TeacherLectureDetailPage.as_view(),
+        name="lecture_detail",
+    ),
+    path(
         "lectures/<int:pk>/edit/",
         lectures.TeacherLectureEditPage.as_view(),
         name="lecture_edit",
+    ),
+    path(
+        "lectures/<int:pk>/start/",
+        lectures.TeacherLectureStartView.as_view(),
+        name="lecture_start",
+    ),
+    path(
+        "lectures/<int:pk>/end/",
+        lectures.TeacherLectureEndView.as_view(),
+        name="lecture_end",
+    ),
+    path(
+        "lectures/history/",
+        lectures.TeacherLectureHistoryPage.as_view(),
+        name="lecture_history",
     ),
     path(
         "lectures/schedules/",

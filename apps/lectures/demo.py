@@ -1,6 +1,9 @@
-"""Demo lectures for seed_demo (backlog LC3): one weekly schedule and two
-single lectures for the first demo teacher. Past and live lectures come
-with lecture states (roadmap 3.5); the services refuse a start in the past.
+"""Demo lectures for seed_demo (backlog LC3 and LC5): one weekly schedule,
+two single lectures, three finished lectures from last week and one live
+lecture for the first demo teacher.
+
+The services refuse a start in the past, so the past and live lectures are
+saved directly (still inside the tenant context).
 """
 
 from __future__ import annotations
@@ -13,7 +16,12 @@ from django.utils import timezone
 from apps.academics.models import TeacherBatchSubject
 from apps.core.tenancy import tenant_context
 from apps.institutes.models import Institute
-from apps.lectures.models import DeliveryMode, Lecture, RecurringSchedule
+from apps.lectures.models import (
+    DeliveryMode,
+    Lecture,
+    LectureStatus,
+    RecurringSchedule,
+)
 from apps.lectures.services import (
     LectureDetails,
     ScheduleDetails,
@@ -88,6 +96,36 @@ def seed_lectures(institute: Institute) -> None:
                     else "",
                 ),
             )
+        _seed_past_and_live(institute, teacher, link)
+
+
+def _seed_past_and_live(institute: Institute, teacher, link) -> None:
+    now = timezone.now().replace(second=0, microsecond=0)
+    name = link.subject.name
+    lectures = [
+        (f"{name} basics 1", now - timedelta(days=7), LectureStatus.FINISHED),
+        (f"{name} basics 2", now - timedelta(days=5), LectureStatus.FINISHED),
+        (f"{name} basics 3", now - timedelta(days=2), LectureStatus.FINISHED),
+        # Started 10 minutes ago, so the demo shows a live class and Join.
+        (f"{name} live class", now - timedelta(minutes=10), LectureStatus.LIVE),
+    ]
+    for title, starts_at, status in lectures:
+        lecture = Lecture.objects.create(
+            institute=institute,
+            title=title,
+            teacher=teacher,
+            batch=link.batch,
+            starts_at=starts_at,
+            duration_minutes=60,
+            status=status,
+            delivery_mode=DeliveryMode.MANUAL_LINK,
+            meeting_url=DEMO_MEET_URL,
+            started_at=starts_at,
+            ended_at=starts_at + timedelta(minutes=55)
+            if status == LectureStatus.FINISHED
+            else None,
+        )
+        lecture.subjects.set([link.subject])
 
 
 def reset_lectures(institute: Institute) -> int:

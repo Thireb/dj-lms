@@ -208,6 +208,12 @@ ROUTE_OBJECTS = {
     "admin:portal_access_action": _student,
     "admin:lecture_edit": _lecture,
     "teacher:lecture_edit": _lecture,
+    "admin:lecture_detail": _lecture,
+    "admin:lecture_cancel": _lecture,
+    "teacher:lecture_detail": _lecture,
+    "teacher:lecture_start": _lecture,
+    "teacher:lecture_end": _lecture,
+    "student:lecture_join": _lecture,
     **{
         f"{portal}:lecture_schedule_{action}": _schedule
         for portal in ("admin", "teacher")

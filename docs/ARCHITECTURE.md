@@ -148,7 +148,7 @@ Academics:
 - Reverse relations (for example `teacher.batch_subjects`) use the fail-closed tenant manager, so they return nothing outside a tenant context.
 
 Operations:
-- `Lecture` (batch, subject(s), teacher, starts_at UTC, duration, status, delivery: manual_link / in_person / zoom later, meeting_url).
+- `Lecture` (batch, subject(s), teacher, starts_at UTC, duration, status, delivery: manual_link / in_person / zoom later, meeting_url). Built in 3.5: `started_at` and `ended_at`; `lectures.services` `start_lecture`, `end_lecture`, `cancel_lecture` (each locks the row) and `finish_ended_lectures`.
 - `RecurringSchedule` (built in 3.2; first named `RecurringSeries`): teacher, batch, subjects, weekdays, a wall-clock start time in its own `time_zone`, duration, start and end dates, link, status (active, stopped) and `generated_until`. It makes `Lecture` rows up to the horizon setting (default 8 weeks); each lecture keeps `schedule` and `follows_schedule` (false once edited on its own). `for_user`: admins see the institute, a teacher their own; students and guardians see only the lectures.
 - Built in 3.1: `Lecture` has one teacher, one batch and many subjects (`subjects` many-to-many), `starts_at` (UTC) and `duration_minutes`. `for_user`: admins and sub-admins see the institute, a teacher their own lectures, a student or guardian the lectures of a batch and subject their (child's) enrolment has, on the same enrolment row. `lectures.services` checks the teacher's links, the overlap and the link, and locks the teacher row so two saves cannot both pass the overlap check.
 - `Attendance` (lecture, student, status: present/partial/late/absent, source: manual or provider).
@@ -177,6 +177,7 @@ Money: `DecimalField(max_digits=12, decimal_places=2)`. Never float.
 Set up in 3.2: `config/celery.py`, broker `REDIS_URL`, no result backend. Tests and dev run tasks inside the request (`CELERY_TASK_ALWAYS_EAGER`). A task takes ids, never model objects, and opens `tenant_context` itself. Services queue a task with `transaction.on_commit`, so a rolled-back save queues nothing.
 
 - Generate recurring lectures. Built in 3.2: `lectures.tasks.generate_schedule_lectures` after a save, and `extend_all_schedules` nightly at 00:30 UTC (Celery beat).
+- Finish lectures past their end. Built in 3.5: `lectures.tasks.finish_all_ended_lectures` every 5 minutes (Celery beat), for active institutes.
 - Bulk challan generation.
 - Challan and lecture reminders.
 - Monthly payroll run.

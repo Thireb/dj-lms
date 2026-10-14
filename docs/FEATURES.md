@@ -62,7 +62,7 @@ Setup order the reference teaches: Campus, Classes, Batches, Subjects, Fee Plans
 
 - [x] Add / edit teacher: name, login, batches*, subjects for each batch*. Saving links the teacher to those batches and subjects.
 - [x] Teacher code auto-filled (like `TCH-001`).
-- [ ] All Teachers list; Teacher Lecture History.
+- [ ] All Teachers list; Teacher Lecture History. Built in 3.5: Teacher lecture history (People menu; filter by teacher and batch; a row action on All teachers opens it for one teacher).
 
 ## 5. Lectures (B)
 
@@ -70,12 +70,12 @@ Setup order the reference teaches: Campus, Classes, Batches, Subjects, Fee Plans
 - [ ] Delivery mode: Zoom API (later), Manual Link (paste any link), In-Person. Built in 3.1: Manual link and In person.
 - [x] Recurring schedules: weekly (or custom) timetable creates every lecture in one step. Built in 3.2: weekly days, a date range (or number of weeks) and a preview; "custom" rules beyond weekdays are not built.
 - [x] Lecture lists with tabs: Today, Upcoming, Past, All; filter by subject. Built in 3.1 for the admin (All lectures) and teacher (My lectures). Built in 3.3: student "My lectures" and guardian "Lectures schedule" (read only, for one chosen child), and a date range on All lectures.
-- [ ] Teacher actions on a lecture: Start class, open whiteboard, take manual attendance.
+- [ ] Teacher actions on a lecture: Start class, open whiteboard, take manual attendance. Built in 3.5: Start class and End class (list row, lecture page and "Up next"). The whiteboard and attendance come with Phase 4.
 - [ ] Student actions: Join (enabled once the teacher starts), "Waiting for host" state, "Join opens soon" state. Built in 3.4: the states and the Join button on "My lectures" and "Up next"; Join posts to the server, which checks the state again and opens the link. The teacher starts a lecture in 3.5, so until then Join stays at "Waiting for host".
-- [ ] Teacher calendar view (Schedule) and Lecture History. Built in 3.3: the Schedule calendar (week and month; a scheduled lecture opens its edit page). Lecture History comes with attendance (Phase 4).
+- [ ] Teacher calendar view (Schedule) and Lecture History. Built in 3.3: the Schedule calendar (week and month; a scheduled lecture opens its edit page). Built in 3.5: Lecture history (finished lectures, filter by batch); its Present / Total column fills with attendance (Phase 4).
 - [ ] Admin Lectures Dashboard / Live Lecture Monitor: live and upcoming classes.
 - [x] Up-next card with countdown on teacher and student dashboards. Built in 3.4: the card refreshes itself every 30 seconds; the teacher card has "Open meeting link" (Start class comes with 3.5); the guardian home lists the next 5 classes with the child's name.
-- [ ] Lecture states: scheduled, live, finished, cancelled.
+- [x] Lecture states: scheduled, live, finished, cancelled. Built in 3.5: the teacher starts and ends a class, the admin cancels a lecture, and a job finishes lectures past their end every 5 minutes.
 
 ## 6. Attendance (B)
 

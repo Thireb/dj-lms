@@ -65,3 +65,23 @@ def test_badge_tones_use_theme_colors() -> None:
     assert "text-warning" in str(Badge("Pending", tone="warning"))
     assert "text-info" in str(Badge("Live", tone="info"))
     assert "text-muted" in str(Badge("Draft", tone="neutral"))
+
+
+def test_detail_list_renders_pairs_components_and_a_dash() -> None:
+    from apps.ui.components.data import Badge, DetailList
+
+    html = str(
+        DetailList(
+            [
+                ("Status", Badge("Live", tone="success")),
+                ("Batch", "Morning"),
+                ("Notes", ""),
+                ("Unsafe", "<script>x</script>"),
+            ]
+        )
+    )
+
+    assert "<dt" in html and ">Batch</dt>" in html
+    assert "badge" in html and ">Live<" in html
+    assert '<span class="text-muted">-</span>' in html
+    assert "<script>x" not in html

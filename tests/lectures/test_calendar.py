@@ -128,7 +128,7 @@ def _page(school, **params) -> str:
 
 
 @pytest.mark.django_db
-def test_week_page_shows_own_lectures_with_edit_links(school) -> None:
+def test_week_page_shows_own_lectures_with_links(school) -> None:
     day = karachi_today() + timedelta(days=1)
     mine = put_at(add_lecture(school, title="Algebra"), _karachi(day, 15))
     put_at(
@@ -148,8 +148,8 @@ def test_week_page_shows_own_lectures_with_edit_links(school) -> None:
     assert "Other physics" not in html
     assert "3:00 PM to 4:00 PM PKT" in html
     assert "Morning · Math" in html
-    edit = reverse("teacher:lecture_edit", kwargs={"pk": mine.pk})
-    assert f'<a href="{edit}"' in html
+    page = reverse("teacher:lecture_detail", kwargs={"pk": mine.pk})
+    assert f'<a href="{page}"' in html
     assert re.search(r'href="\?view=week[^"]*"[^>]*aria-current="page"', html)
     assert re.search(rf'href="{URL}"[^>]*aria-current="page"', html), (
         "the Schedule menu item is active"
@@ -157,7 +157,7 @@ def test_week_page_shows_own_lectures_with_edit_links(school) -> None:
 
 
 @pytest.mark.django_db
-def test_cancelled_lecture_has_no_link(school) -> None:
+def test_cancelled_lecture_links_to_its_page(school) -> None:
     day = karachi_today() + timedelta(days=1)
     lecture = put_at(add_lecture(school, title="Dropped"), _karachi(day, 15))
     lecture.status = LectureStatus.CANCELLED
@@ -165,8 +165,8 @@ def test_cancelled_lecture_has_no_link(school) -> None:
 
     html = _page(school, date=day.isoformat())
 
-    edit = reverse("teacher:lecture_edit", kwargs={"pk": lecture.pk})
-    assert edit not in html
+    page = reverse("teacher:lecture_detail", kwargs={"pk": lecture.pk})
+    assert f'<a href="{page}"' in html
     assert "Cancelled" in html
 
 

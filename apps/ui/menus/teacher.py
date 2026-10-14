@@ -46,6 +46,7 @@ class TeacherMenu:
                         "Lecture history",
                         "teacher:lecture_history",
                         "history",
+                        menu_key="lecture_history",
                     ),
                     MenuItem("Documents", "teacher:documents", "folder-open"),
                 ),

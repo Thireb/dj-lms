@@ -22,13 +22,17 @@ from apps.lectures.models import (
     ScheduleStatus,
 )
 from apps.lectures.services import (
+    DEFAULT_JOIN_WINDOW,
     JOIN_ENDED,
     JOIN_NONE,
     JOIN_OPEN,
     JOIN_SOON,
     JOIN_WAITING,
+    OPEN_STATUSES,
+    can_start,
     join_opens_at,
     join_state,
+    taught_minutes,
 )
 from apps.lectures.times import local_date, local_time, time_range
 from apps.ui.components.actions import Button, ConfirmDialog, IconButton, PostButton
@@ -64,13 +68,57 @@ def lecture_teacher(lecture: Lecture) -> PersonCell:
     return PersonCell(str(lecture.teacher), detail=lecture.teacher.teacher_code)
 
 
+def lecture_url(portal: str, action: str, lecture: Lecture) -> str:
+    return reverse(f"{portal}:lecture_{action}", kwargs={"pk": lecture.pk})
+
+
+def can_cancel(lecture: Lecture, now: datetime) -> bool:
+    return lecture.status == LectureStatus.SCHEDULED and now < lecture.ends_at
+
+
+def cancel_dialog(lecture: Lecture, portal: str = "admin") -> ConfirmDialog:
+    return ConfirmDialog(
+        f"Cancel {lecture.title}? Students see it as cancelled, and a schedule "
+        "edit does not bring it back.",
+        "Cancel lecture",
+        url=lecture_url(portal, "cancel", lecture),
+        trigger_label="Cancel",
+        dismiss_label="Keep lecture",
+    )
+
+
+def start_button(lecture: Lecture) -> PostButton:
+    return PostButton(
+        "Start class", lecture_url("teacher", "start", lecture), icon="video"
+    )
+
+
+def end_dialog(lecture: Lecture) -> ConfirmDialog:
+    return ConfirmDialog(
+        f"End {lecture.title} now? Students can no longer join.",
+        "End class",
+        url=lecture_url("teacher", "end", lecture),
+        variant="primary",
+    )
+
+
 class LectureTable(DataTable):
-    """Admin "All lectures"; the teacher table drops the teacher column."""
+    """Admin "All lectures"; the teacher table drops the teacher column and
+    has Start instead of Cancel."""
 
     portal = "admin"
     empty_title = "No lectures match these filters."
 
-    def __init__(self, rows: list[Lecture], **props):
+    def __init__(
+        self,
+        rows: list[Lecture],
+        *,
+        window: int = DEFAULT_JOIN_WINDOW,
+        now: datetime | None = None,
+        **props,
+    ):
+        self.window = window
+        self.now = now or timezone.now()
         super().__init__(rows=rows, **props)
 
     @property
@@ -88,20 +136,29 @@ class LectureTable(DataTable):
         ]
 
     def row_actions_for(self, lecture: Lecture) -> ButtonRow:
-        items = []
-        if lecture.delivery_mode == DeliveryMode.MANUAL_LINK and lecture.meeting_url:
+        title = lecture.title
+        items: list[Any] = [
+            IconButton(
+                "eye", f"View {title}", url=lecture_url(self.portal, "detail", lecture)
+            )
+        ]
+        if has_open_link(lecture):
             items.append(
                 IconButton(
                     "video",
-                    f"Open meeting link for {lecture.title}",
+                    f"Open meeting link for {title}",
                     url=lecture.meeting_url,
                     new_tab=True,
                 )
             )
         if lecture.status == LectureStatus.SCHEDULED:
-            url = reverse(f"{self.portal}:lecture_edit", kwargs={"pk": lecture.pk})
-            items.append(IconButton("square-pen", f"Edit {lecture.title}", url=url))
+            url = lecture_url(self.portal, "edit", lecture)
+            items.append(IconButton("square-pen", f"Edit {title}", url=url))
+        items.extend(self.state_actions(lecture))
         return ButtonRow(items=items)
+
+    def state_actions(self, lecture: Lecture) -> list[Any]:
+        return [cancel_dialog(lecture)] if can_cancel(lecture, self.now) else []
 
 
 class TeacherLectureTable(LectureTable):
@@ -110,6 +167,77 @@ class TeacherLectureTable(LectureTable):
     @property
     def columns(self) -> list[Column]:  # type: ignore[override]
         return [column for column in super().columns if column.key != "teacher"]
+
+    def state_actions(self, lecture: Lecture) -> list[Any]:
+        if can_start(lecture, now=self.now, window=self.window):
+            return [start_button(lecture)]
+        return []
+
+
+def history_duration(lecture: Lecture) -> str:
+    return f"{taught_minutes(lecture)} min"
+
+
+class HistoryTable(DataTable):
+    """Teacher "Lecture history" (SPEC 3); the admin table adds the teacher.
+    Present / Total comes with attendance (Phase 4)."""
+
+    portal = "teacher"
+    empty_title = "No finished lectures yet."
+    show_teacher = False
+
+    def __init__(self, rows: list[Lecture], **props):
+        super().__init__(rows=rows, **props)
+
+    @property
+    def columns(self) -> list[Column]:  # type: ignore[override]
+        columns = [
+            Column("date", "Date", lecture_date),
+            Column("title", "Lecture"),
+            Column("batch", "Batch", lambda lecture: lecture.batch.name),
+            Column("subjects", "Subjects", lecture_subjects),
+            Column("duration", "Duration", history_duration),
+            Column("attendance", "Present / Total", lambda lecture: "Not taken"),
+            Column("actions", "", self.view_button),
+        ]
+        if self.show_teacher:
+            columns.insert(2, Column("teacher", "Teacher", lecture_teacher))
+        return columns
+
+    def view_button(self, lecture: Lecture) -> IconButton:
+        url = lecture_url(self.portal, "detail", lecture)
+        return IconButton("eye", f"View {lecture.title}", url=url)
+
+
+class AdminHistoryTable(HistoryTable):
+    portal = "admin"
+    show_teacher = True
+
+
+def lecture_detail_rows(lecture: Lecture, *, show_teacher: bool) -> list[tuple]:
+    """Label and value pairs for the lecture page."""
+    rows: list[tuple[str, Any]] = [
+        ("Status", lecture_status_badge(lecture)),
+        ("Date", lecture_date(lecture)),
+        ("Time", lecture_time(lecture)),
+    ]
+    if show_teacher:
+        rows.append(("Teacher", lecture_teacher(lecture)))
+    rows += [
+        ("Batch", lecture.batch.name),
+        ("Subjects", lecture_subjects(lecture)),
+        ("Delivery", lecture.get_delivery_mode_display()),
+    ]
+    if lecture.started_at:
+        rows.append(("Started", local_time(lecture.started_at)))
+    if lecture.ended_at:
+        rows.append(("Ended", local_time(lecture.ended_at)))
+    if lecture.status == LectureStatus.FINISHED:
+        rows.append(("Taught", history_duration(lecture)))
+    if lecture.schedule_id:
+        rows.append(("Schedule", lecture.schedule.title))
+    rows.append(("Description", lecture.description))
+    return rows
 
 
 class StudentLectureTable(LectureTable):
@@ -181,7 +309,7 @@ def lecture_when(lecture: Lecture) -> str:
     return f"{lecture_date(lecture)}, {lecture_time(lecture)}"
 
 
-def lecture_detail(lecture: Lecture, *, teacher: bool = False) -> str:
+def lecture_summary(lecture: Lecture, *, teacher: bool = False) -> str:
     parts = [lecture.batch.name, lecture_subjects(lecture)]
     if teacher:
         parts.append(str(lecture.teacher))
@@ -195,15 +323,24 @@ def up_next_card(
         lecture.title,
         lecture.starts_at,
         when=lecture_when(lecture),
-        detail=lecture_detail(lecture, teacher=teacher),
+        detail=lecture_summary(lecture, teacher=teacher),
         action=action,
         refresh_url=refresh_url,
     )
 
 
+def has_open_link(lecture: Lecture) -> bool:
+    """A meeting link worth showing: online, and not finished or cancelled."""
+    return (
+        lecture.delivery_mode == DeliveryMode.MANUAL_LINK
+        and bool(lecture.meeting_url)
+        and lecture.status in OPEN_STATUSES
+    )
+
+
 def meeting_link_button(lecture: Lecture) -> Button | None:
-    """The teacher's own way in until Start class exists (roadmap 3.5)."""
-    if lecture.delivery_mode != DeliveryMode.MANUAL_LINK or not lecture.meeting_url:
+    """The teacher's and admin's way into the meeting."""
+    if not has_open_link(lecture):
         return None
     return Button("Open meeting link", url=lecture.meeting_url, icon="video")
 
