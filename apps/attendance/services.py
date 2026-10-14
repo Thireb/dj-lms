@@ -4,7 +4,8 @@ A student is expected in a finished lecture when an enrolment of theirs has
 the lecture's batch and one of its subjects, and was made before the
 lecture ended. A student who already has a mark is expected too, so a mark
 stays counted after the enrolment is removed. An expected student with no
-mark counts as absent in the percentage and shows as "Not marked".
+mark shows as "Not marked" ("Waiting for teacher" to students and
+guardians) and is left out of the percentage until it is marked.
 An inactive student (one who left) is expected only where they have a mark,
 so the form does not start them at Present.
 """
@@ -236,17 +237,22 @@ class Summary:
     not_marked: int = 0
 
     @property
+    def marked(self) -> int:
+        return self.present + self.late + self.partial + self.absent
+
+    @property
     def total(self) -> int:
-        return self.present + self.late + self.partial + self.absent + self.not_marked
+        return self.marked + self.not_marked
 
     @property
     def percent(self) -> Decimal | None:
-        """SPEC 6.3: (Present + Late + 0.5 x Partial) / expected lectures,
-        to one decimal; None before the first finished lecture."""
-        if not self.total:
+        """SPEC 6.3 (owner decision 2026-10-14, audit P4-5): (Present + Late
+        + 0.5 x Partial) / marked classes, to one decimal. A class the
+        teacher has not marked is left out; None before the first mark."""
+        if not self.marked:
             return None
         attended = self.present + self.late + HALF * self.partial
-        share = attended * 100 / self.total
+        share = attended * 100 / self.marked
         return share.quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)
 
 

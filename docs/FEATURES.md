@@ -79,7 +79,7 @@ Setup order the reference teaches: Campus, Classes, Batches, Subjects, Fee Plans
 
 ## 6. Attendance (B)
 
-- [x] Statuses: Present, Partial, Late, Absent. Built in 4.1; no mark shows as "Not marked".
+- [x] Statuses: Present, Partial, Late, Absent. Built in 4.1; no mark shows as "Not marked" ("Waiting for teacher" to students and guardians) and is left out of the % (owner decision 2026-10-14).
 - [x] Manual attendance by the teacher for any lecture. Built in 4.1: for any of their finished lectures, and editable later. The admin sees the marks on the lecture page (read only).
 - [ ] Auto attendance from the meeting provider (needs Zoom, later). Unknown names must be matched to a student or ignored.
 - [x] Student "My Attendance" with percentage. Built in 4.2.
