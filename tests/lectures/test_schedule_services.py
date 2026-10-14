@@ -495,3 +495,32 @@ def test_nightly_task_extends_active_schedules_only(school) -> None:
         .count()
         == 0
     )
+
+
+@pytest.mark.django_db
+def test_backfill_sets_the_occurrence_date_in_the_schedule_zone(school) -> None:
+    """Audit P3-1 data migration: rows made before the field get the start
+    date in the schedule's zone."""
+    import importlib
+
+    from django.apps import apps as django_apps
+
+    migration = importlib.import_module(
+        "apps.lectures.migrations.0006_backfill_occurrence_date"
+    )
+    schedule = add_schedule(school, start_time=time(2, 0))  # 02:00 Karachi
+    # unscoped: test set-up; clear the field as before the migration.
+    Lecture.unscoped.filter(schedule=schedule).update(occurrence_date=None)
+
+    # The live registry has the fail-closed manager (a real migration gets
+    # the plain one), so run it inside the tenant context here.
+    with tenant_context(school.morning.institute):
+        migration.backfill(django_apps, None)
+
+    lectures = schedule_lectures(schedule)
+    assert all(
+        lec.occurrence_date == timezone.localtime(lec.starts_at, PKT).date()
+        for lec in lectures
+    )
+    # 02:00 Karachi is the previous day in UTC: the zone matters.
+    assert lectures[0].occurrence_date != lectures[0].starts_at.date()
