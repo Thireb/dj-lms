@@ -586,24 +586,43 @@ def test_edit_with_an_old_copy_does_not_undo_a_start(school) -> None:
     assert lecture.title == "Algebra basics"
 
 
-@pytest.mark.django_db
-def test_a_stopped_schedule_with_an_old_copy_makes_nothing(school) -> None:
+def _stop_behind(schedule) -> None:
     from apps.lectures.models import RecurringSchedule, ScheduleStatus
-    from apps.lectures.services import extend_schedule, generate_lectures
 
-    schedule = add_schedule(school)
-    count = len(schedule_lectures(schedule))
     # unscoped: test set-up; the stop happens behind this copy's back.
     RecurringSchedule.unscoped.filter(pk=schedule.pk).update(
-        status=ScheduleStatus.STOPPED, generated_until=None
+        status=ScheduleStatus.STOPPED
     )
 
+
+@pytest.mark.django_db
+def test_generate_with_an_old_copy_of_a_stopped_schedule_makes_nothing(
+    school,
+) -> None:
+    from apps.lectures.services import generate_lectures
+
+    schedule = add_schedule(school)
+    # unscoped: test set-up; clear the lectures so there are dates to make.
+    Lecture.unscoped.filter(schedule=schedule).delete()
+    schedule.generated_until = None
+    schedule.save(update_fields=["generated_until"])
+    _stop_behind(schedule)  # the copy still says active
+
     result = _run(school, generate_lectures, schedule)
-    with pytest.raises(ValidationError, match="stopped schedule"):
-        _run(school, extend_schedule, schedule, schedule.end_date + timedelta(days=7))
 
     assert result.created == 0
-    assert len(schedule_lectures(schedule)) == count
+    assert schedule_lectures(schedule) == []
+
+
+@pytest.mark.django_db
+def test_extend_with_an_old_copy_of_a_stopped_schedule_is_refused(school) -> None:
+    from apps.lectures.services import extend_schedule
+
+    schedule = add_schedule(school)
+    _stop_behind(schedule)  # the copy still says active
+
+    with pytest.raises(ValidationError, match="stopped schedule"):
+        _run(school, extend_schedule, schedule, schedule.end_date + timedelta(days=7))
 
 
 # Phase 3 audit P3-4: closed rows open no form
