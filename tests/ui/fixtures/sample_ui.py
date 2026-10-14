@@ -28,18 +28,6 @@ def stub_menu_groups():
     return resolve_menu_groups((group,), user=demo_user(), institute=None)
 
 
-def fake_lectures():
-    return [
-        SimpleNamespace(
-            title="Sample lecture",
-            scheduled_at="2026-08-16T15:00:00+00:00",
-            meeting_link="https://meet.example.invalid/x",
-            status="scheduled",
-            day="Mon 16 Aug 2026",
-        )
-    ]
-
-
 def fake_institute(**overrides):
     base = SimpleNamespace(
         name="Demo institute",

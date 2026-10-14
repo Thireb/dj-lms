@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-from types import SimpleNamespace
-
 import pytest
 from apps.ui import safe_url as safe_url_module
-from apps.ui.components.actions import Button, QuickAction
+from apps.ui.components.actions import Button, PostButton, QuickAction
 from apps.ui.components.layout import SectionCard, Tabs
 from apps.ui.components.lectures import CountdownCard
 from apps.ui.safe_url import safe_url
@@ -50,16 +48,17 @@ def test_safe_url_helper_allows_safe(url: str) -> None:
         lambda u: QuickAction("Tile", "plus", u),
         lambda u: SectionCard("Title", body="Body", link_url=u),
         lambda u: Tabs([{"id": "a", "label": "A", "url": u}], active="a"),
-        lambda u: CountdownCard(
-            SimpleNamespace(
-                title="Lecture",
-                scheduled_at="2026-08-16T15:00:00+00:00",
-                meeting_link=u,
-            ),
-            SimpleNamespace(timezone_label="UTC"),
-        ),
+        lambda u: CountdownCard("Lecture", "2026-08-16T15:00:00+00:00", refresh_url=u),
+        lambda u: PostButton("Join", u),
     ],
-    ids=["button", "quick_action", "section_card", "tabs", "countdown_card"],
+    ids=[
+        "button",
+        "quick_action",
+        "section_card",
+        "tabs",
+        "countdown_card",
+        "post_button",
+    ],
 )
 @pytest.mark.parametrize("unsafe", UNSAFE_URLS)
 def test_components_reject_unsafe_urls_in_rendered_html(factory, unsafe: str) -> None:

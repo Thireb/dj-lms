@@ -27,25 +27,33 @@ document.addEventListener("alpine:init", () => {
       }
       const diffMs = targetMs - Date.now();
       if (diffMs <= 0) {
-        this.remaining = "00:00";
+        this.remaining = "Started";
         if (this._timer !== null) {
           window.clearInterval(this._timer);
           this._timer = null;
         }
         return;
       }
-      const totalSeconds = Math.floor(diffMs / 1000);
-      const hours = Math.floor(totalSeconds / 3600);
-      const minutes = Math.floor((totalSeconds % 3600) / 60);
-      const seconds = totalSeconds % 60;
-      if (hours > 0) {
-        this.remaining = `${hours}:${pad2(minutes)}:${pad2(seconds)}`;
-      } else {
-        this.remaining = `${pad2(minutes)}:${pad2(seconds)}`;
-      }
+      this.remaining = `Starts in ${formatRemaining(diffMs)}`;
     },
   }));
 });
+
+/** 2d 3h, then 1:02:03, then 04:05. */
+function formatRemaining(diffMs) {
+  const totalSeconds = Math.floor(diffMs / 1000);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  if (days > 0) {
+    return `${days}d ${hours}h`;
+  }
+  if (hours > 0) {
+    return `${hours}:${pad2(minutes)}:${pad2(seconds)}`;
+  }
+  return `${pad2(minutes)}:${pad2(seconds)}`;
+}
 
 function pad2(value) {
   return String(value).padStart(2, "0");

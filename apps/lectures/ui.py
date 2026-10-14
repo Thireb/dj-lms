@@ -7,6 +7,7 @@ from __future__ import annotations
 from collections import defaultdict
 from collections.abc import Callable, Iterable
 from datetime import date, datetime
+from typing import Any
 from zoneinfo import ZoneInfo
 
 from django.urls import reverse
@@ -20,11 +21,20 @@ from apps.lectures.models import (
     RecurringSchedule,
     ScheduleStatus,
 )
-from apps.lectures.times import local_date, time_range
-from apps.ui.components.actions import ConfirmDialog, IconButton
+from apps.lectures.services import (
+    JOIN_ENDED,
+    JOIN_NONE,
+    JOIN_OPEN,
+    JOIN_SOON,
+    JOIN_WAITING,
+    join_opens_at,
+    join_state,
+)
+from apps.lectures.times import local_date, local_time, time_range
+from apps.ui.components.actions import Button, ConfirmDialog, IconButton, PostButton
 from apps.ui.components.block_stack import ButtonRow
 from apps.ui.components.data import Badge, Column, DataTable, PersonCell
-from apps.ui.components.lectures import CalendarDay, CalendarItem
+from apps.ui.components.lectures import CalendarDay, CalendarItem, CountdownCard
 
 STATUS_TONES = {
     LectureStatus.SCHEDULED: "info",
@@ -103,14 +113,26 @@ class TeacherLectureTable(LectureTable):
 
 
 class StudentLectureTable(LectureTable):
-    """Student "My lectures" and the guardian's lectures for one child. The
-    Join column comes with roadmap 3.4."""
+    """Student "My lectures" (with Join) and the guardian's lectures for one
+    child (``join_window=None``: guardians do not join)."""
 
     portal = "student"
 
+    def __init__(
+        self,
+        rows: list[Lecture],
+        *,
+        join_window: int | None = None,
+        now: datetime | None = None,
+        **props,
+    ):
+        self.join_window = join_window
+        self.now = now or timezone.now()
+        super().__init__(rows, **props)
+
     @property
     def columns(self) -> list[Column]:  # type: ignore[override]
-        return [
+        columns = [
             Column("title", "Lecture"),
             Column("date", "Date", lecture_date),
             Column("time", "Time", lecture_time),
@@ -118,6 +140,72 @@ class StudentLectureTable(LectureTable):
             Column("teacher", "Teacher", lambda lecture: str(lecture.teacher)),
             Column("status", "Status", lecture_status_badge),
         ]
+        if self.join_window is not None:
+            columns.append(Column("join", "Join", self.join_for))
+        return columns
+
+    def join_for(self, lecture: Lecture) -> Any:
+        window = self.join_window or 0
+        state = join_state(lecture, now=self.now, window=window)
+        return join_action(lecture, state, window)
+
+
+JOIN_LABELS = {
+    JOIN_SOON: "Join opens soon",
+    JOIN_WAITING: "Waiting for host",
+    JOIN_ENDED: "Ended",
+}
+
+
+def join_action(lecture: Lecture, state: str, window: int) -> Any:
+    """The student's Join button for a state (SPEC 6.4). Only the open state
+    is a real button; it posts to the join view, which opens the link."""
+    if state == JOIN_OPEN:
+        url = reverse("student:lecture_join", kwargs={"pk": lecture.pk})
+        return PostButton("Join", url, icon="video", new_tab=True)
+    if state == JOIN_NONE:
+        in_person = lecture.delivery_mode == DeliveryMode.IN_PERSON
+        return (
+            "In person"
+            if in_person and lecture.status != LectureStatus.CANCELLED
+            else ""
+        )
+    title = ""
+    if state == JOIN_SOON:
+        title = f"Join opens at {local_time(join_opens_at(lecture, window))}."
+    return Button(JOIN_LABELS[state], variant="secondary", disabled=True, title=title)
+
+
+def lecture_when(lecture: Lecture) -> str:
+    """Example: Wed 14 Oct 2026, 3:00 PM to 4:00 PM PKT."""
+    return f"{lecture_date(lecture)}, {lecture_time(lecture)}"
+
+
+def lecture_detail(lecture: Lecture, *, teacher: bool = False) -> str:
+    parts = [lecture.batch.name, lecture_subjects(lecture)]
+    if teacher:
+        parts.append(str(lecture.teacher))
+    return " · ".join(part for part in parts if part)
+
+
+def up_next_card(
+    lecture: Lecture, *, action: Any, refresh_url: str, teacher: bool = False
+) -> CountdownCard:
+    return CountdownCard(
+        lecture.title,
+        lecture.starts_at,
+        when=lecture_when(lecture),
+        detail=lecture_detail(lecture, teacher=teacher),
+        action=action,
+        refresh_url=refresh_url,
+    )
+
+
+def meeting_link_button(lecture: Lecture) -> Button | None:
+    """The teacher's own way in until Start class exists (roadmap 3.5)."""
+    if lecture.delivery_mode != DeliveryMode.MANUAL_LINK or not lecture.meeting_url:
+        return None
+    return Button("Open meeting link", url=lecture.meeting_url, icon="video")
 
 
 def calendar_item(lecture: Lecture, url: str | None) -> CalendarItem:

@@ -295,6 +295,82 @@ def list_lectures(
     return lectures.order_by("starts_at", "pk")
 
 
+# Up next and joining (roadmap 3.4, SPEC 6.4)
+
+DEFAULT_JOIN_WINDOW = 10
+JOIN_SOON = "soon"  # before the join window opens
+JOIN_WAITING = "waiting"  # window open, the teacher has not started
+JOIN_OPEN = "open"  # the teacher started: students may join
+JOIN_ENDED = "ended"
+JOIN_NONE = "none"  # cancelled, or in person: nothing to join
+OPEN_STATUSES = (LectureStatus.SCHEDULED, LectureStatus.LIVE)
+
+
+def join_window_minutes(institute: Institute | None) -> int:
+    minutes = (
+        InstituteSettings.objects.filter(institute=institute)
+        .values_list("join_window_minutes", flat=True)
+        .first()
+    )
+    return DEFAULT_JOIN_WINDOW if minutes is None else minutes
+
+
+def join_opens_at(lecture: Lecture, window: int) -> datetime:
+    return lecture.starts_at - timedelta(minutes=window)
+
+
+def join_state(lecture: Lecture, *, now: datetime, window: int) -> str:
+    """The student's Join state. Join opens at start minus the window; it is
+    enabled once the teacher starts (status live) and ends with the lecture."""
+    if (
+        lecture.status == LectureStatus.CANCELLED
+        or lecture.delivery_mode != DeliveryMode.MANUAL_LINK
+    ):
+        return JOIN_NONE
+    if lecture.status == LectureStatus.FINISHED or now >= lecture.ends_at:
+        return JOIN_ENDED
+    if lecture.status == LectureStatus.LIVE:
+        return JOIN_OPEN
+    if now < join_opens_at(lecture, window):
+        return JOIN_SOON
+    return JOIN_WAITING
+
+
+def _open_lectures(user: Any, now: datetime) -> QuerySet:
+    """Scheduled or live lectures the user may see that have not ended."""
+    return (
+        Lecture.objects.for_user(user)
+        .filter(status__in=OPEN_STATUSES)
+        .annotate(ends_at_db=ENDS_AT)
+        .filter(ends_at_db__gt=now)
+        .select_related("teacher__user", "batch")
+        .prefetch_related("subjects")
+        .order_by("starts_at", "pk")
+    )
+
+
+def next_lecture(user: Any, *, now: datetime | None = None) -> Lecture | None:
+    """The user's next lecture: the running one, or the next to start."""
+    return _open_lectures(user, now or timezone.now()).first()
+
+
+def upcoming_lectures(
+    user: Any, *, limit: int, now: datetime | None = None
+) -> list[Lecture]:
+    return list(_open_lectures(user, now or timezone.now())[:limit])
+
+
+def lectures_today_count(user: Any, *, now: datetime | None = None) -> int:
+    """Lectures on the viewer's today, cancelled ones left out."""
+    start, end = local_day_bounds(now or timezone.now())
+    return (
+        Lecture.objects.for_user(user)
+        .filter(starts_at__gte=start, starts_at__lt=end)
+        .exclude(status=LectureStatus.CANCELLED)
+        .count()
+    )
+
+
 # Calendar (roadmap 3.3, SPEC 3: teacher Schedule)
 
 CALENDAR_WEEK = "week"

@@ -30,7 +30,7 @@ apps/ui/
                    # PersonCell, PersonList, KpiSummary, ProgressBar,
                    # ProgressRing, ChartCard, EmptyState
     actions.py     # Button, IconButton, QuickAction, ConfirmDialog, CopyField, Toast
-    lectures.py    # CountdownCard, LectureRow, ScheduleList, Calendar
+    lectures.py    # CountdownCard, LectureRow, Calendar
     nav.py         # NotificationBell, FilterBar, Pagination
     pdf.py         # PdfHeader
   forms/
@@ -266,14 +266,14 @@ Every item here is a class. Names are fixed.
 | `ChartCard` | data | Chart.js card | `title`, `chart_id`, `data_url` |
 | `EmptyState` | data | icon tile, message and one action; `framed=False` drops the dashed box inside a card | `title`, `text`, `action`, `icon`, `framed` |
 | `IconButton` | actions | icon-only link (with `url`) or button; `label` is the `aria-label` and tooltip; `new_tab=True` adds `target="_blank" rel="noopener noreferrer"` (links to other sites, such as meeting links) | `icon`, `label`, `url`, `new_tab` |
-| `Button` | actions | `primary`, `secondary`, `danger`, `ghost`, `light`, `glass` (the last two on the band); Lucide icon before the label | `label`, `variant`, `url`, `icon` |
+| `Button` | actions | `primary`, `secondary`, `danger`, `ghost`, `light`, `glass` (the last two on the band); Lucide icon before the label; `disabled=True` is a state that cannot be clicked (never a link), `title` explains it | `label`, `variant`, `url`, `icon`, `disabled`, `title` |
+| `PostButton` | actions | one-button POST form with CSRF (when rendered with `request`); `new_tab=True` adds `target="_blank" rel="noopener noreferrer"` (Join) | `label`, `url`, `variant`, `icon`, `new_tab` |
 | `QuickAction` | actions | dashboard tile | `label`, `icon`, `url` |
 | `ConfirmDialog` | actions | confirm actions in a centred modal (`role="alertdialog"`, backdrop, Escape and click outside close it); renders a POST form with CSRF (when rendered with `request`) and Cancel | `message`, `confirm_label`, `url`, `trigger_label`, `variant` (`danger`/`primary`), `fields` (hidden name/value pairs) |
 | `CopyField` | actions | read-only value with a copy button (one-time links) | `label`, `value` |
 | `Toast` | actions | success, warning or error message (`tone` is the Django message level tag) | `message`, `tone` |
-| `CountdownCard` | lectures | "Up next" with live timer + Join | `lecture`, `viewer`; `scheduled_at` is validated to a UTC ISO string in `data-scheduled-at`, read by `countdownCard` in `static/js/app.js` |
-| `LectureRow` | lectures | one lecture in a list | `lecture`, `viewer` |
-| `ScheduleList` | lectures | lectures grouped by day | `lectures`, `viewer` |
+| `CountdownCard` | lectures | "Up next": title, when and detail lines, "Starts in 1:02:03" (then "Started") and one action; `starts_at` is validated to a UTC ISO string in `data-scheduled-at`, read by `countdownCard` in `static/js/app.js`; with `refresh_url` the card reloads itself every 30 seconds (HTMX) | `title`, `starts_at`, `when`, `detail`, `action`, `refresh_url` |
+| `LectureRow` | lectures | one lecture in a short list (guardian "Upcoming classes") | `title`, `when`, `detail`, `trailing` |
 | `Calendar` | lectures | week (seven day cards, side by side from lg) or month (a grid of weeks from md; on phones a list of the month's days that have entries), with previous, Today and next links; each day is a `CalendarDay` (`day`, `items`, `is_today`, `in_month`) and each entry a `CalendarItem` (`time`, `title`, `detail`, `status`, `tone`, `url`); an unsafe item `url` renders as plain text | `days`, `view` (`week`, `month`), `label`, `previous_url`, `today_url`, `next_url`, `empty_text`, `empty_day_text` |
 | `NotificationBell` | nav | bell + unread count | `user` |
 | `FilterBar` | nav | search field with an icon + selects and "Apply filters"; "Clear" shows when a filter has a value. Each filter (dict or object) has `name`, `label`, optional `value`, `placeholder`; a filter with `options` (list of value, label) renders a select; a filter with `hidden=True` is a hidden input that keeps a value (such as the chosen tab) and does not count for "Clear"; a select with `kept=True` (a guardian's chosen child) does not count for "Clear", and "Clear" keeps its value; `input_type="date"` renders a date field | `filters` |
@@ -286,7 +286,7 @@ Form layout objects: `Section(legend, *fields, description="", columns=1)` (titl
 
 Form widgets (not components): `PasswordInput` (show/hide toggle; static `type="password"` for no-JS and tests). `GroupedCheckboxes` (one fieldset per choice group, for example subjects under each batch; `empty_text` when there are no choices).
 
-Built ahead of the pages that need them, and shown only on `/dev/components/` so far: `Modal`, `Tabs`, `ChartCard`, `CountdownCard`, `LectureRow`, `ScheduleList`, `PdfHeader`, `HtmxModalForm`. Keep them tested; the lecture, chart and PDF phases use them (audit L12).
+Built ahead of the pages that need them, and shown only on `/dev/components/` so far: `Modal`, `Tabs`, `ChartCard`, `PdfHeader`, `HtmxModalForm`. Keep them tested; the lecture, chart and PDF phases use them (audit L12).
 
 ## 8. Menus
 

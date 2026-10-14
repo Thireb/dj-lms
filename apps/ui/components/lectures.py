@@ -38,32 +38,48 @@ def scheduled_at_to_iso(value: object) -> str:
 
 
 class CountdownCard(Component):
+    """ "Up next": a lecture's title, when and detail lines, a live countdown
+    to ``starts_at`` and one action (for example Join).
+
+    ``starts_at`` is validated to a UTC ISO string in ``data-scheduled-at``,
+    read by ``countdownCard`` in ``static/js/app.js``. With ``refresh_url``
+    the card reloads itself every 30 seconds (HTMX), so a Join state that
+    changes on the server shows without a page reload.
+    """
+
     template_name = "ui/components/countdown_card.html"
 
-    def __init__(self, lecture, viewer, **props):
-        scheduled_raw = getattr(lecture, "scheduled_at", "")
+    def __init__(
+        self,
+        title,
+        starts_at,
+        when="",
+        detail="",
+        action=None,
+        refresh_url="",
+        **props,
+    ):
         super().__init__(
-            lecture=lecture,
-            viewer=viewer,
-            title=getattr(lecture, "title", ""),
-            scheduled_at_iso=scheduled_at_to_iso(scheduled_raw),
-            meeting_link=safe_url(getattr(lecture, "meeting_link", "")),
+            title=title,
+            scheduled_at_iso=scheduled_at_to_iso(starts_at),
+            when=when,
+            detail=detail,
+            action=action,
+            refresh_url=safe_url(refresh_url),
             **props,
         )
 
 
 class LectureRow(Component):
+    """One lecture in a short list: title, when and detail, and an optional
+    trailing component (a badge or a button)."""
+
     template_name = "ui/components/lecture_row.html"
 
-    def __init__(self, lecture, viewer, **props):
-        super().__init__(lecture=lecture, viewer=viewer, **props)
-
-
-class ScheduleList(Component):
-    template_name = "ui/components/schedule_list.html"
-
-    def __init__(self, lectures, viewer, **props):
-        super().__init__(lectures=lectures, viewer=viewer, **props)
+    def __init__(self, title, when, detail="", trailing=None, **props):
+        super().__init__(
+            title=title, when=when, detail=detail, trailing=trailing, **props
+        )
 
 
 @dataclass(frozen=True)

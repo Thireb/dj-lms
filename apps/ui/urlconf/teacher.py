@@ -7,6 +7,7 @@ app_name = "teacher"
 
 urlpatterns = [
     path("", portal_home.TeacherPortalHomePage.as_view(), name="home"),
+    path("up-next/", lectures.UpNextCardView.as_view(), name="up_next"),
     path("lectures/", lectures.TeacherLectureListPage.as_view(), name="lecture_list"),
     path("schedule/", lectures.TeacherCalendarPage.as_view(), name="schedule"),
     path(
