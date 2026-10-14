@@ -2620,6 +2620,12 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "                or any(is_expected(lecture, e) for e in enrolments[pk])\n",
         "                or True\n",
     ),
+    (
+        "attendance leaves out inactive students (audit P4-1)",
+        "apps/attendance/services.py",
+        "    active = rows.filter(student__status=ProfileStatus.ACTIVE)\n",
+        "    active = rows\n",
+    ),
 ]
 
 

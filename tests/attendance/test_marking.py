@@ -10,6 +10,7 @@ from apps.attendance.models import Attendance
 from apps.attendance.services import can_mark, lecture_counts, roster
 from apps.core.tenancy import tenant_context
 from apps.lectures.models import Lecture, LectureStatus
+from apps.people.services import set_student_active
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 
@@ -71,6 +72,36 @@ def test_mark_stays_after_the_enrolment_is_removed(old_school) -> None:
     mark(lecture, {school.student_1: "late"})
     link_student(school.student_1, {school.evening: [school.physics]})
     assert _roster(lecture) == [(school.student_1.pk, "late")]
+
+
+def _deactivate(profile) -> None:
+    with tenant_context(profile.institute):
+        set_student_active(profile, is_active=False)
+
+
+@pytest.mark.django_db
+def test_inactive_student_leaves_the_roster_and_the_total(old_school) -> None:
+    """A student who left is not started at Present on the form and does
+    not count in Present / Total (audit P4-1)."""
+    school = old_school
+    lecture = finished(school, subjects=[school.math])
+    _deactivate(school.student_1)
+
+    assert _roster(lecture) == []
+    assert _counts(lecture)[lecture.pk].total == 0
+    with pytest.raises(ValidationError, match="not in this lecture"):
+        mark(lecture, {school.student_1: "present"})
+
+
+@pytest.mark.django_db
+def test_inactive_student_keeps_a_saved_mark(old_school) -> None:
+    school = old_school
+    lecture = finished(school, subjects=[school.math])
+    mark(lecture, {school.student_1: "late"})
+    _deactivate(school.student_1)
+
+    assert _roster(lecture) == [(school.student_1.pk, "late")]
+    assert _counts(lecture)[lecture.pk].total == 1
 
 
 @pytest.mark.django_db
