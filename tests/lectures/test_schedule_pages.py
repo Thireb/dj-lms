@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from datetime import timedelta
+from datetime import time, timedelta
 
 import pytest
 from apps.core.roles import Role
@@ -140,7 +140,7 @@ def test_first_submit_shows_a_preview_and_saves_nothing(admin_client, school) ->
     html = admin_client.post(_url("create"), _form(school)).content.decode()
 
     assert "7 lectures will be added now" in html
-    assert html.count("Will be added") == 7
+    assert html.count(">New<") == 7
     assert re.search(r'type="submit"[^>]*>\s*Create schedule\s*<', html)
     assert not RecurringSchedule.unscoped.exists()
 
@@ -345,3 +345,71 @@ def test_preview_marks_a_busy_date_as_skipped(admin_client, school) -> None:
     assert "0 lectures will be added now" in html
     assert html.count(">Skipped<") == 7
     assert "The teacher already has Existing then." in html
+
+
+# External audit (Phase 3)
+
+
+@pytest.mark.django_db
+def test_preview_is_one_line_per_date_with_save_on_top(admin_client, school) -> None:
+    """L3: no table cards with an empty Note row; Save above the dates."""
+    add_schedule(school, title="Existing", weekdays=[0])
+
+    html = admin_client.post(_url("create"), _form(school)).content.decode()
+
+    card = html.split("lectures will be added now", 1)[1]
+    save = re.search(r'<button type="submit" class="btn btn-primary">', card)
+    first_row = card.index("lecture-row")
+    assert save and save.start() < first_row
+    assert html.count('class="lecture-row') == 7
+    assert 'data-label="Note"' not in html
+    assert html.count("The teacher already has Existing then.") == 1
+
+
+@pytest.mark.django_db
+def test_list_flags_a_schedule_that_makes_no_lectures(admin_client, school) -> None:
+    """L5: the generator skipped it silently; the list now says why."""
+    from apps.academics.models import TeacherBatchSubject
+
+    broken = add_schedule(school)
+    add_schedule(
+        school,
+        title="Evening physics",
+        teacher=school.teacher_2,
+        batch=school.evening,
+        subjects=[school.physics],
+    )
+    # unscoped: test set-up; the teacher stops teaching Math in Morning.
+    TeacherBatchSubject.unscoped.filter(
+        teacher=school.teacher_1, subject=school.math
+    ).delete()
+
+    html = admin_client.get(_url("list")).content.decode()
+
+    row = table_row(html, "Daily algebra")
+    assert cell(row, "status")[:2] == ["Needs", "attention"]
+    assert f"{school.teacher_1} no longer teaches Math in Morning" in row
+    assert cell(table_row(html, "Evening physics"), "status") == ["Active"]
+    assert broken.status == "active"
+
+
+@pytest.mark.django_db
+def test_list_flags_an_inactive_teacher_but_not_a_stopped_schedule(
+    admin_client, school
+) -> None:
+    from apps.people.models import ProfileStatus, TeacherProfile
+
+    add_schedule(school)
+    stopped = add_schedule(school, title="Old algebra", start_time=time(18, 0))
+    admin_client.post(_url("stop", stopped.pk))
+    # unscoped: test set-up outside a tenant context.
+    TeacherProfile.unscoped.filter(pk=school.teacher_1.pk).update(
+        status=ProfileStatus.INACTIVE
+    )
+
+    html = admin_client.get(_url("list")).content.decode()
+
+    assert "is inactive, so no new lectures are made." in table_row(
+        html, "Daily algebra"
+    )
+    assert cell(table_row(html, "Old algebra"), "status") == ["Stopped"]

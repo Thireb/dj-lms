@@ -270,12 +270,14 @@ GRID_CLASSES = {
     # Section cards side by side from lg.
     "sections": "grid gap-5 lg:grid-cols-2 lg:items-start",
     "stack": "grid gap-5",
+    # Rows that draw their own dividers (LectureRow), no gap.
+    "list": "grid",
 }
 
 
 class Grid(Component):
-    """Components in a grid; ``variant`` is ``stats``, ``sections`` or
-    ``stack`` (one column)."""
+    """Components in a grid; ``variant`` is ``stats``, ``sections``,
+    ``stack`` (one column) or ``list`` (one column, no gap)."""
 
     template_name = "ui/components/grid.html"
 

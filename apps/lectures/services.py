@@ -3,6 +3,7 @@ recurring schedules that make them (roadmap 3.2, SPEC 4.6)."""
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from datetime import date, datetime, time, timedelta
 from typing import Any
@@ -19,6 +20,7 @@ from django.db.models import (
     QuerySet,
 )
 from django.utils import timezone
+from kombu.exceptions import OperationalError as KombuOperationalError
 
 from apps.academics.models import Batch, Subject, TeacherBatchSubject
 from apps.core.tenancy import require_tenant_context
@@ -44,6 +46,8 @@ from apps.lectures.times import (
     time_range,
 )
 from apps.people.models import ProfileStatus, TeacherProfile
+
+logger = logging.getLogger(__name__)
 
 SHOW_UPCOMING = "upcoming"
 SHOW_CHOICES = [
@@ -781,12 +785,33 @@ def _check_dates(
 
 
 def _enqueue(schedule: RecurringSchedule) -> None:
+    """After the commit, queue the task that makes the lectures."""
+    institute_id, schedule_id = schedule.institute_id, schedule.pk
+    transaction.on_commit(lambda: _send_generate(institute_id, schedule_id))
+
+
+def _send_generate(institute_id: int, schedule_id: int) -> None:
+    """Queue the generation task. When the broker is down (external audit:
+    the save showed an error page for a schedule that existed, and an edit
+    left its lectures missing until the nightly run), make the lectures here
+    instead. If that fails too, log it: the nightly job makes them later."""
     from apps.lectures.tasks import generate_schedule_lectures
 
-    institute_id, schedule_id = schedule.institute_id, schedule.pk
-    transaction.on_commit(
-        lambda: generate_schedule_lectures.delay(institute_id, schedule_id)
-    )
+    try:
+        generate_schedule_lectures.delay(institute_id, schedule_id)
+        return
+    except KombuOperationalError:
+        logger.warning(
+            "Broker unavailable; making the lectures of schedule %s now.",
+            schedule_id,
+        )
+    try:
+        generate_schedule_lectures(institute_id, schedule_id)
+    except Exception:
+        logger.exception(
+            "Could not make the lectures of schedule %s; the nightly job retries.",
+            schedule_id,
+        )
 
 
 def _apply_schedule(schedule: RecurringSchedule, details: ScheduleDetails) -> None:
@@ -892,16 +917,46 @@ def stop_schedule(schedule: RecurringSchedule) -> int:
     ).update(status=LectureStatus.CANCELLED)
 
 
-def _still_valid(schedule: RecurringSchedule) -> bool:
-    """The teacher is active and still teaches every subject in the batch."""
-    if schedule.teacher.status != ProfileStatus.ACTIVE:
-        return False
-    taught = set(
-        TeacherBatchSubject.objects.filter(
-            teacher=schedule.teacher, batch=schedule.batch
-        ).values_list("subject_id", flat=True)
+def taught_pairs(teacher_ids: set[int]) -> set[tuple[int, int, int]]:
+    """(teacher, batch, subject) links of these teachers, in one query."""
+    return set(
+        TeacherBatchSubject.objects.filter(teacher_id__in=teacher_ids).values_list(
+            "teacher_id", "batch_id", "subject_id"
+        )
     )
-    return all(subject.pk in taught for subject in schedule.subjects.all())
+
+
+def schedule_problem(
+    schedule: RecurringSchedule, taught: set[tuple[int, int, int]]
+) -> str:
+    """Why the schedule can make no lectures, or "" when it can: the teacher
+    must be active and still teach every subject in the batch."""
+    if schedule.teacher.status != ProfileStatus.ACTIVE:
+        return f"{schedule.teacher} is inactive, so no new lectures are made."
+    missing = sorted(
+        subject.name
+        for subject in schedule.subjects.all()
+        if (schedule.teacher_id, schedule.batch_id, subject.pk) not in taught
+    )
+    if missing:
+        return (
+            f"{schedule.teacher} no longer teaches {', '.join(missing)} in "
+            f"{schedule.batch.name}, so no new lectures are made."
+        )
+    return ""
+
+
+def schedule_problems(schedules: list[RecurringSchedule]) -> dict[int, str]:
+    """Problems of the active schedules in a list page (external audit L5:
+    the generator skipped them and nobody saw it)."""
+    active = [row for row in schedules if row.status == ScheduleStatus.ACTIVE]
+    taught = taught_pairs({row.teacher_id for row in active})
+    problems = {row.pk: schedule_problem(row, taught) for row in active}
+    return {pk: text for pk, text in problems.items() if text}
+
+
+def _still_valid(schedule: RecurringSchedule) -> bool:
+    return not schedule_problem(schedule, taught_pairs({schedule.teacher_id}))
 
 
 @dataclass(frozen=True)

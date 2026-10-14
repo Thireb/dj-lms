@@ -46,7 +46,8 @@ def _detail(school) -> str:
 PAGES = [
     ("admin", lambda s: reverse("admin:lecture_list") + "?show=all", 11),
     ("admin", _detail, 7),
-    ("admin", lambda s: reverse("admin:lecture_schedule_list"), 9),
+    # +1: the teacher links for "Needs attention", one query per page.
+    ("admin", lambda s: reverse("admin:lecture_schedule_list"), 10),
     ("admin", lambda s: reverse("admin:teacher_lecture_history"), 9),
     ("admin", lambda s: reverse("admin:dashboard_lectures"), 8),
     ("teacher_1", lambda s: reverse("teacher:lecture_list") + "?show=all", 10),

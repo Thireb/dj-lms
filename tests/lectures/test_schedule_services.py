@@ -524,3 +524,35 @@ def test_backfill_sets_the_occurrence_date_in_the_schedule_zone(school) -> None:
     )
     # 02:00 Karachi is the previous day in UTC: the zone matters.
     assert lectures[0].occurrence_date != lectures[0].starts_at.date()
+
+
+@pytest.mark.django_db
+def test_nightly_task_goes_on_after_one_schedule_fails(
+    school, monkeypatch, caplog
+) -> None:
+    """External audit L1: one bad schedule does not stop the others."""
+    import logging
+
+    from apps.lectures import tasks
+
+    _set_horizon(school.morning.institute, 1)
+    start = karachi_today() + timedelta(days=1)
+    broken = add_schedule(school, title="Broken", end_date=start + timedelta(days=20))
+    fine = add_schedule(
+        school, title="Fine", start_time=time(18, 0), end_date=start + timedelta(20)
+    )
+    before = len(schedule_lectures(fine))
+    _set_horizon(school.morning.institute, 3)
+    real = tasks.generate_lectures
+
+    def failing_for_broken(schedule, *args, **kwargs):
+        if schedule.pk == broken.pk:
+            raise RuntimeError("bad row")
+        return real(schedule, *args, **kwargs)
+
+    monkeypatch.setattr(tasks, "generate_lectures", failing_for_broken)
+    with caplog.at_level(logging.ERROR, logger="apps.lectures.tasks"):
+        created = extend_all_schedules()
+
+    assert created == len(schedule_lectures(fine)) - before > 0
+    assert f"schedule {broken.pk}" in caplog.text

@@ -82,3 +82,24 @@ def test_post_button_posts_with_csrf_to_a_new_tab() -> None:
     assert 'name="csrfmiddlewaretoken"' in html
     assert 'type="submit"' in html
     assert "target=" not in plain
+
+
+def test_button_new_tab_and_submit() -> None:
+    from apps.ui.components.actions import Button
+
+    link = str(Button("Open", url="https://meet.example.com/x", new_tab=True))
+    submit = str(Button("Save", submit=True))
+    plain = str(Button("Close"))
+
+    assert 'target="_blank" rel="noopener noreferrer"' in link
+    assert '<button type="submit"' in submit
+    assert '<button type="button"' in plain
+
+
+def test_badge_note_shows_the_reason_escaped() -> None:
+    from apps.ui.components.data import Badge, BadgeNote
+
+    html = str(BadgeNote(Badge("Needs attention", tone="warning"), "<b>why</b>"))
+
+    assert "Needs attention" in html
+    assert "&lt;b&gt;why&lt;/b&gt;" in html

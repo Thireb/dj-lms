@@ -37,8 +37,21 @@ from apps.lectures.services import (
 from apps.lectures.times import local_date, local_time, time_range
 from apps.ui.components.actions import Button, ConfirmDialog, IconButton, PostButton
 from apps.ui.components.block_stack import ButtonRow
-from apps.ui.components.data import Badge, Column, DataTable, PersonCell
-from apps.ui.components.lectures import CalendarDay, CalendarItem, CountdownCard
+from apps.ui.components.data import (
+    Badge,
+    BadgeNote,
+    Column,
+    DataTable,
+    EmptyState,
+    PersonCell,
+)
+from apps.ui.components.layout import Grid
+from apps.ui.components.lectures import (
+    CalendarDay,
+    CalendarItem,
+    CountdownCard,
+    LectureRow,
+)
 
 STATUS_TONES = {
     LectureStatus.SCHEDULED: "info",
@@ -343,7 +356,9 @@ def meeting_link_button(lecture: Lecture) -> Button | None:
     """The teacher's and admin's way into the meeting."""
     if not has_open_link(lecture):
         return None
-    return Button("Open meeting link", url=lecture.meeting_url, icon="video")
+    return Button(
+        "Open meeting link", url=lecture.meeting_url, icon="video", new_tab=True
+    )
 
 
 def calendar_item(lecture: Lecture, url: str | None) -> CalendarItem:
@@ -409,7 +424,14 @@ class ScheduleTable(DataTable):
     portal = "admin"
     empty_title = "No schedules match these filters."
 
-    def __init__(self, rows: list[RecurringSchedule], **props):
+    def __init__(
+        self,
+        rows: list[RecurringSchedule],
+        *,
+        problems: dict[int, str] | None = None,
+        **props,
+    ):
+        self.problems = problems or {}
         super().__init__(rows=rows, **props)
 
     @property
@@ -423,9 +445,15 @@ class ScheduleTable(DataTable):
             Column("start", "Start", lambda row: date_format(row.start_date, "j M Y")),
             Column("end", "End", lambda row: date_format(row.end_date, "j M Y")),
             Column("lectures", "Lectures", lambda row: row.lecture_count),
-            Column("status", "Status", schedule_status_badge),
+            Column("status", "Status", self.status_for),
             Column("actions", "", self.row_actions_for),
         ]
+
+    def status_for(self, schedule: RecurringSchedule) -> Any:
+        problem = self.problems.get(schedule.pk)
+        if problem:
+            return BadgeNote(Badge("Needs attention", tone="warning"), problem)
+        return schedule_status_badge(schedule)
 
     def url(self, action: str, schedule: RecurringSchedule) -> str:
         name = f"{self.portal}:lecture_schedule_{action}"
@@ -459,21 +487,38 @@ class TeacherScheduleTable(ScheduleTable):
         return [column for column in super().columns if column.key != "teacher"]
 
 
-class SchedulePreviewList(DataTable):
-    """The lectures a schedule save would make (SPEC 4.6 preview)."""
+def schedule_preview_list(planned: list) -> Any:
+    """The lectures a schedule save would make (SPEC 4.6 preview): one line
+    per date, with the reason only on a skipped date. A table made one card
+    per date with an empty Note row on phones (external audit L3)."""
+    if not planned:
+        return EmptyState(
+            "No lecture falls in the next weeks.", icon="calendar", framed=False
+        )
+    return Grid(
+        [
+            LectureRow(
+                preview_when(item.starts_at),
+                "",
+                detail=_preview_note(item),
+                trailing=_preview_result(item),
+            )
+            for item in planned
+        ],
+        variant="list",
+    )
 
-    columns = [
-        Column("date", "Date", lambda item: local_date(item.starts_at)),
-        Column("time", "Time", lambda item: time_range(item.starts_at, item.ends_at)),
-        Column("result", "Result", lambda item: _preview_result(item)),
-        Column("note", "Note", lambda item: _preview_note(item)),
-    ]
-    empty_title = "No lecture falls in the next weeks."
+
+def preview_when(starts_at: datetime) -> str:
+    """Example: Thu 15 Oct, 10:00 AM PKT. Short enough for one line at 360px
+    next to the badge; the card says how long each lecture is."""
+    day = date_format(timezone.localtime(starts_at), "D j M")
+    return f"{day}, {local_time(starts_at)}"
 
 
 def _preview_result(item) -> Badge:
     if item.clash is None:
-        return Badge("Will be added", tone="success")
+        return Badge("New", tone="success")
     return Badge("Skipped", tone="warning")
 
 

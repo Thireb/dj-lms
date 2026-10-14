@@ -256,6 +256,18 @@ Full review of roadmap 3.1 to 3.6 on `main` f1e5ff3: pytest 1620 passed, ruff cl
 | P3-8 | Polling: "Up next" (teacher, student) and the Lectures dashboard reload every 30 seconds. About 8 queries each; at 1,000 open student homes that is about 33 requests a second. Fine for now; revisit with caching or a longer interval before large institutes. | Low | [ ] |
 | P3-9 | Time zones with clock changes: a lecture or schedule time that does not exist on a spring-forward day (for example 01:30 in Europe/London) is saved as Django's `make_aware` reads it, without a warning. Pakistan has no clock changes; add a check when an institute in such a zone signs up. | Low | [ ] |
 
+## External audit of Phase 3 (2026-10-14, after PR #49)
+
+| # | Item | Priority | Status |
+|---|---|---|---|
+| X1 | Broker (Redis) down: `_enqueue` called `.delay()` in `on_commit` with no error handling, so a saved schedule showed an error page (a resubmit made a duplicate), and "Save and update lectures" left the upcoming lectures deleted until the nightly run. Reproduced with a broker on a closed port (`kombu.exceptions.OperationalError`). Fixed: the error is logged and the lectures are made in the request; if that fails too, it is logged and the nightly job makes them. Tests run against the closed port. The audit suggested "log and wait for the nightly job"; making them at once avoids a day without lectures. | High | [x] |
+| X2 (L1) | One failing schedule or institute ended the nightly extend and the 5-minute finish run for everyone after it. Each schedule and each institute is now logged and skipped on error (ids only, no personal data); tests added. | Medium | [x] |
+| X3 (L2) | Sidebar group headings were `text-white/55`; axe flagged them on 5 teacher pages. Now `text-white/70` (7.3:1 on the lighter end of the gradient). | Low | [x] |
+| X4 (L3) | Schedule preview at 360px: 21 dates became 21 table cards with an empty Note row; Save was at the very bottom. Now one line per date ("Thu 15 Oct, 10:00 AM PKT" and New or Skipped, the reason only when skipped) and a Save button above the dates. 21 dates: page 6355px to 3691px (the rest is the form), Save at y 394. | Low | [x] |
+| X5 (L4) | "Open meeting link" (teacher and admin) opened in the same tab. `Button` has `new_tab`; the link now opens a new tab without an opener, like the student Join. | Low | [x] |
+| X6 (L5) | A schedule whose teacher became inactive or stopped teaching a subject made no lectures, silently. The schedule list now shows "Needs attention" with the reason; the generator and the list share `schedule_problem`. The schedule list budget is 10 queries (+1, the teacher links once per page). | Medium | [x] |
+| X7 | Cleanup found while fixing X6: `ScheduleListPage` had unused copies of the date filter methods (a 3.3 edit replaced every match). Removed. | Low | [x] |
+
 ## Later (deployment hardening, Phase 12)
 
 | # | Item | Priority | Status |
