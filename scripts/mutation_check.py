@@ -2338,6 +2338,54 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "            return minutes_text(self.now - (lecture.started_at or lecture.starts_at))\n",
         "            return minutes_text(self.now - lecture.starts_at)\n",
     ),
+    (
+        "schedule lecture keeps its date",
+        "apps/lectures/services.py",
+        "        occurrence_date=starts_at.date(),  # starts_at is in the schedule's zone\n",
+        "",
+    ),
+    (
+        "taken dates use occurrence date",
+        "apps/lectures/services.py",
+        "        lecture.occurrence_date or timezone.localtime(lecture.starts_at, zone).date()\n",
+        "        timezone.localtime(lecture.starts_at, zone).date()\n",
+    ),
+    (
+        "lecture edit reads the locked row",
+        "apps/lectures/services.py",
+        "    _lock_teacher(details.teacher)\n    _lock_and_reload(lecture)\n    _check(lecture.institute, details, lecture)\n",
+        "    _lock_teacher(details.teacher)\n    _check(lecture.institute, details, lecture)\n",
+    ),
+    (
+        "generate reads the locked schedule",
+        "apps/lectures/services.py",
+        "    _lock_teacher(schedule.teacher)\n    _lock_and_reload(schedule)\n    if schedule.status != ScheduleStatus.ACTIVE:\n        return GenerateResult()\n",
+        "    _lock_teacher(schedule.teacher)\n    if schedule.status != ScheduleStatus.ACTIVE:\n        return GenerateResult()\n",
+    ),
+    (
+        "extend reads the locked schedule",
+        "apps/lectures/services.py",
+        "    require_tenant_context(schedule.institute)\n    _lock_and_reload(schedule)\n    errors = _Errors()\n",
+        "    require_tenant_context(schedule.institute)\n    errors = _Errors()\n",
+    ),
+    (
+        "demo seed uses the student's pair",
+        "apps/lectures/demo.py",
+        "        if (link.batch_id, link.subject_id) in shared:\n",
+        "        if False:\n",
+    ),
+    (
+        "closed lecture edit goes back",
+        "apps/lectures/views.py",
+        "        if self.lecture.status != LectureStatus.SCHEDULED:\n            # Audit P3-4",
+        "        if False:\n            # Audit P3-4",
+    ),
+    (
+        "stopped schedule pages go back",
+        "apps/lectures/views.py",
+        '        if self.schedule.status == ScheduleStatus.ACTIVE:\n            return None\n        messages.error(self.request, f"A stopped schedule',
+        '        if True:\n            return None\n        messages.error(self.request, f"A stopped schedule',
+    ),
 ]
 
 
