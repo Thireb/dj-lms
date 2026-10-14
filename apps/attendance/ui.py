@@ -5,7 +5,13 @@ from __future__ import annotations
 from decimal import Decimal
 
 from apps.attendance.models import AttendanceStatus
-from apps.attendance.services import LectureCount, Record, RosterEntry, Summary
+from apps.attendance.services import (
+    GroupSummary,
+    LectureCount,
+    Record,
+    RosterEntry,
+    Summary,
+)
 from apps.lectures.times import local_date, time_range
 from apps.ui.components.data import Badge, Column, DataTable, PersonCell, StatCard
 from apps.ui.components.layout import Grid
@@ -124,5 +130,29 @@ class AttendanceTable(DataTable):
             Column("teacher", "Teacher", lambda record: str(record.lecture.teacher)),
             Column(
                 "status", "Attendance", lambda record: attendance_badge(record.status)
+            ),
+        ]
+
+
+class SummaryTable(DataTable):
+    """Counts and % per month or per subject (roadmap 4.3). ``label`` names
+    the first column."""
+
+    def __init__(self, rows: list[GroupSummary], *, label: str, **props):
+        self.label = label
+        super().__init__(rows=rows, **props)
+
+    @property
+    def columns(self) -> list[Column]:  # type: ignore[override]
+        return [
+            Column("label", self.label, lambda row: row.label),
+            Column("classes", "Classes", lambda row: row.summary.total),
+            Column("present", "Present", lambda row: row.summary.present),
+            Column("late", "Late", lambda row: row.summary.late),
+            Column("partial", "Partial", lambda row: row.summary.partial),
+            Column("absent", "Absent", lambda row: row.summary.absent),
+            Column("not_marked", NOT_MARKED, lambda row: row.summary.not_marked),
+            Column(
+                "percent", "Attendance", lambda row: percent_text(row.summary.percent)
             ),
         ]

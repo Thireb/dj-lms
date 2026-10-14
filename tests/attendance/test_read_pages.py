@@ -4,6 +4,8 @@ attendance history"."""
 
 from __future__ import annotations
 
+import re
+
 import pytest
 from apps.attendance.views import AdminStudentAttendancePage
 from apps.core.roles import Role
@@ -277,3 +279,78 @@ def test_all_students_row_links_to_the_history(old_school, admin_client) -> None
     html = _html(admin_client, reverse("admin:student_list"))
     assert f"{ADMIN_URL}?student={school.student_1.pk}" in html
     assert f'aria-label="Attendance history of {school.student_1}"' in html
+
+
+@pytest.mark.django_db
+def test_subject_filter_follows_the_chosen_student(two_children, admin_client) -> None:
+    """The admin and a guardian of two children see more subjects than the
+    chosen student takes; the filter lists only that student's."""
+    school = two_children
+    client = signed_in(school.guardian_1.user)
+    client.post(CHOOSE_URL, {"child": school.student_2.pk})
+    guardian = _html(client, GUARDIAN_URL)
+    admin = _html(admin_client, ADMIN_URL, student=school.student_2.pk)
+    for html in (guardian, admin):
+        assert select_values(html, "subject") == ["", str(school.physics.pk)]
+
+
+# Month and subject views, dashboards (roadmap 4.3)
+
+
+@pytest.mark.django_db
+def test_month_and_subject_views(old_school) -> None:
+    school = old_school
+    lecture = finished(school, title="Morning math")
+    mark(lecture, {school.student_1: "partial"})
+    client = signed_in(school.student_1.user)
+
+    months = _html(client, STUDENT_URL, view="months")
+    subjects = _html(client, STUDENT_URL, view="subjects")
+    classes = _html(client, STUDENT_URL, view="bogus")
+
+    month_row = re.findall(r"<tr\b.*?</tr>", months, re.S)[1]
+    assert cell(month_row, "classes") == ["1"]
+    assert cell(month_row, "partial") == ["1"]
+    assert cell(month_row, "percent") == ["50%"]
+    assert cell(table_row(subjects, "Math"), "percent") == ["50%"]
+    assert table_row(classes, "Morning math")  # unknown view: the classes
+    assert 'aria-current="page"' in months.split('aria-label="Attendance views"')[1]
+
+
+@pytest.mark.django_db
+def test_view_tabs_keep_the_filters(old_school, admin_client) -> None:
+    school = old_school
+    html = _html(
+        admin_client,
+        ADMIN_URL,
+        student=school.student_1.pk,
+        subject=school.math.pk,
+        view="months",
+    )
+    tabs = html.split('aria-label="Attendance views"')[1].split("</nav>")[0]
+    assert f"student={school.student_1.pk}" in tabs
+    assert f"subject={school.math.pk}" in tabs
+    assert 'name="view" value="months"' in html
+
+
+@pytest.mark.django_db
+def test_student_home_shows_the_percent(old_school) -> None:
+    school = old_school
+    lecture = finished(school)
+    finished(school, title="Second", days_ago=2)
+    mark(lecture, {school.student_1: "late"})
+    html = _html(signed_in(school.student_1.user), reverse("student:home"))
+    assert ">50%<" in html
+    assert "2 finished classes" in html
+
+
+@pytest.mark.django_db
+def test_guardian_home_shows_each_child_percent(two_children) -> None:
+    school = two_children
+    lecture = finished(school)
+    evening = _evening(school)
+    mark(lecture, {school.student_1: "present"})
+    mark(evening, {school.student_2: "absent"})
+    html = _html(signed_in(school.guardian_1.user), reverse("guardian:home"))
+    assert "Attendance 100%" in html
+    assert "Attendance 0%" in html

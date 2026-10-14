@@ -14,13 +14,16 @@ from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from apps.academics.models import Subject
 from apps.attendance.forms import AttendanceForm
 from apps.attendance.services import (
+    by_month,
+    by_subject,
     can_mark,
     roster,
     save_marks,
     student_records,
+    student_subject_ids,
     summarize,
 )
-from apps.attendance.ui import AttendanceTable, summary_cards
+from apps.attendance.ui import AttendanceTable, SummaryTable, summary_cards
 from apps.core import menus as menu_keys
 from apps.core.query import id_param, search_param
 from apps.core.roles import Role
@@ -36,6 +39,7 @@ from apps.people.models import StudentProfile
 from apps.people.views import GuardianChildMixin
 from apps.ui.components.block_stack import BlockStack
 from apps.ui.components.data import EmptyState
+from apps.ui.components.layout import LinkTabs
 from apps.ui.components.nav import FilterBar, Pagination
 from apps.ui.views.pages import FormPage, ListPage
 
@@ -92,8 +96,15 @@ class TakeAttendancePage(LectureObjectMixin, TeacherLectureMixin, FormPage):
         return HttpResponseRedirect(self.detail_url())
 
 
-# Read pages (roadmap 4.2): My attendance, Class attendance, Student
-# attendance history
+# Read pages (roadmap 4.2, with the month and subject views of 4.3): My
+# attendance, Class attendance, Student attendance history
+
+
+VIEW_CLASSES = "classes"
+VIEW_MONTHS = "months"
+VIEW_SUBJECTS = "subjects"
+VIEWS = {VIEW_CLASSES: "Classes", VIEW_MONTHS: "By month", VIEW_SUBJECTS: "By subject"}
+NO_CLASSES = "No finished classes match these filters."
 
 
 class StudentAttendancePage(ListPage):
@@ -139,24 +150,60 @@ class StudentAttendancePage(ListPage):
             date_from=calendar_day(filters["date_from"]),
             date_to=calendar_day(filters["date_to"]),
         )
-        page = Paginator(records, PAGE_SIZE).get_page(self.request.GET.get("page"))
-        query = urlencode({key: value for key, value in filters.items() if value})
-        return {
+        view = search_param(self.request.GET.get("view"))
+        view = view if view in VIEWS else VIEW_CLASSES
+        components = {
             "filters": BlockStack(
                 blocks=[
                     summary_cards(summarize(records)),
-                    FilterBar(self.filter_fields(filters)),
+                    self.view_tabs(view, filters),
+                    FilterBar(self.filter_fields(filters, view)),
                 ]
-            ),
-            "table": AttendanceTable(list(page.object_list)),
-            "pagination": Pagination(page, query=query),
+            )
         }
+        if view == VIEW_MONTHS:
+            components["table"] = SummaryTable(
+                by_month(records), label="Month", empty_title=NO_CLASSES
+            )
+        elif view == VIEW_SUBJECTS:
+            subject_ids = student_subject_ids(self.student)
+            components["table"] = SummaryTable(
+                by_subject(records, subject_ids),
+                label="Subject",
+                empty_title=NO_CLASSES,
+            )
+        else:
+            page = Paginator(records, PAGE_SIZE).get_page(self.request.GET.get("page"))
+            query = urlencode(
+                {"view": view} | {key: value for key, value in filters.items() if value}
+            )
+            components["table"] = AttendanceTable(list(page.object_list))
+            components["pagination"] = Pagination(page, query=query)
+        return components
 
-    def filter_fields(self, filters: dict[str, str]) -> list[dict[str, Any]]:
+    def view_tabs(self, view: str, filters: dict[str, str]) -> LinkTabs:
+        kept = {key: value for key, value in filters.items() if value}
+        return LinkTabs(
+            [
+                {
+                    "id": key,
+                    "label": label,
+                    "url": "?" + urlencode(kept | {"view": key}),
+                }
+                for key, label in VIEWS.items()
+            ],
+            active=view,
+            label="Attendance views",
+        )
+
+    def filter_fields(
+        self, filters: dict[str, str], view: str = ""
+    ) -> list[dict[str, Any]]:
         subjects = Subject.objects.for_user(self.request.user).filter(
             student_links__student=self.student
         )
         return [
+            {"name": "view", "value": view, "hidden": True},
             {
                 "name": "subject",
                 "label": "Subject",
@@ -223,7 +270,9 @@ class AdminStudentAttendancePage(StudentAttendancePage):
             ),
         }
 
-    def filter_fields(self, filters: dict[str, str]) -> list[dict[str, Any]]:
+    def filter_fields(
+        self, filters: dict[str, str], view: str = ""
+    ) -> list[dict[str, Any]]:
         student = {
             "name": "student",
             "label": "Student",
@@ -233,4 +282,4 @@ class AdminStudentAttendancePage(StudentAttendancePage):
         }
         if self.student is None:
             return [student]
-        return [student, *super().filter_fields(filters)]
+        return [student, *super().filter_fields(filters, view)]

@@ -115,3 +115,93 @@ def test_records_filter_by_subject_and_dates(old_school) -> None:
             date_to=today - timedelta(days=2),
         )
     ] == ["Physics one"]
+
+
+# Month and subject summaries (roadmap 4.3)
+
+
+def _lecture(starts_at, *subjects):
+    """An unsaved lecture with its subjects as if prefetched."""
+    _lecture.count = getattr(_lecture, "count", 0) + 1
+    lecture = Lecture(pk=_lecture.count, starts_at=starts_at, duration_minutes=60)
+    lecture._prefetched_objects_cache = {"subjects": list(subjects)}
+    return lecture
+
+
+def test_by_month_groups_newest_first_in_the_viewer_zone(settings) -> None:
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    from apps.academics.models import Subject
+    from apps.attendance.services import by_month
+    from django.utils import timezone as dj_timezone
+
+    math = Subject(pk=1, name="Math")
+    utc = ZoneInfo("UTC")
+    records = [
+        # 30 Sep 21:00 UTC is 1 Oct 02:00 in Karachi.
+        Record(_lecture(datetime(2026, 9, 30, 21, tzinfo=utc), math), "present"),
+        Record(_lecture(datetime(2026, 9, 10, 9, tzinfo=utc), math), "absent"),
+        Record(_lecture(datetime(2026, 10, 5, 9, tzinfo=utc), math), "partial"),
+    ]
+    with dj_timezone.override(ZoneInfo("Asia/Karachi")):
+        months = by_month(records)
+    assert [(m.label, m.summary.total) for m in months] == [
+        ("October 2026", 2),
+        ("September 2026", 1),
+    ]
+    # October: 1 present + 0.5 partial out of 2 = 75%
+    assert months[0].summary.percent == Decimal("75.0")
+    assert months[1].summary.percent == Decimal("0.0")
+
+
+def test_by_subject_counts_own_subjects_of_a_shared_lecture() -> None:
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    from apps.academics.models import Subject
+    from apps.attendance.services import by_subject
+
+    math, physics, art = (
+        Subject(pk=1, name="Math"),
+        Subject(pk=2, name="Physics"),
+        Subject(pk=3, name="Art"),
+    )
+    when = datetime(2026, 10, 5, 9, tzinfo=ZoneInfo("UTC"))
+    records = [
+        Record(_lecture(when, math, physics), "late"),  # takes both
+        Record(_lecture(when, math, art), "absent"),  # takes Math only
+        Record(_lecture(when, art), "present"),  # left Art: still counted
+    ]
+    subjects = by_subject(records, {math.pk, physics.pk})
+    assert [(s.label, s.summary.total) for s in subjects] == [
+        ("Art", 1),
+        ("Math", 2),
+        ("Physics", 1),
+    ]
+    assert subjects[1].summary.percent == Decimal("50.0")
+
+
+@pytest.mark.django_db
+def test_summaries_for_many_students_match_the_records(old_school) -> None:
+    from apps.attendance.services import student_summaries
+
+    school = old_school
+    one = finished(school, title="One", days_ago=2)
+    finished(school, title="Two", days_ago=1)
+    evening = finished(
+        school,
+        title="Evening",
+        teacher=school.teacher_2,
+        batch=school.evening,
+        subjects=[school.physics],
+    )
+    mark(one, {school.student_1: "late"})
+    mark(evening, {school.student_2: "partial"})
+    with tenant_context(school.morning.institute):
+        summaries = student_summaries(
+            [school.student_1, school.student_2, school.student_new]
+        )
+    assert summaries[school.student_1.pk] == Summary(late=1, not_marked=1)
+    assert summaries[school.student_2.pk] == Summary(partial=1)
+    assert summaries[school.student_new.pk] == Summary()

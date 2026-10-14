@@ -18,6 +18,8 @@ from typing import Any
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Q
+from django.utils import timezone
+from django.utils.dateformat import format as date_format
 
 from apps.academics.models import StudentBatchSubject
 from apps.attendance.models import Attendance, AttendanceSource, AttendanceStatus
@@ -246,3 +248,77 @@ def summarize(records: list[Record]) -> Summary:
     for record in records:
         counts[SUMMARY_FIELDS[record.status]] += 1
     return Summary(**counts)
+
+
+# Summaries (roadmap 4.3)
+
+
+@dataclass(frozen=True)
+class GroupSummary:
+    label: str
+    summary: Summary
+
+
+def by_month(records: list[Record]) -> list[GroupSummary]:
+    """One summary per month in the viewer's zone, newest first."""
+    groups: dict[date, list[Record]] = defaultdict(list)
+    for record in records:
+        day = timezone.localtime(record.lecture.starts_at).date()
+        groups[day.replace(day=1)].append(record)
+    return [
+        GroupSummary(date_format(month, "F Y"), summarize(groups[month]))
+        for month in sorted(groups, reverse=True)
+    ]
+
+
+def by_subject(records: list[Record], subject_ids: set[int]) -> list[GroupSummary]:
+    """One summary per subject, by name. A lecture with several subjects
+    counts for the student's own subjects among them (``subject_ids``), or
+    for all of them when the student no longer takes any."""
+    groups: dict[str, list[Record]] = defaultdict(list)
+    for record in records:
+        subjects = list(record.lecture.subjects.all())
+        own = [subject for subject in subjects if subject.pk in subject_ids]
+        for subject in own or subjects:
+            groups[subject.name].append(record)
+    return [GroupSummary(name, summarize(groups[name])) for name in sorted(groups)]
+
+
+def student_subject_ids(student: StudentProfile) -> set[int]:
+    links = StudentBatchSubject.objects.filter(student=student)
+    return set(links.values_list("subject_id", flat=True))
+
+
+def student_summaries(students: list[StudentProfile]) -> dict[int, Summary]:
+    """Each student's summary of all finished classes (dashboards), in 4
+    queries for any number of students."""
+    ids = [student.pk for student in students]
+    enrolments: dict[int, list[Enrolment]] = defaultdict(list)
+    for enrolment in _enrolments(
+        StudentBatchSubject.objects.filter(student_id__in=ids)
+    ):
+        enrolments[enrolment.student_id].append(enrolment)
+    marks: dict[int, dict[int, str]] = defaultdict(dict)
+    rows = Attendance.objects.filter(student_id__in=ids).values_list(
+        "student_id", "lecture_id", "status"
+    )
+    for student_id, lecture_id, status in rows:
+        marks[student_id][lecture_id] = status
+    batch_ids = {e.batch_id for own in enrolments.values() for e in own}
+    marked_ids = {lecture_id for own in marks.values() for lecture_id in own}
+    lectures = list(
+        Lecture.objects.filter(status=LectureStatus.FINISHED)
+        .filter(Q(batch_id__in=batch_ids) | Q(pk__in=marked_ids))
+        .prefetch_related("subjects")
+    )
+    return {
+        pk: summarize(
+            [
+                Record(lecture, marks[pk].get(lecture.pk, ""))
+                for lecture in lectures
+                if lecture.pk in marks[pk]
+                or any(is_expected(lecture, e) for e in enrolments[pk])
+            ]
+        )
+        for pk in ids
+    }

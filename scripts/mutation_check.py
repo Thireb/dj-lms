@@ -1950,9 +1950,9 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
     ),
     (
         "guardian children use for_user",
-        "apps/lectures/views.py",
-        '            StudentProfile.objects.for_user(self.request.user)\n            .select_related("user")\n',
-        '            StudentProfile.objects.all()\n            .select_related("user")\n',
+        "apps/people/services.py",
+        '    return list(\n        StudentProfile.objects.for_user(user)\n        .select_related("user")\n',
+        '    return list(\n        StudentProfile.objects.all()\n        .select_related("user")\n',
     ),
     (
         "guardian subjects are the child's",
@@ -1962,7 +1962,7 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
     ),
     (
         "guardian one child has no child select",
-        "apps/lectures/views.py",
+        "apps/people/views.py",
         "        if len(self.children) < 2:\n",
         "        if False:\n",
     ),
@@ -2601,6 +2601,24 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "apps/attendance/views.py",
         "            student_links__student=self.student\n",
         "            pk__gt=0\n",
+    ),
+    (
+        "attendance by subject counts own subjects",
+        "apps/attendance/services.py",
+        "        for subject in own or subjects:\n",
+        "        for subject in subjects:\n",
+    ),
+    (
+        "attendance by month newest first",
+        "apps/attendance/services.py",
+        "        for month in sorted(groups, reverse=True)\n",
+        "        for month in sorted(groups)\n",
+    ),
+    (
+        "attendance summaries only expected lectures",
+        "apps/attendance/services.py",
+        "                or any(is_expected(lecture, e) for e in enrolments[pk])\n",
+        "                or True\n",
     ),
 ]
 

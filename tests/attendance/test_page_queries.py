@@ -34,6 +34,9 @@ def busy(old_school, institute_a):
 
 
 PAGES = [
+    # The dashboards' attendance %, with finished lectures to read.
+    ("student_1", lambda s: reverse("student:home"), 15),
+    ("guardian_1", lambda s: reverse("guardian:home"), 14),
     # Same count with 16 lectures as with 8 (checked by hand at build time).
     ("student_1", lambda s: reverse("student:attendance"), 12),
     ("guardian_1", lambda s: reverse("guardian:attendance"), 10),

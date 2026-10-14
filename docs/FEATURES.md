@@ -155,17 +155,17 @@ Main dashboard: campus hero, clock, 4 stat cards (students, teachers, batches, l
 Dashboard: welcome banner, subject/batch chips, up-next card with countdown, 4 stat cards (lectures, students, batches, subjects), quick actions. Built in R4c: welcome banner with chips, an empty up-next card, and stat cards for students, batches and subjects. Built in 3.4: the up-next card with a countdown and a "Lectures today" card. Quick actions come later.
 
 **Student (left sidebar):** Dashboard | Academics (My Lectures, My Attendance, Leave Requests, Homework, Lesson Plans, Assignments, Quizzes & Exams, Documents) | Messages | Finance (Fee Details) | Account (My Profile, Settings, Sign Out).
-Dashboard: attendance %, homework done %, upcoming count, fee paid %, up-next card, fee KPIs (billed, paid, due, pending challans). Built in R4c: welcome banner with code, class and batch/subject chips, and an up-next card (with a countdown and Join since 3.4). The KPIs come with their phases.
+Dashboard: attendance %, homework done %, upcoming count, fee paid %, up-next card, fee KPIs (billed, paid, due, pending challans). Built in R4c: welcome banner with code, class and batch/subject chips, and an up-next card (with a countdown and Join since 3.4). Built in 4.3: attendance % and "Lectures today" cards. The other KPIs come with their phases.
 
 **Guardian (left sidebar):** Dashboard | Academics (Lectures Schedule, Homework, Lesson Plans, Quizzes & Exams, Class Attendance) | Finance (Fee & Challans, Fee Pay) | Communication (Messages) | Account (Student Profile, Account Settings, Sign Out).
-Dashboard: child switcher in the header, billed / paid / outstanding / upcoming classes, homework progress and 6-month trend chart. One guardian login can cover several children; every page follows the chosen child. Built in R4c: welcome banner, a "Your children" card (code, class, batches, status) and an upcoming classes card (the next 5 classes with the child's name since 3.4). The child switcher is built in 4.2 (header, kept in the session; shown with two or more children). The KPIs come with their phases.
+Dashboard: child switcher in the header, billed / paid / outstanding / upcoming classes, homework progress and 6-month trend chart. One guardian login can cover several children; every page follows the chosen child. Built in R4c: welcome banner, a "Your children" card (code, class, batches, status) and an upcoming classes card (the next 5 classes with the child's name since 3.4). The child switcher is built in 4.2 (header, kept in the session; shown with two or more children). Built in 4.3: each child's attendance % in "Your children". The other KPIs come with their phases.
 
 ## 14. Analytics
 
 - [ ] Admin: students, fee collection, unpaid, discounts, payroll, lectures.
 - [ ] Teacher: batch and attendance numbers on the dashboard.
-- [ ] Student: attendance %, homework %, fee paid %.
-- [ ] Guardian: homework trend, fees, attendance.
+- [ ] Student: attendance %, homework %, fee paid %. Attendance % built in 4.3.
+- [ ] Guardian: homework trend, fees, attendance. Attendance % per child built in 4.3.
 
 ## 15. Out of scope for now (integrations)
 

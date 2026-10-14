@@ -11,6 +11,8 @@ from typing import Any
 
 from django.utils import timezone
 
+from apps.attendance.services import student_summaries
+from apps.attendance.ui import percent_text
 from apps.core.roles import Role
 from apps.lectures.services import lectures_today_count, upcoming_lectures
 from apps.lectures.ui import lecture_status_badge, lecture_summary, lecture_when
@@ -137,6 +139,25 @@ class StudentPortalHomePage(PortalHomePage):
     def get_chips(self) -> list[str]:
         return self.data.pairs
 
+    def get_stat_cards(self) -> list[Any]:
+        profile = self.data.profile
+        if profile is None:
+            return []
+        summary = student_summaries([profile])[profile.pk]
+        classes = "class" if summary.total == 1 else "classes"
+        return [
+            StatCard(
+                percent_text(summary.percent),
+                "Attendance",
+                note=f"{summary.total} finished {classes}",
+                icon="clipboard-check",
+                tone="lead",
+            ),
+            StatCard(
+                lectures_today_count(self.request.user), "Lectures today", icon="video"
+            ),
+        ]
+
 
 class GuardianPortalHomePage(GuardianChildMixin, PortalHomePage):
     portal = "guardian"
@@ -151,6 +172,10 @@ class GuardianPortalHomePage(GuardianChildMixin, PortalHomePage):
     def children(self) -> list[Any]:
         """The switcher reuses the children the home already loaded."""
         return self.data.children
+
+    @cached_property
+    def summaries(self) -> dict[int, Any]:
+        return student_summaries(self.data.children)
 
     def up_next_body(self) -> Any:
         lectures = upcoming_lectures(self.request.user, limit=UPCOMING_COUNT)
@@ -180,7 +205,8 @@ class GuardianPortalHomePage(GuardianChildMixin, PortalHomePage):
         batches = ", ".join(
             sorted({link.batch.name for link in child.batch_subjects.all()})
         )
-        detail = _code_line(child.student_code, label, batches)
+        percent = percent_text(self.summaries[child.pk].percent)
+        detail = _code_line(child.student_code, label, batches, f"Attendance {percent}")
         return PersonCell(str(child), detail=detail), profile_status_badge(child)
 
     def get_sections(self) -> list[Any]:
