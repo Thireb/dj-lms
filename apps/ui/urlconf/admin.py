@@ -96,9 +96,24 @@ urlpatterns = [
     path("lectures/", lectures.LectureListPage.as_view(), name="lecture_list"),
     path("lectures/add/", lectures.LectureCreatePage.as_view(), name="lecture_create"),
     path(
+        "lectures/<int:pk>/",
+        lectures.LectureDetailPage.as_view(),
+        name="lecture_detail",
+    ),
+    path(
         "lectures/<int:pk>/edit/",
         lectures.LectureEditPage.as_view(),
         name="lecture_edit",
+    ),
+    path(
+        "lectures/<int:pk>/cancel/",
+        lectures.LectureCancelView.as_view(),
+        name="lecture_cancel",
+    ),
+    path(
+        "teachers/lecture-history/",
+        lectures.AdminLectureHistoryPage.as_view(),
+        name="teacher_lecture_history",
     ),
     path(
         "lectures/schedules/",

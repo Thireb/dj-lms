@@ -139,4 +139,9 @@ CELERY_BEAT_SCHEDULE = {
         "task": "apps.lectures.tasks.extend_all_schedules",
         "schedule": crontab(hour=0, minute=30),
     },
+    # Lectures past their end become finished (roadmap 3.5, SPEC 6.4).
+    "finish-ended-lectures": {
+        "task": "apps.lectures.tasks.finish_all_ended_lectures",
+        "schedule": crontab(minute="*/5"),
+    },
 }

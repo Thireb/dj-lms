@@ -46,22 +46,29 @@ from apps.lectures.services import (
     SchedulePreview,
     calendar_lectures,
     calendar_range,
+    can_start,
+    cancel_lecture,
     create_lecture,
     create_schedule,
+    end_lecture,
     extend_schedule,
     join_opens_at,
     join_state,
     join_window_minutes,
+    list_history,
     list_lectures,
     list_schedules,
     next_lecture,
     preview_schedule,
+    start_lecture,
     stop_schedule,
     update_lecture,
     update_schedule,
 )
 from apps.lectures.times import combine_local, local_date, local_time, time_range
 from apps.lectures.ui import (
+    AdminHistoryTable,
+    HistoryTable,
     LectureTable,
     SchedulePreviewList,
     ScheduleTable,
@@ -69,20 +76,26 @@ from apps.lectures.ui import (
     TeacherLectureTable,
     TeacherScheduleTable,
     calendar_days,
+    can_cancel,
+    cancel_dialog,
+    end_dialog,
     join_action,
+    lecture_detail_rows,
+    lecture_summary,
     meeting_link_button,
+    start_button,
     stop_dialog,
     up_next_card,
 )
 from apps.people.models import StudentProfile, TeacherProfile
 from apps.ui.components.actions import Button
 from apps.ui.components.block_stack import BlockStack
-from apps.ui.components.data import EmptyState
+from apps.ui.components.data import DetailList, EmptyState
 from apps.ui.components.forms import CrispyForm, PortalPostForm
 from apps.ui.components.layout import LinkTabs, SectionCard
 from apps.ui.components.lectures import Calendar
 from apps.ui.components.nav import FilterBar, Pagination
-from apps.ui.views.pages import FormPage, ListPage, PortalPageView
+from apps.ui.views.pages import DetailPage, FormPage, ListPage, PortalPageView
 
 PAGE_SIZE = 25
 SHOW_KEYS = {key for key, _ in SHOW_CHOICES}
@@ -260,7 +273,7 @@ class LectureListPage(AdminLectureMixin, ListPage):
         )
 
     def table_kwargs(self) -> dict[str, Any]:
-        return {}
+        return {"window": join_window_minutes(self.get_institute())}
 
     def visible_lectures(self) -> Any:
         return Lecture.objects.for_user(self.request.user)
@@ -388,6 +401,164 @@ class GuardianLectureListPage(StudentLectureListPage):
         return super().first_lecture_state()
 
 
+# Lecture page and states (roadmap 3.5, SPEC 6.4)
+
+
+class LectureObjectMixin:
+    """The lecture from the URL, through ``for_user`` (404 when not visible)."""
+
+    def get_lecture(self) -> Lecture:
+        lectures = (
+            Lecture.objects.for_user(self.request.user)
+            .select_related("teacher__user", "batch", "schedule")
+            .prefetch_related("subjects")
+        )
+        return get_object_or_404(lectures, pk=self.kwargs["pk"])
+
+
+class LectureDetailPage(LectureObjectMixin, AdminLectureMixin, DetailPage):
+    title = "Lecture"
+
+    def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        self.lecture = self.get_lecture()
+        self.title = self.lecture.title
+        self.now = timezone.now()
+        self.window = join_window_minutes(self.get_institute())
+        return super().get(request, *args, **kwargs)
+
+    def get_subtitle(self) -> str:
+        return lecture_summary(self.lecture)
+
+    def get_actions(self) -> list[Any]:
+        lecture = self.lecture
+        actions = self.state_actions()
+        link = meeting_link_button(lecture)
+        if link is not None:
+            actions.append(link)
+        if lecture.status == LectureStatus.SCHEDULED:
+            url = self.url("edit", pk=lecture.pk)
+            actions.append(
+                Button("Edit", variant="secondary", url=url, icon="square-pen")
+            )
+        return actions
+
+    def state_actions(self) -> list[Any]:
+        if can_cancel(self.lecture, self.now):
+            return [cancel_dialog(self.lecture)]
+        return []
+
+    def get_primary_cards(self) -> list[Any]:
+        rows = lecture_detail_rows(self.lecture, show_teacher=self.portal == "admin")
+        return [SectionCard(title="Details", icon="video", body=DetailList(rows))]
+
+
+class TeacherLectureDetailPage(TeacherLectureMixin, LectureDetailPage):
+    def state_actions(self) -> list[Any]:
+        lecture = self.lecture
+        if can_start(lecture, now=self.now, window=self.window):
+            return [start_button(lecture)]
+        if lecture.status == LectureStatus.LIVE:
+            return [end_dialog(lecture)]
+        return []
+
+
+class LectureStateView(LectureObjectMixin, PortalPageView):
+    """POST only: change a lecture's state, then go back to its page."""
+
+    http_method_names = ["post"]
+    success_message = ""
+
+    def post(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        lecture = self.get_lecture()
+        try:
+            self.change(lecture)
+        except ValidationError as error:
+            messages.error(request, " ".join(error.messages))
+        else:
+            messages.success(request, self.success_message.format(title=lecture))
+        url = reverse(f"{self.portal}:lecture_detail", kwargs={"pk": lecture.pk})
+        return HttpResponseRedirect(url)
+
+    def change(self, lecture: Lecture) -> None:
+        raise NotImplementedError
+
+
+class LectureCancelView(AdminLectureMixin, LectureStateView):
+    success_message = "{title} cancelled."
+
+    def change(self, lecture: Lecture) -> None:
+        cancel_lecture(lecture)
+
+
+class TeacherLectureStartView(TeacherLectureMixin, LectureStateView):
+    success_message = "{title} started. Students can join now."
+
+    def change(self, lecture: Lecture) -> None:
+        start_lecture(lecture, window=join_window_minutes(self.get_institute()))
+
+
+class TeacherLectureEndView(TeacherLectureMixin, LectureStateView):
+    success_message = "{title} ended."
+
+    def change(self, lecture: Lecture) -> None:
+        end_lecture(lecture)
+
+
+class TeacherLectureHistoryPage(LectureListPage):
+    """Teacher "Lecture history" (SPEC 3): own finished lectures."""
+
+    portal = "teacher"
+    menu_key = None
+    active_item = "lecture_history"
+    allowed_roles = [Role.TEACHER]
+    title = "Lecture history"
+    filter_keys = ("batch",)
+    history_table = HistoryTable
+
+    def get_actions(self) -> list[Any]:
+        return []
+
+    def get_filters(self) -> dict[str, str]:
+        return {
+            key: search_param(self.request.GET.get(key)) for key in self.filter_keys
+        }
+
+    def get_rows(self, filters: dict[str, str]) -> Any:
+        return list_history(
+            self.request.user,
+            teacher_id=id_param(filters.get("teacher")),
+            batch_id=id_param(filters.get("batch")),
+        )
+
+    def get_components(self) -> dict[str, Any]:
+        filters = self.get_filters()
+        page = Paginator(self.get_rows(filters), PAGE_SIZE).get_page(
+            self.request.GET.get("page")
+        )
+        query = urlencode({key: value for key, value in filters.items() if value})
+        fields = [
+            getattr(self, f"{key}_filter")(filters[key]) for key in self.filter_keys
+        ]
+        return {
+            "filters": FilterBar(fields),
+            "table": self.history_table(list(page.object_list)),
+            "pagination": Pagination(page, query=query),
+        }
+
+
+class AdminLectureHistoryPage(TeacherLectureHistoryPage):
+    """Admin "Teacher lecture history" (People menu): every teacher's
+    finished lectures, filtered by teacher and batch."""
+
+    portal = "admin"
+    menu_key = menu_keys.PEOPLE
+    active_item = None
+    allowed_roles = [Role.INSTITUTE_ADMIN, Role.SUB_ADMIN]
+    title = "Teacher lecture history"
+    filter_keys = ("teacher", "batch")
+    history_table = AdminHistoryTable
+
+
 JOIN_REFUSED = {
     JOIN_SOON: "Join opens {opens}.",
     JOIN_WAITING: "The teacher has not started this lecture yet. Try again soon.",
@@ -429,10 +600,13 @@ def up_next_body(request: HttpRequest, portal: str, institute: Any) -> Any:
             framed=False,
         )
     refresh_url = reverse(f"{portal}:up_next")
-    if portal == "teacher":
-        action = meeting_link_button(lecture)
-        return up_next_card(lecture, action=action, refresh_url=refresh_url)
     window = join_window_minutes(institute)
+    if portal == "teacher":
+        if can_start(lecture, now=timezone.now(), window=window):
+            action = start_button(lecture)
+        else:
+            action = meeting_link_button(lecture)
+        return up_next_card(lecture, action=action, refresh_url=refresh_url)
     state = join_state(lecture, now=timezone.now(), window=window)
     return up_next_card(
         lecture,
@@ -460,7 +634,7 @@ class StudentUpNextCardView(UpNextCardView):
 
 class TeacherCalendarPage(ListPage):
     """Teacher "Schedule" (SPEC 3): own lectures in a week or month view, in
-    the teacher's time zone. A scheduled lecture links to its edit page."""
+    the teacher's time zone. Each lecture links to its page."""
 
     portal = "teacher"
     active_item = "schedule"
@@ -512,9 +686,7 @@ class TeacherCalendarPage(ListPage):
         )
 
     def lecture_url(self, lecture: Lecture) -> str | None:
-        if lecture.status != LectureStatus.SCHEDULED:
-            return None
-        return reverse("teacher:lecture_edit", kwargs={"pk": lecture.pk})
+        return reverse("teacher:lecture_detail", kwargs={"pk": lecture.pk})
 
 
 def calendar_day(value: str | None) -> date | None:

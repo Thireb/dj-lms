@@ -192,6 +192,24 @@ class PersonList(Component):
         return render_component_template(self, ctx, request=request)
 
 
+class DetailList(Component):
+    """Label and value pairs for a detail page (a ``<dl>``). A value may be
+    text or a component (a badge, a link); an empty value shows a dash."""
+
+    template_name = "ui/components/detail_list.html"
+
+    def __init__(self, rows, **props):
+        super().__init__(rows=rows, **props)
+
+    def render(self, request=None):
+        ctx = self.get_context()
+        ctx["rows"] = [
+            (label, render_child(value, request) if value not in (None, "") else "")
+            for label, value in ctx["rows"]
+        ]
+        return render_component_template(self, ctx, request=request)
+
+
 class ChartCard(Component):
     template_name = "ui/components/chart_card.html"
 

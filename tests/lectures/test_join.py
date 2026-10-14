@@ -255,15 +255,19 @@ def test_student_home_counts_down_to_the_next_lecture(school) -> None:
 
 
 @pytest.mark.django_db
-def test_teacher_home_has_the_meeting_link_and_lectures_today(school) -> None:
+def test_teacher_home_has_start_class_and_lectures_today(school) -> None:
     # Starts now, so it is today at any time of day.
-    _starting_in(school, 0, title="Algebra basics")
+    lecture = _starting_in(school, 0, title="Algebra basics")
+    start = reverse("teacher:lecture_start", kwargs={"pk": lecture.pk})
 
     html = _home(school.teacher_1.user, "teacher:home")
+    _set_status(lecture, LectureStatus.LIVE)
+    live = _home(school.teacher_1.user, "teacher:home")
 
     card = html.split("countdown-card", 1)[1]
     assert "Algebra basics" in card
-    assert f'href="{MEET_URL}"' in card
+    assert f'action="{start}"' in card
+    assert f'href="{MEET_URL}"' in live.split("countdown-card", 1)[1]
     assert re.search(r'font-bold[^"]*">1</p><p[^>]*>Lectures today<', html)
 
 

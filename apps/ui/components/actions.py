@@ -81,8 +81,11 @@ class ConfirmDialog(Component):
         trigger_label="",
         variant="danger",
         fields=None,
+        dismiss_label="Cancel",
         **props,
     ):
+        """``dismiss_label`` closes the dialog; change it when the action
+        itself is a cancel ("Keep lecture" next to "Cancel lecture")."""
         super().__init__(
             message=message,
             confirm_label=confirm_label,
@@ -90,6 +93,7 @@ class ConfirmDialog(Component):
             trigger_label=trigger_label,
             variant=variant,
             fields=list(fields or []),
+            dismiss_label=dismiss_label,
             **props,
         )
 

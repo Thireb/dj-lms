@@ -1,0 +1,1 @@
+<dl class="detail-list grid gap-x-6 gap-y-3 text-sm sm:grid-cols-[11rem_minmax(0,1fr)]">{% for label, value in rows %}<dt class="font-semibold text-muted">{{ label }}</dt><dd class="min-w-0 break-words text-text">{% if value %}{{ value }}{% else %}<span class="text-muted">-</span>{% endif %}</dd>{% endfor %}</dl>
