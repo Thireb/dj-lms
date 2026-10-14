@@ -2227,8 +2227,8 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
     (
         "teacher table has no cancel",
         "apps/lectures/ui.py",
-        "        if can_start(lecture, now=self.now, window=self.window):\n            return [start_button(lecture)]\n        return []\n",
-        "        if can_start(lecture, now=self.now, window=self.window):\n            return [start_button(lecture)]\n        return super().state_actions(lecture)\n",
+        '                    "clipboard-check", f"Attendance for {lecture.title}", url=url\n                )\n            ]\n        return []\n',
+        '                    "clipboard-check", f"Attendance for {lecture.title}", url=url\n                )\n            ]\n        return super().state_actions(lecture)\n',
     ),
     (
         "admin list cancel only when cancellable",

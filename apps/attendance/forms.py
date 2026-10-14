@@ -9,7 +9,7 @@ from django import forms
 
 from apps.attendance.models import AttendanceStatus
 from apps.attendance.services import RosterEntry
-from apps.ui.forms.base import BaseForm, FormActions
+from apps.ui.forms.base import BaseForm, FormActions, Section
 from apps.ui.forms.widgets import ChipRadios
 
 PREFIX = "student_"
@@ -37,7 +37,13 @@ class AttendanceForm(BaseForm):
 
     def get_layout(self) -> Layout:
         return Layout(
-            *self.fields.keys(), FormActions(self.save_label, self.cancel_url)
+            Section(
+                "Students",
+                *self.fields.keys(),
+                description="Everyone starts at Present. Change the students "
+                "who were late, partial or absent.",
+            ),
+            FormActions(self.save_label, self.cancel_url),
         )
 
     def marks(self) -> dict[int, str]:

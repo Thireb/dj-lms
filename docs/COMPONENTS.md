@@ -289,7 +289,7 @@ Every item here is a class. Names are fixed.
 
 Form layout objects: `Section(legend, *fields, description="", columns=1)` (title and a one-line explanation on the left, fields on the right from md; `columns=2` puts the fields in two columns; with no legend the fields take the full width), `Row`, `FormActions` (`stacked=True`: cancel becomes a text link and the submit button is full width, for public pages).
 
-Form widgets (not components): `PasswordInput` (show/hide toggle; static `type="password"` for no-JS and tests). `GroupedCheckboxes` (one fieldset per choice group, for example subjects under each batch; `empty_text` when there are no choices). `ChipRadios` (one choice as a row of chips in a `radiogroup`; `group_label` names it for screen readers; used for attendance marks).
+Form widgets (not components): `PasswordInput` (show/hide toggle; static `type="password"` for no-JS and tests). `GroupedCheckboxes` (one fieldset per choice group, for example subjects under each batch; `empty_text` when there are no choices). `ChipRadios` (one choice as a row of chips in a `radiogroup`; `group_label` names it for screen readers; below sm the chips are 4 equal columns without the check icon, so four marks fit at 360px; used for attendance marks).
 
 Built ahead of the pages that need them, and shown only on `/dev/components/` so far: `Modal`, `Tabs`, `ChartCard`, `PdfHeader`, `HtmxModalForm`. Keep them tested; the lecture, chart and PDF phases use them (audit L12).
 
