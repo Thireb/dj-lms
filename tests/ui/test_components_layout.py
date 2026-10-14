@@ -103,3 +103,15 @@ def test_sidebar_group_headings_have_enough_contrast() -> None:
 
     assert "text-white/55" not in template
     assert 'text-white/70">{{ group.label }}' in template
+
+
+def test_sidebar_background_grows_with_its_items() -> None:
+    """Audit P4-4: with ``h-full`` the gradient stopped at the screen
+    height, so the items below it (Account, Sign out) were white text on
+    the light page. The aside grows with its items; its parent scrolls."""
+    html = str(Sidebar(portal="teacher", groups=stub_menu_groups()))
+    aside = html.split("<aside", 1)[1].split(">", 1)[0]
+    classes = aside.split('class="', 1)[1].split('"', 1)[0].split()
+
+    assert "min-h-full" in classes
+    assert "h-full" not in classes

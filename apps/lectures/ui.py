@@ -38,7 +38,7 @@ from apps.lectures.services import (
 )
 from apps.lectures.times import local_date, local_time, time_range
 from apps.ui.components.actions import Button, ConfirmDialog, IconButton, PostButton
-from apps.ui.components.block_stack import ButtonRow
+from apps.ui.components.block_stack import BlockStack, ButtonRow
 from apps.ui.components.data import (
     Badge,
     BadgeNote,
@@ -512,15 +512,19 @@ class TeacherScheduleTable(ScheduleTable):
         return [column for column in super().columns if column.key != "teacher"]
 
 
+PREVIEW_ROWS = 10  # dates listed in a schedule preview (audit P4-6)
+
+
 def schedule_preview_list(planned: list) -> Any:
     """The lectures a schedule save would make (SPEC 4.6 preview): one line
     per date, with the reason only on a skipped date. A table made one card
-    per date with an empty Note row on phones (external audit L3)."""
+    per date with an empty Note row on phones (external audit L3). Only the
+    first dates are listed; 21 lines were 3799px at 360px (audit P4-6)."""
     if not planned:
         return EmptyState(
             "No lecture falls in the next weeks.", icon="calendar", framed=False
         )
-    return Grid(
+    rows = Grid(
         [
             LectureRow(
                 preview_when(item.starts_at),
@@ -528,10 +532,25 @@ def schedule_preview_list(planned: list) -> Any:
                 detail=_preview_note(item),
                 trailing=_preview_result(item),
             )
-            for item in planned
+            for item in planned[:PREVIEW_ROWS]
         ],
         variant="list",
     )
+    rest = planned[PREVIEW_ROWS:]
+    if not rest:
+        return rows
+    return BlockStack(blocks=[rows, _more_dates(rest)])
+
+
+def _more_dates(rest: list) -> str:
+    """Example: and 11 more dates, 2 of them skipped."""
+    noun = "date" if len(rest) == 1 else "dates"
+    skipped = sum(1 for item in rest if item.clash is not None)
+    if not skipped:
+        return f"and {len(rest)} more {noun}."
+    if len(rest) == 1:
+        return "and 1 more date, skipped."
+    return f"and {len(rest)} more {noun}, {skipped} of them skipped."
 
 
 def preview_when(starts_at: datetime) -> str:

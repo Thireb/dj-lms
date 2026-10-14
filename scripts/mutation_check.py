@@ -2674,6 +2674,66 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "    rows = list(lectures[:MONITOR_ROWS])\n",
         "    rows = list(lectures)\n",
     ),
+    (
+        "sidebar background grows with its items (P4-4)",
+        "apps/ui/templates/ui/components/sidebar.html",
+        '<aside class="sidebar flex min-h-full w-64',
+        '<aside class="sidebar flex h-full w-64',
+    ),
+    (
+        "attendance percent of marked classes (P4-5)",
+        "apps/attendance/services.py",
+        "        share = attended * 100 / self.marked\n",
+        "        share = attended * 100 / self.total\n",
+    ),
+    (
+        "attendance no percent before a mark (P4-5)",
+        "apps/attendance/services.py",
+        "        if not self.marked:\n",
+        "        if not self.total:\n",
+    ),
+    (
+        "attendance waiting badge for students (P4-5)",
+        "apps/attendance/ui.py",
+        '        return Badge(WAITING if waiting else NOT_MARKED, tone="neutral")\n',
+        '        return Badge(NOT_MARKED, tone="neutral")\n',
+    ),
+    (
+        "attendance no marks yet value (P4-5)",
+        "apps/attendance/ui.py",
+        "    return NO_MARKS if percent is None else percent_text(percent)\n",
+        "    return percent_text(percent)\n",
+    ),
+    (
+        "attendance card note counts marked (P4-5)",
+        "apps/attendance/ui.py",
+        "    if summary.not_marked:\n",
+        "    if False:\n",
+    ),
+    (
+        "attendance absent card only absent (P4-5)",
+        "apps/attendance/ui.py",
+        '            StatCard(summary.absent, "Absent", icon="x"),\n',
+        '            StatCard(summary.absent + summary.not_marked, "Absent", icon="x"),\n',
+    ),
+    (
+        "admin history keeps not marked (P4-5)",
+        "apps/attendance/views.py",
+        "    waiting = False\n",
+        "    waiting = True\n",
+    ),
+    (
+        "schedule preview lists the first dates (P4-6)",
+        "apps/lectures/ui.py",
+        "            for item in planned[:PREVIEW_ROWS]\n",
+        "            for item in planned\n",
+    ),
+    (
+        "schedule preview counts hidden skipped dates (P4-6)",
+        "apps/lectures/ui.py",
+        '    if not skipped:\n        return f"and {len(rest)} more {noun}."\n',
+        '    if True:\n        return f"and {len(rest)} more {noun}."\n',
+    ),
 ]
 
 

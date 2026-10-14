@@ -28,6 +28,7 @@ from apps.attendance.ui import (
     StudentPickTable,
     SummaryTable,
     summary_cards,
+    waiting_line,
 )
 from apps.core import menus as menu_keys
 from apps.core.query import id_param, search_param
@@ -123,6 +124,9 @@ class StudentAttendancePage(ListPage):
     allowed_roles = [Role.STUDENT]
     title = "My attendance"
     filter_keys = ("subject", "date_from", "date_to")
+    # Students and guardians see "Waiting for teacher" and why the % leaves
+    # those classes out; staff see "Not marked" (audit P4-5).
+    waiting = True
     no_student = EmptyState(
         "No student profile.", text="Contact the institute office.", icon="user"
     )
@@ -159,10 +163,13 @@ class StudentAttendancePage(ListPage):
         )
         view = search_param(self.request.GET.get("view"))
         view = view if view in VIEWS else VIEW_CLASSES
+        summary = summarize(records)
+        line = waiting_line(summary) if self.waiting else ""
         components = {
             "filters": BlockStack(
                 blocks=[
-                    summary_cards(summarize(records)),
+                    summary_cards(summary),
+                    *([line] if line else []),
                     self.view_tabs(view, filters),
                     FilterBar(self.filter_fields(filters, view)),
                 ]
@@ -184,7 +191,9 @@ class StudentAttendancePage(ListPage):
             query = urlencode(
                 {"view": view} | {key: value for key, value in filters.items() if value}
             )
-            components["table"] = AttendanceTable(list(page.object_list))
+            components["table"] = AttendanceTable(
+                list(page.object_list), waiting=self.waiting
+            )
             components["pagination"] = Pagination(page, query=query)
         return components
 
@@ -252,6 +261,7 @@ class AdminStudentAttendancePage(StudentAttendancePage):
     allowed_roles = [Role.INSTITUTE_ADMIN, Role.SUB_ADMIN]
     title = "Student attendance history"
     filter_keys = ("student", "subject", "date_from", "date_to")
+    waiting = False
 
     def get_student(self) -> StudentProfile | None:
         wanted = id_param(search_param(self.request.GET.get("student")))

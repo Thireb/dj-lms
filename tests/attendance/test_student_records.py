@@ -31,9 +31,32 @@ def _records(student, **filters) -> list[tuple[str, str]]:
 def test_percent_counts_late_and_half_of_partial() -> None:
     summary = Summary(present=2, late=1, partial=1, absent=1, not_marked=1)
     assert summary.total == 6
-    # (2 + 1 + 0.5) / 6 = 58.333...%
-    assert summary.percent == Decimal("58.3")
-    assert percent_text(summary.percent) == "58.3%"
+    assert summary.marked == 5
+    # Not marked is left out (owner decision 2026-10-14): (2 + 1 + 0.5) / 5
+    assert summary.percent == Decimal("70.0")
+    assert percent_text(summary.percent) == "70%"
+
+
+# Owner decision 2026-10-14 (audit P4-5): only marked classes count.
+
+
+def test_ten_classes_one_not_marked() -> None:
+    summary = Summary(present=4, late=2, partial=2, absent=1, not_marked=1)
+    assert (summary.total, summary.marked) == (10, 9)
+    # (4 + 2 + 0.5 x 2) / 9 = 7 / 9 = 77.77...%
+    assert summary.percent == Decimal("77.8")
+
+
+def test_nothing_marked_has_no_percent() -> None:
+    summary = Summary(not_marked=10)
+    assert summary.total == 10
+    assert summary.percent is None
+
+
+def test_waiting_classes_do_not_lower_the_percent() -> None:
+    assert Summary(present=1, not_marked=2).percent == Decimal("100.0")
+    assert Summary(partial=1).percent == Decimal("50.0")
+    assert Summary(present=1, absent=1).percent == Decimal("50.0")
 
 
 def test_percent_rounds_half_up() -> None:

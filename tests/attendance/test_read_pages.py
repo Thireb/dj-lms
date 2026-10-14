@@ -16,7 +16,7 @@ from tests.attendance.conftest import finished, mark
 from tests.conftest import cell, make_user, table_row
 from tests.lectures.conftest import select_values, signed_in
 from tests.people.conftest import student
-from tests.school import link_guardian, link_student
+from tests.school import link_guardian, link_student, link_teacher
 
 STUDENT_URL = reverse("student:attendance")
 GUARDIAN_URL = reverse("guardian:attendance")
@@ -30,10 +30,10 @@ def _html(client, url: str, **params) -> str:
     return response.content.decode()
 
 
-def _evening(school, **fields):
+def _evening(school, title="Evening physics", **fields):
     return finished(
         school,
-        title="Evening physics",
+        title=title,
         teacher=school.teacher_2,
         batch=school.evening,
         subjects=[school.physics],
@@ -95,12 +95,15 @@ def test_student_sees_own_marks_and_percent(old_school) -> None:
     html = _html(signed_in(school.student_1.user), STUDENT_URL)
 
     assert cell(table_row(html, "Taken"), "status") == ["Partial"]
-    assert cell(table_row(html, "Untaken"), "status") == ["Not", "marked"]
+    assert cell(table_row(html, "Untaken"), "status") == ["Waiting", "for", "teacher"]
     assert "Evening physics" not in html
-    # (0.5 partial) / 2 classes = 25%
-    assert ">25%<" in html
-    assert "2 finished classes" in html
-    assert "1 not marked" in html
+    # Only the marked class counts (owner decision 2026-10-14): 0.5 / 1
+    assert ">50%<" in html
+    assert "1 of 2 finished classes marked" in html
+    assert (
+        "1 class is waiting for the teacher to mark attendance. "
+        "It is not counted yet." in html
+    )
     assert "student:attendance" not in html  # menu shows a URL, not a name
     assert f'href="{STUDENT_URL}"' in html
 
@@ -359,8 +362,18 @@ def test_student_home_shows_the_percent(old_school) -> None:
     finished(school, title="Second", days_ago=2)
     mark(lecture, {school.student_1: "late"})
     html = _html(signed_in(school.student_1.user), reverse("student:home"))
-    assert ">50%<" in html
-    assert "2 finished classes" in html
+    # The unmarked class is left out: 1 late / 1 marked
+    assert ">100%<" in html
+    assert "1 of 2 finished classes marked" in html
+
+
+@pytest.mark.django_db
+def test_student_home_with_no_marks(old_school) -> None:
+    school = old_school
+    finished(school)
+    html = _html(signed_in(old_school.student_1.user), reverse("student:home"))
+    assert ">No marks yet<" in html
+    assert "0 of 1 finished class marked" in html
 
 
 @pytest.mark.django_db
@@ -370,6 +383,85 @@ def test_guardian_home_shows_each_child_percent(two_children) -> None:
     evening = _evening(school)
     mark(lecture, {school.student_1: "present"})
     mark(evening, {school.student_2: "absent"})
+    _evening(school, title="Evening waiting", days_ago=2)
     html = _html(signed_in(school.guardian_1.user), reverse("guardian:home"))
-    assert "Attendance 100%" in html
-    assert "Attendance 0%" in html
+    assert "Attendance: 100%" in html
+    # 1 absent of 1 marked; the waiting class does not count
+    assert "Attendance: 0%" in html
+
+
+@pytest.mark.django_db
+def test_guardian_home_child_with_no_marks(two_children) -> None:
+    school = two_children
+    mark(finished(school), {school.student_1: "partial"})
+    _evening(school)
+    html = _html(signed_in(school.guardian_1.user), reverse("guardian:home"))
+    assert "Attendance: 50%" in html
+    assert "Attendance: No marks yet" in html
+
+
+@pytest.mark.django_db
+def test_admin_sees_not_marked_without_the_waiting_line(old_school, admin_client):
+    school = old_school
+    mark(finished(school, title="Taken", days_ago=2), {school.student_1: "absent"})
+    finished(school, title="Untaken")
+    html = _html(admin_client, ADMIN_URL, student=school.student_1.pk)
+    assert cell(table_row(html, "Untaken"), "status") == ["Not", "marked"]
+    assert "waiting for the teacher" not in html
+    assert ">0%<" in html
+    assert "1 of 2 finished classes marked" in html
+
+
+@pytest.mark.django_db
+def test_absent_card_counts_only_absent(old_school) -> None:
+    school = old_school
+    mark(finished(school, title="Gone", days_ago=2), {school.student_1: "absent"})
+    finished(school, title="Untaken")
+    html = _html(signed_in(school.student_1.user), STUDENT_URL)
+    card = html.split(">Absent<")[0][-60:]
+    assert ">1</p>" in card
+    assert "not marked" not in html
+
+
+@pytest.mark.django_db
+def test_every_class_waiting(old_school) -> None:
+    school = old_school
+    finished(school, title="One")
+    finished(school, title="Two", days_ago=2)
+    html = _html(signed_in(school.student_1.user), STUDENT_URL)
+    assert ">No marks yet<" in html
+    assert "0 of 2 finished classes marked" in html
+    assert "2 classes are waiting for the teacher to mark attendance." in html
+
+
+@pytest.mark.django_db
+def test_subject_filter_and_views_leave_out_waiting_classes(old_school) -> None:
+    school = old_school
+    mark(
+        finished(school, title="Math marked", days_ago=3), {school.student_1: "partial"}
+    )
+    finished(school, title="Math waiting", days_ago=2)
+    link_teacher(school.teacher_1, {school.morning: [school.math, school.physics]})
+    physics = finished(school, title="Physics", subjects=[school.physics], days_ago=1)
+    mark(physics, {school.student_1: "present"})
+    client = signed_in(school.student_1.user)
+
+    math = _html(client, STUDENT_URL, subject=school.math.pk)
+    subjects = _html(client, STUDENT_URL, view="subjects")
+    months = _html(client, STUDENT_URL, view="months", subject=school.math.pk)
+
+    assert ">50%<" in math  # 0.5 / 1 marked Math class
+    assert cell(table_row(subjects, "Math"), "percent") == ["50%"]
+    assert cell(table_row(subjects, "Math"), "not_marked") == ["1"]
+    assert cell(table_row(subjects, "Physics"), "percent") == ["100%"]
+    month_row = re.findall(r"<tr\b.*?</tr>", months, re.S)[1]
+    assert cell(month_row, "percent") == ["50%"]
+
+
+@pytest.mark.django_db
+def test_summary_row_with_no_marks_shows_a_dash(old_school) -> None:
+    school = old_school
+    finished(school, title="Math waiting")
+    html = _html(signed_in(school.student_1.user), STUDENT_URL, view="subjects")
+    assert cell(table_row(html, "Math"), "percent") == ["-"]
+    assert cell(table_row(html, "Math"), "not_marked") == ["1"]

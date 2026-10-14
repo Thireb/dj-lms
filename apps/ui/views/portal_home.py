@@ -12,7 +12,7 @@ from typing import Any
 from django.utils import timezone
 
 from apps.attendance.services import lectures_to_mark, student_summaries
-from apps.attendance.ui import percent_text
+from apps.attendance.ui import attendance_value, classes_note
 from apps.core.roles import Role
 from apps.lectures.services import lectures_today_count, upcoming_lectures
 from apps.lectures.ui import lecture_status_badge, lecture_summary, lecture_when
@@ -150,12 +150,11 @@ class StudentPortalHomePage(PortalHomePage):
         if profile is None:
             return []
         summary = student_summaries([profile])[profile.pk]
-        classes = "class" if summary.total == 1 else "classes"
         return [
             StatCard(
-                percent_text(summary.percent),
+                attendance_value(summary.percent),
                 "Attendance",
-                note=f"{summary.total} finished {classes}",
+                note=classes_note(summary),
                 icon="clipboard-check",
                 tone="lead",
             ),
@@ -211,8 +210,10 @@ class GuardianPortalHomePage(GuardianChildMixin, PortalHomePage):
         batches = ", ".join(
             sorted({link.batch.name for link in child.batch_subjects.all()})
         )
-        percent = percent_text(self.summaries[child.pk].percent)
-        detail = _code_line(child.student_code, label, batches, f"Attendance {percent}")
+        percent = attendance_value(self.summaries[child.pk].percent)
+        detail = _code_line(
+            child.student_code, label, batches, f"Attendance: {percent}"
+        )
         return PersonCell(str(child), detail=detail), profile_status_badge(child)
 
     def get_sections(self) -> list[Any]:

@@ -30,12 +30,16 @@ STATUS_TONES = {
     AttendanceStatus.ABSENT: "danger",
 }
 NOT_MARKED = "Not marked"
+WAITING = "Waiting for teacher"
+NO_MARKS = "No marks yet"
 
 
-def attendance_badge(status: str) -> Badge:
-    """A mark, or a grey "Not marked" when the teacher has not marked it."""
+def attendance_badge(status: str, *, waiting: bool = False) -> Badge:
+    """A mark, or a grey badge when the teacher has not marked it: "Not
+    marked" for staff, "Waiting for teacher" (``waiting``) for students and
+    guardians (audit P4-5)."""
     if not status:
-        return Badge(NOT_MARKED, tone="neutral")
+        return Badge(WAITING if waiting else NOT_MARKED, tone="neutral")
     return Badge(AttendanceStatus(status).label, tone=STATUS_TONES[status])
 
 
@@ -79,16 +83,44 @@ def percent_text(percent: Decimal | None) -> str:
     return f"{text.removesuffix('.0')}%"
 
 
-def summary_cards(summary: Summary) -> Grid:
-    """Attendance %, Present, Partial and Absent for a student (SPEC 6.3)."""
-    absent_note = f"{summary.not_marked} not marked" if summary.not_marked else ""
+def attendance_value(percent: Decimal | None) -> str:
+    """A card or dashboard value: the %, or "No marks yet" (audit P4-5)."""
+    return NO_MARKS if percent is None else percent_text(percent)
+
+
+def classes_note(summary: Summary) -> str:
+    """Example: 3 of 5 finished classes marked; 5 finished classes."""
     classes = "class" if summary.total == 1 else "classes"
+    if summary.not_marked:
+        return f"{summary.marked} of {summary.total} finished {classes} marked"
+    return f"{summary.total} finished {classes}"
+
+
+def waiting_line(summary: Summary) -> str:
+    """Why the % leaves some classes out; empty when none is waiting."""
+    count = summary.not_marked
+    if not count:
+        return ""
+    if count == 1:
+        return (
+            "1 class is waiting for the teacher to mark attendance. "
+            "It is not counted yet."
+        )
+    return (
+        f"{count} classes are waiting for the teacher to mark attendance. "
+        "They are not counted yet."
+    )
+
+
+def summary_cards(summary: Summary) -> Grid:
+    """Attendance %, Present, Partial and Absent for a student (SPEC 6.3).
+    The % counts marked classes only (owner decision 2026-10-14)."""
     return Grid(
         [
             StatCard(
-                percent_text(summary.percent),
+                attendance_value(summary.percent),
                 "Attendance",
-                note=f"{summary.total} finished {classes}",
+                note=classes_note(summary),
                 icon="clipboard-check",
                 tone="lead",
             ),
@@ -96,12 +128,7 @@ def summary_cards(summary: Summary) -> Grid:
                 summary.present, "Present", note=f"{summary.late} late", icon="check"
             ),
             StatCard(summary.partial, "Partial", note="Counts as half", icon="clock"),
-            StatCard(
-                summary.absent + summary.not_marked,
-                "Absent",
-                note=absent_note,
-                icon="x",
-            ),
+            StatCard(summary.absent, "Absent", icon="x"),
         ],
         variant="stats",
     )
@@ -117,7 +144,8 @@ class AttendanceTable(DataTable):
 
     empty_title = "No finished classes match these filters."
 
-    def __init__(self, rows: list[Record], **props):
+    def __init__(self, rows: list[Record], *, waiting: bool = False, **props):
+        self.waiting = waiting
         super().__init__(rows=rows, **props)
 
     @property
@@ -135,7 +163,9 @@ class AttendanceTable(DataTable):
             Column("subjects", "Subjects", _subjects),
             Column("teacher", "Teacher", lambda record: str(record.lecture.teacher)),
             Column(
-                "status", "Attendance", lambda record: attendance_badge(record.status)
+                "status",
+                "Attendance",
+                lambda record: attendance_badge(record.status, waiting=self.waiting),
             ),
         ]
 
