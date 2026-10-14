@@ -2011,8 +2011,8 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
     (
         "join ends with the lecture",
         "apps/lectures/services.py",
-        "    if lecture.status == LectureStatus.FINISHED or now >= lecture.ends_at:\n",
-        "    if lecture.status == LectureStatus.FINISHED:\n",
+        "    if lecture.status in CLOSED_STATUSES or now >= lecture.ends_at:\n",
+        "    if lecture.status in CLOSED_STATUSES:\n",
     ),
     (
         "join none for in person",
@@ -2173,20 +2173,14 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
     (
         "finish only past the end",
         "apps/lectures/services.py",
-        '        .filter(ends_at_db__lte=now)\n    )\n    return Lecture.objects.filter(pk__in=ended.values("pk"))',
-        '    )\n    return Lecture.objects.filter(pk__in=ended.values("pk"))',
-    ),
-    (
-        "finish leaves cancelled alone",
-        "apps/lectures/services.py",
-        "        Lecture.objects.filter(status__in=OPEN_STATUSES)\n        .annotate(ends_at_db=ENDS_AT)\n        .filter(ends_at_db__lte=now)\n",
-        "        Lecture.objects.all()\n        .annotate(ends_at_db=ENDS_AT)\n        .filter(ends_at_db__lte=now)\n",
+        "    ended = Lecture.objects.annotate(ends_at_db=ENDS_AT).filter(ends_at_db__lte=now)\n",
+        "    ended = Lecture.objects.annotate(ends_at_db=ENDS_AT)\n",
     ),
     (
         "finish needs the tenant",
         "apps/lectures/services.py",
-        '    count."""\n    require_tenant_context(institute)\n',
-        '    count."""\n',
+        '    count of both."""\n    require_tenant_context(institute)\n',
+        '    count of both."""\n',
     ),
     (
         "taught minutes from start and end",
