@@ -43,7 +43,9 @@ from apps.lectures.times import (
     local_date,
     local_day_bounds,
     local_time,
+    missing_time_message,
     time_range,
+    wall_time_missing,
 )
 from apps.people.models import ProfileStatus, TeacherProfile
 
@@ -780,8 +782,12 @@ def _check_dates(
     if (details.end_date - details.start_date).days >= MAX_SCHEDULE_DAYS:
         errors.add("end_date", "A schedule can run for one year at most.")
         return
-    if not occurrences(details, details.start_date, details.end_date):
+    starts = occurrences(details, details.start_date, details.end_date)
+    if not starts:
         errors.add("weekdays", "None of these days falls between the dates.")
+    missing = next((start for start in starts if wall_time_missing(start)), None)
+    if missing is not None:
+        errors.add("start_time", missing_time_message(missing))
 
 
 def _enqueue(schedule: RecurringSchedule) -> None:

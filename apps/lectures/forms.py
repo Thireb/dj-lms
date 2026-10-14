@@ -20,6 +20,7 @@ from apps.lectures.models import (
     Weekday,
     meeting_url_validator,
 )
+from apps.lectures.times import combine_local, missing_time_message, wall_time_missing
 from apps.people.models import ProfileStatus, TeacherProfile
 from apps.ui.forms.base import BaseForm, style_widgets
 from apps.ui.forms.layout import FormActions, Section
@@ -190,6 +191,11 @@ class LectureForm(BaseForm):
             )
         if mode == DeliveryMode.IN_PERSON:
             cleaned["meeting_url"] = ""
+        day, start = cleaned.get("date"), cleaned.get("start_time")
+        if day is not None and start is not None:
+            local = combine_local(day, start)
+            if wall_time_missing(local):
+                self.add_error("start_time", missing_time_message(local))
         return cleaned
 
     def teacher(self) -> TeacherProfile:
