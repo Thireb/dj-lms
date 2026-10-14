@@ -2209,8 +2209,8 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
     (
         "history newest first",
         "apps/lectures/services.py",
-        '    return lectures.order_by("-starts_at", "-pk")\n\n\n# Calendar',
-        '    return lectures.order_by("starts_at", "pk")\n\n\n# Calendar',
+        '    return lectures.order_by("-starts_at", "-pk")\n\n\n# Live lecture monitor',
+        '    return lectures.order_by("starts_at", "pk")\n\n\n# Live lecture monitor',
     ),
     (
         "history teacher filter",
@@ -2265,6 +2265,78 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "apps/lectures/tasks.py",
         "    finished = 0\n    for institute in Institute.objects.filter(is_active=True):\n",
         "    finished = 0\n    for institute in Institute.objects.all():\n",
+    ),
+    (
+        "monitor late needs past the start",
+        "apps/lectures/services.py",
+        "        late=list(scheduled.filter(starts_at__lte=now, ends_at_db__gt=now)),\n",
+        "        late=list(scheduled.filter(ends_at_db__gt=now)),\n",
+    ),
+    (
+        "monitor late leaves at the end",
+        "apps/lectures/services.py",
+        "        late=list(scheduled.filter(starts_at__lte=now, ends_at_db__gt=now)),\n",
+        "        late=list(scheduled.filter(starts_at__lte=now)),\n",
+    ),
+    (
+        "monitor late only scheduled",
+        "apps/lectures/services.py",
+        "    scheduled = lectures.filter(status=LectureStatus.SCHEDULED)\n",
+        "    scheduled = lectures.exclude(status=LectureStatus.LIVE)\n",
+    ),
+    (
+        "monitor soon is two hours",
+        "apps/lectures/services.py",
+        "            scheduled.filter(starts_at__gt=now, starts_at__lte=now + SOON_WINDOW)\n",
+        "            scheduled.filter(starts_at__gt=now)\n",
+    ),
+    (
+        "monitor uses for_user",
+        "apps/lectures/services.py",
+        "    lectures = (\n        Lecture.objects.for_user(user)\n        .annotate(ends_at_db=ENDS_AT)\n",
+        "    lectures = (\n        Lecture.objects.all()\n        .annotate(ends_at_db=ENDS_AT)\n",
+    ),
+    (
+        "monitor total leaves out cancelled",
+        "apps/lectures/services.py",
+        "            if status != LectureStatus.CANCELLED\n",
+        "            if True\n",
+    ),
+    (
+        "monitor today is today",
+        "apps/lectures/services.py",
+        '        .filter(starts_at__gte=start, starts_at__lt=end)\n        .values("status")\n',
+        '        .filter(starts_at__gte=start)\n        .values("status")\n',
+    ),
+    (
+        "monitor page needs dashboards menu",
+        "apps/lectures/views.py",
+        '    portal = "admin"\n    menu_key = menu_keys.DASHBOARDS\n    allowed_roles = [Role.INSTITUTE_ADMIN, Role.SUB_ADMIN]\n    title = "Lectures dashboard"\n',
+        '    portal = "admin"\n    menu_key = None\n    allowed_roles = [Role.INSTITUTE_ADMIN, Role.SUB_ADMIN]\n    title = "Lectures dashboard"\n',
+    ),
+    (
+        "live region refuses unsafe ids",
+        "apps/ui/components/layout.py",
+        '        if not re.fullmatch(r"[a-z][a-z0-9-]*", str(region_id)):\n',
+        "        if False:\n",
+    ),
+    (
+        "live region url is safe",
+        "apps/ui/components/layout.py",
+        "            url=safe_url(url),\n            seconds=int(seconds),\n",
+        "            url=url,\n            seconds=int(seconds),\n",
+    ),
+    (
+        "live region selects itself",
+        "apps/ui/templates/ui/components/live_region.html",
+        ' hx-select="#{{ region_id }}"',
+        "",
+    ),
+    (
+        "monitor running time from start",
+        "apps/lectures/ui.py",
+        "            return minutes_text(self.now - (lecture.started_at or lecture.starts_at))\n",
+        "            return minutes_text(self.now - lecture.starts_at)\n",
     ),
 ]
 

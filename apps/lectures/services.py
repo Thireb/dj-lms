@@ -482,6 +482,56 @@ def list_history(
     return lectures.order_by("-starts_at", "-pk")
 
 
+# Live lecture monitor (roadmap 3.6, SPEC 8 Lectures dashboard)
+
+SOON_WINDOW = timedelta(hours=2)
+
+
+@dataclass(frozen=True)
+class LectureMonitor:
+    live: list[Lecture]
+    late: list[Lecture]  # past their start, not started, not ended
+    soon: list[Lecture]  # start within SOON_WINDOW
+    today: dict[str, int]  # today's lectures by status
+
+    @property
+    def today_total(self) -> int:
+        """Today's lectures without the cancelled ones."""
+        return sum(
+            count
+            for status, count in self.today.items()
+            if status != LectureStatus.CANCELLED
+        )
+
+
+def lecture_monitor(user: Any, *, now: datetime | None = None) -> LectureMonitor:
+    now = now or timezone.now()
+    lectures = (
+        Lecture.objects.for_user(user)
+        .annotate(ends_at_db=ENDS_AT)
+        .select_related("teacher__user", "batch")
+        .prefetch_related("subjects")
+        .order_by("starts_at", "pk")
+    )
+    scheduled = lectures.filter(status=LectureStatus.SCHEDULED)
+    start, end = local_day_bounds(now)
+    today = (
+        Lecture.objects.for_user(user)
+        .filter(starts_at__gte=start, starts_at__lt=end)
+        .values("status")
+        .annotate(count=Count("pk"))
+        .order_by()
+    )
+    return LectureMonitor(
+        live=list(lectures.filter(status=LectureStatus.LIVE)),
+        late=list(scheduled.filter(starts_at__lte=now, ends_at_db__gt=now)),
+        soon=list(
+            scheduled.filter(starts_at__gt=now, starts_at__lte=now + SOON_WINDOW)
+        ),
+        today={row["status"]: row["count"] for row in today},
+    )
+
+
 # Calendar (roadmap 3.3, SPEC 3: teacher Schedule)
 
 CALENDAR_WEEK = "week"

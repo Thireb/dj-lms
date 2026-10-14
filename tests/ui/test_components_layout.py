@@ -68,3 +68,28 @@ def test_modal_renders() -> None:
     html = str(Modal(id="m1", title="Confirm", body=Button("OK")))
     assert "Confirm" in html
     assert "modal" in html
+
+
+def test_grid_variants() -> None:
+    from apps.ui.components.layout import Grid
+
+    stats = str(Grid(["a", "b"], variant="stats"))
+    unknown = str(Grid(["a"], variant="nope"))
+
+    assert 'class="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4"' in stats
+    assert 'class="grid gap-5"' in unknown
+
+
+def test_live_region_reloads_itself() -> None:
+    import pytest
+    from apps.ui.components.layout import LiveRegion
+
+    html = str(LiveRegion("lecture-monitor", "<b>x</b>", url="/admin/x/"))
+    unsafe = str(LiveRegion("panel", "x", url="javascript:alert(1)"))
+
+    assert 'hx-get="/admin/x/" hx-trigger="every 30s"' in html
+    assert 'hx-select="#lecture-monitor"' in html
+    assert "<b>x" not in html  # text bodies are escaped
+    assert "hx-get" not in unsafe and "javascript:" not in unsafe
+    with pytest.raises(ValueError):
+        LiveRegion('x" onclick="alert(1)', "x", url="/a/")

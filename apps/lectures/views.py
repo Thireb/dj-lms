@@ -41,6 +41,7 @@ from apps.lectures.services import (
     SHOW_UPCOMING,
     CalendarRange,
     LectureDetails,
+    LectureMonitor,
     SavedLecture,
     ScheduleDetails,
     SchedulePreview,
@@ -55,6 +56,7 @@ from apps.lectures.services import (
     join_opens_at,
     join_state,
     join_window_minutes,
+    lecture_monitor,
     list_history,
     list_lectures,
     list_schedules,
@@ -70,6 +72,7 @@ from apps.lectures.ui import (
     AdminHistoryTable,
     HistoryTable,
     LectureTable,
+    MonitorTable,
     SchedulePreviewList,
     ScheduleTable,
     StudentLectureTable,
@@ -90,12 +93,18 @@ from apps.lectures.ui import (
 from apps.people.models import StudentProfile, TeacherProfile
 from apps.ui.components.actions import Button
 from apps.ui.components.block_stack import BlockStack
-from apps.ui.components.data import DetailList, EmptyState
+from apps.ui.components.data import DetailList, EmptyState, StatCard
 from apps.ui.components.forms import CrispyForm, PortalPostForm
-from apps.ui.components.layout import LinkTabs, SectionCard
+from apps.ui.components.layout import Grid, LinkTabs, LiveRegion, SectionCard
 from apps.ui.components.lectures import Calendar
 from apps.ui.components.nav import FilterBar, Pagination
-from apps.ui.views.pages import DetailPage, FormPage, ListPage, PortalPageView
+from apps.ui.views.pages import (
+    DashboardPage,
+    DetailPage,
+    FormPage,
+    ListPage,
+    PortalPageView,
+)
 
 PAGE_SIZE = 25
 SHOW_KEYS = {key for key, _ in SHOW_CHOICES}
@@ -1155,3 +1164,68 @@ class TeacherScheduleExtendPage(TeacherScheduleMixin, ScheduleExtendPage):
 
 class TeacherScheduleStopView(TeacherScheduleMixin, ScheduleStopView):
     pass
+
+
+# Live lecture monitor (roadmap 3.6, SPEC 8 Lectures dashboard)
+
+
+class LecturesDashboardPage(DashboardPage):
+    """Admin "Lectures" dashboard: what is live, late or starting soon, and
+    today's lectures by status. The panel reloads itself every 30 seconds."""
+
+    portal = "admin"
+    menu_key = menu_keys.DASHBOARDS
+    allowed_roles = [Role.INSTITUTE_ADMIN, Role.SUB_ADMIN]
+    title = "Lectures dashboard"
+    region_id = "lecture-monitor"
+
+    def get_subtitle(self) -> str:
+        return "Live, late and upcoming lectures. Updates every 30 seconds."
+
+    def get_feature(self) -> LiveRegion:
+        now = timezone.now()
+        data = lecture_monitor(self.request.user, now=now)
+        return LiveRegion(
+            self.region_id,
+            body=Grid([self.stats(data), self.sections(data, now)], variant="stack"),
+            url=self.request.path,
+        )
+
+    def stats(self, data: LectureMonitor) -> Grid:
+        today = data.today
+        finished = today.get(LectureStatus.FINISHED, 0)
+        cancelled = today.get(LectureStatus.CANCELLED, 0)
+        return Grid(
+            [
+                StatCard(len(data.live), "Live now", icon="video", tone="lead"),
+                StatCard(
+                    len(data.late), "Late start", icon="clock", note="Not started yet"
+                ),
+                StatCard(len(data.soon), "Next 2 hours", icon="calendar"),
+                StatCard(
+                    data.today_total,
+                    "Lectures today",
+                    icon="calendar-days",
+                    note=f"{finished} finished, {cancelled} cancelled",
+                ),
+            ],
+            variant="stats",
+        )
+
+    def sections(self, data: LectureMonitor, now: Any) -> Grid:
+        cards = [
+            ("Live now", "video", data.live, "live"),
+            ("Late start", "clock", data.late, "late"),
+            ("Starting in the next 2 hours", "calendar", data.soon, "soon"),
+        ]
+        return Grid(
+            [
+                SectionCard(
+                    title=title,
+                    icon=icon,
+                    body=MonitorTable(rows, mode=mode, now=now),
+                )
+                for title, icon, rows, mode in cards
+            ],
+            variant="stack",
+        )
