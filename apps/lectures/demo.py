@@ -13,7 +13,7 @@ from zoneinfo import ZoneInfo
 
 from django.utils import timezone
 
-from apps.academics.models import TeacherBatchSubject
+from apps.academics.models import StudentBatchSubject, TeacherBatchSubject
 from apps.core.tenancy import tenant_context
 from apps.institutes.models import Institute
 from apps.lectures.models import (
@@ -29,12 +29,31 @@ from apps.lectures.services import (
     create_schedule,
     generate_lectures,
 )
-from apps.people.demo import DEMO_TEACHER_EMAIL
+from apps.people.demo import DEMO_STUDENT_EMAIL, DEMO_TEACHER_EMAIL
 from apps.people.models import TeacherProfile
 
 DEMO_SCHEDULE_TITLE = "Weekly class"
 DEMO_MEET_URL = "https://meet.example.com/demo-class"
 MON_WED_FRI = [0, 2, 4]
+
+
+def _shared_link(teacher: TeacherProfile) -> TeacherBatchSubject | None:
+    """The teacher's batch and subject that the demo student also takes, so
+    the student and guardian demo show lectures and Join (Phase 3 audit P3-3).
+    Any of the teacher's pairs when they share none."""
+    links = (
+        TeacherBatchSubject.objects.filter(teacher=teacher)
+        .select_related("batch", "subject")
+        .order_by("batch__name", "subject__name")
+    )
+    studied = StudentBatchSubject.objects.filter(
+        student__user__email=DEMO_STUDENT_EMAIL
+    ).values_list("batch_id", "subject_id")
+    shared = set(studied)
+    for link in links:
+        if (link.batch_id, link.subject_id) in shared:
+            return link
+    return links.first()
 
 
 def seed_lectures(institute: Institute) -> None:
@@ -46,12 +65,7 @@ def seed_lectures(institute: Institute) -> None:
             or RecurringSchedule.objects.filter(teacher=teacher).exists()
         ):
             return
-        link = (
-            TeacherBatchSubject.objects.filter(teacher=teacher)
-            .select_related("batch", "subject")
-            .order_by("batch__name", "subject__name")
-            .first()
-        )
+        link = _shared_link(teacher)
         if link is None:
             return
         zone = ZoneInfo(institute.timezone)

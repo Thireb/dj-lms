@@ -305,10 +305,40 @@ def test_edit_remakes_future_lectures_and_keeps_ones_edited_alone(school) -> Non
     assert alone.follows_schedule is False and alone.title == "Moved one"
     assert started in after
     remade = [lec for lec in after if lec.follows_schedule and lec != started]
-    # The started lecture was moved to today, so its old day is free again:
-    # 7 days less the day edited alone.
-    assert len(remade) == 6
+    # 7 days less the started one and the one edited alone: each still
+    # stands for its schedule date (occurrence_date), so neither is made again.
+    assert len(remade) == 5
     assert {timezone.localtime(lec.starts_at, PKT).hour for lec in remade} == {15}
+
+
+@pytest.mark.django_db
+def test_schedule_edit_does_not_remake_a_moved_lecture_date(school) -> None:
+    """Audit P3-1: a lecture moved to the next day ("this one") keeps its
+    first date. A schedule edit does not make that date again, and the
+    next day keeps its own lecture."""
+    schedule = add_schedule(school)
+    moved = schedule_lectures(schedule)[2]
+    first_day = timezone.localtime(moved.starts_at, PKT).date()
+    next_start = moved.starts_at + timedelta(days=1, hours=8)
+    _in_context(
+        school,
+        update_lecture,
+        moved,
+        details(school, title="Moved", starts_at=next_start),
+    )
+
+    _in_context(
+        school, update_schedule, schedule, schedule_details(school, title="Renamed")
+    )
+    _in_context(school, generate_lectures, schedule)
+
+    days = [
+        timezone.localtime(lec.starts_at, PKT).date()
+        for lec in schedule_lectures(schedule)
+    ]
+    assert days.count(first_day) == 0
+    assert days.count(first_day + timedelta(days=1)) == 2  # its own and the moved one
+    assert len(days) == 7
 
 
 @pytest.mark.django_db

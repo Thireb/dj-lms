@@ -204,6 +204,17 @@ def test_seed_demo_adds_a_schedule_and_lectures_once(demo_env) -> None:
     assert lectures.filter(schedule__isnull=True).count() == 6
     assert lectures.filter(status="finished").count() == 3
     assert lectures.filter(status="live").count() == 1
+    # Audit P3-3: the demo student sees them, so Join can be shown.
+    from apps.core.tenancy import tenant_context
+    from apps.lectures.models import Lecture
+
+    student = User.objects.get(email="demo-student@example.com")
+    guardian = User.objects.get(email="demo-guardian@example.com")
+    with tenant_context(student.institute):
+        visible = Lecture.objects.for_user(student)
+        assert visible.filter(status="live").count() == 1
+        assert visible.filter(status="scheduled").count() > 10
+        assert Lecture.objects.for_user(guardian).count() == visible.count()
     assert first > 10  # Mon, Wed and Fri for the next 8 weeks
     assert lectures.count() == first
 

@@ -428,9 +428,9 @@ def test_edit_of_a_finished_lecture_is_refused(admin_client, school) -> None:
     Lecture.unscoped.filter(pk=lecture.pk).update(status=LectureStatus.FINISHED)
 
     html = admin_client.post(
-        _url("edit", lecture.pk), _form(school, title="Changed")
+        _url("edit", lecture.pk), _form(school, title="Changed"), follow=True
     ).content.decode()
 
     lecture.refresh_from_db()
-    assert "Only a scheduled lecture can be edited." in html
+    assert "Only a scheduled lecture can be edited." in html  # on the lecture page
     assert lecture.title == "Algebra basics"

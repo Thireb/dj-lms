@@ -205,6 +205,14 @@ def _check(institute: Institute, details: LectureDetails, old: Lecture | None) -
     errors.raise_any()
 
 
+def _lock_and_reload(row: Lecture | RecurringSchedule) -> None:
+    """Lock the row and read it again, so a check and save see the latest
+    state: a Start, Cancel or the finish job between the page load and the
+    save is not undone by saving the old values (Phase 3 audit P3-2)."""
+    type(row).objects.select_for_update().filter(pk=row.pk).first()
+    row.refresh_from_db()
+
+
 def _lock_teacher(teacher: TeacherProfile) -> None:
     """Two saves for one teacher run one after the other, so the overlap check
     in the second one sees the first lecture."""
@@ -240,6 +248,7 @@ def update_lecture(lecture: Lecture, details: LectureDetails) -> SavedLecture:
     its changes when the schedule is edited later."""
     require_tenant_context(lecture.institute)
     _lock_teacher(details.teacher)
+    _lock_and_reload(lecture)
     _check(lecture.institute, details, lecture)
     if lecture.schedule_id is not None:
         lecture.follows_schedule = False
@@ -836,6 +845,7 @@ def update_schedule(schedule: RecurringSchedule, details: ScheduleDetails) -> in
     were removed for remaking."""
     require_tenant_context(schedule.institute)
     _lock_teacher(details.teacher)
+    _lock_and_reload(schedule)
     now = timezone.now()
     _check_schedule(schedule.institute, details, schedule, now)
     # delete() also counts the subject links, so count the lectures alone.
@@ -850,6 +860,7 @@ def update_schedule(schedule: RecurringSchedule, details: ScheduleDetails) -> in
 @transaction.atomic
 def extend_schedule(schedule: RecurringSchedule, end_date: date) -> None:
     require_tenant_context(schedule.institute)
+    _lock_and_reload(schedule)
     errors = _Errors()
     if schedule.status != ScheduleStatus.ACTIVE:
         errors.add("__all__", "A stopped schedule cannot be extended.")
@@ -868,6 +879,7 @@ def stop_schedule(schedule: RecurringSchedule) -> int:
     """No more lectures; the ones not started yet are cancelled (they stay in
     the lists as Cancelled). Returns how many were cancelled."""
     require_tenant_context(schedule.institute)
+    _lock_and_reload(schedule)
     schedule.status = ScheduleStatus.STOPPED
     schedule.save(update_fields=["status", "updated_at"])
     return Lecture.objects.filter(
@@ -903,18 +915,15 @@ def generate_lectures(
     a date that already has a lecture of this schedule is left alone."""
     require_tenant_context(schedule.institute)
     now = now or timezone.now()
+    _lock_teacher(schedule.teacher)
+    _lock_and_reload(schedule)
     if schedule.status != ScheduleStatus.ACTIVE:
         return GenerateResult()
-    _lock_teacher(schedule.teacher)
     first, last = _window(schedule.institute, schedule, now, schedule.generated_until)
     starts = occurrences(schedule, first, last)
     if not _still_valid(schedule):
         return GenerateResult(skipped=len(starts))
-    zone = ZoneInfo(schedule.time_zone)
-    taken = {
-        timezone.localtime(lecture.starts_at, zone).date()
-        for lecture in Lecture.objects.filter(schedule=schedule)
-    }
+    taken = _taken_dates(schedule)
     subjects = list(schedule.subjects.all())
     created = skipped = 0
     for item in _plan(schedule, starts, now):
@@ -931,12 +940,26 @@ def generate_lectures(
     return GenerateResult(created=created, skipped=skipped)
 
 
+def _taken_dates(schedule: RecurringSchedule) -> set[date]:
+    """Schedule dates that already have a lecture. A lecture moved on its own
+    still stands for its first date (``occurrence_date``), so that date is
+    not made again and the date it moved to keeps its own lecture."""
+    zone = ZoneInfo(schedule.time_zone)
+    return {
+        lecture.occurrence_date or timezone.localtime(lecture.starts_at, zone).date()
+        for lecture in Lecture.objects.filter(schedule=schedule).only(
+            "starts_at", "occurrence_date"
+        )
+    }
+
+
 def _make_lecture(
     schedule: RecurringSchedule, starts_at: datetime, subjects: list[Subject]
 ) -> None:
     lecture = Lecture(
         institute=schedule.institute,
         schedule=schedule,
+        occurrence_date=starts_at.date(),  # starts_at is in the schedule's zone
         title=schedule.title,
         teacher=schedule.teacher,
         batch=schedule.batch,

@@ -560,3 +560,84 @@ def test_finish_task_skips_inactive_institutes(school, institute_b) -> None:
 
     other.refresh_from_db()
     assert other.status == LectureStatus.SCHEDULED
+
+
+# Phase 3 audit P3-2: services read the row again under a lock
+
+
+@pytest.mark.django_db
+def test_edit_with_an_old_copy_does_not_undo_a_start(school) -> None:
+    from apps.lectures.services import update_lecture
+
+    from tests.lectures.conftest import details
+
+    lecture = add_lecture(school)
+    _set(Lecture.unscoped.get(pk=lecture.pk), status=LectureStatus.LIVE)
+
+    with pytest.raises(ValidationError, match="Only a scheduled lecture"):
+        _run(
+            school,
+            update_lecture,
+            lecture,  # still says scheduled
+            details(school, title="Renamed", starts_at=lecture.starts_at),
+        )
+    lecture.refresh_from_db()
+    assert lecture.status == LectureStatus.LIVE
+    assert lecture.title == "Algebra basics"
+
+
+@pytest.mark.django_db
+def test_a_stopped_schedule_with_an_old_copy_makes_nothing(school) -> None:
+    from apps.lectures.models import RecurringSchedule, ScheduleStatus
+    from apps.lectures.services import extend_schedule, generate_lectures
+
+    schedule = add_schedule(school)
+    count = len(schedule_lectures(schedule))
+    # unscoped: test set-up; the stop happens behind this copy's back.
+    RecurringSchedule.unscoped.filter(pk=schedule.pk).update(
+        status=ScheduleStatus.STOPPED, generated_until=None
+    )
+
+    result = _run(school, generate_lectures, schedule)
+    with pytest.raises(ValidationError, match="stopped schedule"):
+        _run(school, extend_schedule, schedule, schedule.end_date + timedelta(days=7))
+
+    assert result.created == 0
+    assert len(schedule_lectures(schedule)) == count
+
+
+# Phase 3 audit P3-4: closed rows open no form
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("status", [LectureStatus.FINISHED, LectureStatus.CANCELLED])
+def test_edit_page_of_a_closed_lecture_goes_back(admin_client, school, status) -> None:
+    lecture = _set(add_lecture(school), status=status)
+
+    response = admin_client.get(_url("admin", "edit", lecture), follow=True)
+    teacher = signed_in(school.teacher_1.user).post(
+        _url("teacher", "edit", lecture), {"title": "x"}
+    )
+
+    assert response.redirect_chain[-1][0] == _url("admin", "detail", lecture)
+    assert "Only a scheduled lecture can be edited." in response.content.decode()
+    assert teacher.status_code == 302
+    assert teacher["Location"] == _url("teacher", "detail", lecture)
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("action", ["edit", "extend"])
+def test_stopped_schedule_pages_go_back(admin_client, school, action) -> None:
+    schedule = add_schedule(school)
+    admin_client.post(
+        reverse("admin:lecture_schedule_stop", kwargs={"pk": schedule.pk})
+    )
+    url = reverse(f"admin:lecture_schedule_{action}", kwargs={"pk": schedule.pk})
+
+    response = admin_client.get(url, follow=True)
+    posted = admin_client.post(url, {"end_date": "2099-01-01"})
+
+    verb = "edited" if action == "edit" else "extended"
+    assert response.redirect_chain[-1][0] == reverse("admin:lecture_schedule_list")
+    assert f"A stopped schedule cannot be {verb}." in response.content.decode()
+    assert posted.status_code == 302
