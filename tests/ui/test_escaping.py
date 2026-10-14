@@ -9,6 +9,7 @@ from apps.ui.components.actions import (
     Button,
     ConfirmDialog,
     CopyField,
+    PostButton,
     QuickAction,
     Toast,
 )
@@ -23,25 +24,12 @@ from apps.ui.components.data import (
     StatCard,
 )
 from apps.ui.components.layout import HeroBanner, Modal, PageHeader, SectionCard
-from apps.ui.components.lectures import CountdownCard, LectureRow, ScheduleList
+from apps.ui.components.lectures import CountdownCard, LectureRow
 from apps.ui.components.nav import FilterBar
 from apps.ui.components.pdf import PdfHeader
 
 XSS = "<script>alert('x')</script>"
 ESCAPED_FRAGMENT = "&lt;script&gt;"
-
-
-def _lecture(**overrides):
-    base = SimpleNamespace(
-        title="Lecture",
-        scheduled_at="2026-08-16T15:00:00+00:00",
-        meeting_link="https://meet.example.invalid/x",
-        status="scheduled",
-        day="Mon 16 Aug 2026",
-    )
-    for key, value in overrides.items():
-        setattr(base, key, value)
-    return base
 
 
 @pytest.mark.parametrize(
@@ -73,18 +61,9 @@ def _lecture(**overrides):
                 SimpleNamespace(name=XSS, timezone=XSS),
             ),
         ),
-        (
-            lambda: CountdownCard(
-                _lecture(title=XSS), SimpleNamespace(timezone_label="PKT")
-            ),
-        ),
-        (lambda: LectureRow(_lecture(title=XSS, status=XSS), SimpleNamespace()),),
-        (
-            lambda: ScheduleList(
-                [_lecture(title=XSS, day=XSS)],
-                SimpleNamespace(),
-            ),
-        ),
+        (lambda: CountdownCard(XSS, XSS, when=XSS, detail=XSS),),
+        (lambda: LectureRow(XSS, XSS, detail=XSS, trailing=XSS),),
+        (lambda: PostButton(XSS, "#"),),
         (
             lambda: FilterBar(
                 filters=[
@@ -114,7 +93,7 @@ def _lecture(**overrides):
         "pdf_header",
         "countdown_card",
         "lecture_row",
-        "schedule_list",
+        "post_button",
         "filter_bar",
         "copy_field",
         "confirm_dialog_fields",

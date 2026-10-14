@@ -1,0 +1,1 @@
+{% load ui_icons %}<form method="post" action="{{ url }}" class="post-button inline-flex"{% if new_tab %} target="_blank" rel="noopener noreferrer"{% endif %}>{% if csrf_token %}{% csrf_token %}{% endif %}<button type="submit" class="btn btn-{{ variant }}">{% if icon %}{% icon icon %}{% endif %}{{ label }}</button></form>

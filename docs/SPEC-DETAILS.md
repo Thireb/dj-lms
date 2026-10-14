@@ -281,6 +281,7 @@ Full name*, Institute name*, Phone*, Email, Website, Message*. Saved for Super A
 
 ### 6.4 Lectures
 - Join opens at start minus join window. Student Join button states: `Join opens soon` (before window), `Waiting for host` (window open, teacher not started), `Join` (teacher started), `Ended`.
+- 3.4 (assumed): a live lecture shows `Join` even before the window (the teacher started early). Join posts to the server, which checks the state again and only then sends the student to the link; the link is not shown on student pages. An in-person lecture shows "In person"; a cancelled one shows nothing. "Up next" is the running lecture, else the next to start; cancelled and finished lectures are left out. "Lectures today" counts the viewer's today, without cancelled lectures.
 - Teacher presses Start to set status `live`. Finish sets `finished` automatically after the end time unless ended earlier.
 - A student sees a lecture only if enrolled in that batch and subject.
 - Recurring generation: on save creates lectures up to the end date, limited by the horizon setting. A nightly job extends the horizon.

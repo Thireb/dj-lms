@@ -3,15 +3,39 @@ from apps.ui.safe_url import safe_url
 
 
 class Button(Component):
+    """A link (with ``url``) or a plain button. ``disabled=True`` shows a
+    state that cannot be clicked yet; ``title`` explains it."""
+
     template_name = "ui/components/button.html"
     variant = "primary"
 
-    def __init__(self, label, variant=None, url=None, icon="", **props):
+    def __init__(
+        self, label, variant=None, url=None, icon="", disabled=False, title="", **props
+    ):
         super().__init__(
             label=label,
             variant=variant or self.variant,
-            url=safe_url(url) if url is not None else None,
+            url=safe_url(url) if url is not None and not disabled else None,
             icon=icon,
+            disabled=disabled,
+            title=title,
+            **props,
+        )
+
+
+class PostButton(Component):
+    """A one-button POST form with CSRF (when rendered with ``request``).
+    ``new_tab=True`` sends it to a new tab without an opener (Join)."""
+
+    template_name = "ui/components/post_button.html"
+
+    def __init__(self, label, url, variant="primary", icon="", new_tab=False, **props):
+        super().__init__(
+            label=label,
+            url=safe_url(url),
+            variant=variant,
+            icon=icon,
+            new_tab=new_tab,
             **props,
         )
 

@@ -1,6 +1,6 @@
 """Portal home pages for teachers, students and guardians (roadmap R4c).
 
-A welcome band, an "Up next" card that waits for lectures (Phase 3), and
+A welcome band, the "Up next" card with a countdown (roadmap 3.4), and
 what exists now: batches and subjects, and a guardian's children.
 """
 
@@ -11,11 +11,16 @@ from typing import Any
 from django.utils import timezone
 
 from apps.core.roles import Role
+from apps.lectures.services import lectures_today_count, upcoming_lectures
+from apps.lectures.ui import lecture_detail, lecture_status_badge, lecture_when
+from apps.lectures.views import up_next_body
 from apps.people.home import greeting, guardian_home, student_home, teacher_home
 from apps.people.ui import profile_status_badge
 from apps.ui.brand import initials
+from apps.ui.components.block_stack import BlockStack
 from apps.ui.components.data import EmptyState, PersonCell, PersonList, StatCard
 from apps.ui.components.layout import HeroBanner, SectionCard
+from apps.ui.components.lectures import LectureRow
 from apps.ui.views.pages import DashboardPage
 
 
@@ -25,9 +30,6 @@ class PortalHomePage(DashboardPage):
     title = "Dashboard"
     active_item = "dashboard"
     up_next_title = "Up next"
-    up_next_text = (
-        "Your next lecture shows here with a countdown once lectures are scheduled."
-    )
 
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         self.data = self.load(self.request.user)
@@ -60,18 +62,31 @@ class PortalHomePage(DashboardPage):
 
     def up_next(self) -> SectionCard:
         return SectionCard(
-            title=self.up_next_title,
-            icon="video",
-            body=EmptyState(
-                "No lectures yet",
-                text=self.up_next_text,
-                icon="calendar",
-                framed=False,
-            ),
+            title=self.up_next_title, icon="video", body=self.up_next_body()
         )
+
+    def up_next_body(self) -> Any:
+        return up_next_body(self.request, self.portal, self.get_institute())
 
     def get_feature(self) -> SectionCard:
         return self.up_next()
+
+
+UPCOMING_COUNT = 5
+
+
+def children_in(lecture: Any, children: list[Any]) -> list[str]:
+    """Names of the children enrolled in the lecture's batch and one of its
+    subjects (the same rule as ``Lecture.objects.for_user``)."""
+    subject_ids = {subject.pk for subject in lecture.subjects.all()}
+    return [
+        str(child)
+        for child in children
+        if any(
+            link.batch_id == lecture.batch_id and link.subject_id in subject_ids
+            for link in child.batch_subjects.all()
+        )
+    ]
 
 
 def _code_line(code: str, *parts: str) -> str:
@@ -94,8 +109,10 @@ class TeacherPortalHomePage(PortalHomePage):
 
     def get_stat_cards(self) -> list[Any]:
         data = self.data
+        today = lectures_today_count(self.request.user)
         return [
-            StatCard(data.student_count, "My students", icon="users", tone="lead"),
+            StatCard(today, "Lectures today", icon="video", tone="lead"),
+            StatCard(data.student_count, "My students", icon="users"),
             StatCard(data.batch_count, "Batches", icon="layers"),
             StatCard(data.subject_count, "Subjects", icon="book-open"),
         ]
@@ -124,10 +141,32 @@ class GuardianPortalHomePage(PortalHomePage):
     allowed_roles = [Role.GUARDIAN]
     section_columns = 2
     up_next_title = "Upcoming classes"
-    up_next_text = "Your children's next classes show here once lectures are scheduled."
 
     def load(self, user: Any) -> Any:
         return guardian_home(user)
+
+    def up_next_body(self) -> Any:
+        lectures = upcoming_lectures(self.request.user, limit=UPCOMING_COUNT)
+        if not lectures:
+            return EmptyState(
+                "No upcoming classes",
+                text="Your children's next classes show here.",
+                icon="calendar",
+                framed=False,
+            )
+        return BlockStack(blocks=[self.class_row(lecture) for lecture in lectures])
+
+    def class_row(self, lecture: Any) -> LectureRow:
+        names = children_in(lecture, self.data.children)
+        detail = lecture_detail(lecture)
+        if len(self.data.children) > 1:
+            detail = " · ".join([", ".join(names), detail])
+        return LectureRow(
+            lecture.title,
+            lecture_when(lecture),
+            detail=detail,
+            trailing=lecture_status_badge(lecture),
+        )
 
     def child_row(self, child: Any) -> tuple[PersonCell, Any]:
         label = child.class_label.name if child.class_label else ""

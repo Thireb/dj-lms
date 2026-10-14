@@ -617,6 +617,7 @@ class AdminDashboardPage(DashboardPage):
                 (students.total, "Students", f"{students.active} active"),
                 (teachers.total, "Teachers", f"{teachers.active} active"),
                 (data.batches_running, "Running batches", f"of {data.batches_total}"),
+                (data.lectures_today, "Lectures today", ""),
             ],
         )
 

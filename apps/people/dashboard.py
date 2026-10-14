@@ -1,8 +1,8 @@
 """Service layer for the admin main dashboard (roadmap 2.4, SPEC 8).
 
-Only what exists now: students, teachers and running batches. Lectures
-today (Phase 3), the fee strip and waiting receipts (Phase 7) and pending
-approvals (Phase 9) are added by those phases.
+Students, teachers, running batches and lectures today (roadmap 3.4). The
+fee strip and waiting receipts (Phase 7) and pending approvals (Phase 9) are
+added by those phases.
 """
 
 from __future__ import annotations
@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from django.db.models import Count, Q
 
 from apps.academics.models import Batch
+from apps.lectures.services import lectures_today_count
 from apps.people.models import ProfileStatus, StudentProfile, TeacherProfile
 from apps.people.services import list_students, list_teachers
 
@@ -38,6 +39,7 @@ class AdminDashboard:
     teachers: PeopleCounts
     batches_total: int
     batches_running: int
+    lectures_today: int
     recent_students: list[StudentProfile]
     recent_teachers: list[TeacherProfile]
 
@@ -60,6 +62,7 @@ def admin_dashboard(user: object) -> AdminDashboard:
         teachers=_counts(TeacherProfile, user),
         batches_total=batches.count(),
         batches_running=running.count(),
+        lectures_today=lectures_today_count(user),
         recent_students=list(list_students(user)[:RECENT_COUNT]),
         recent_teachers=list(list_teachers(user)[:RECENT_COUNT]),
     )

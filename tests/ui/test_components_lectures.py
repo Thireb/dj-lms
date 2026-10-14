@@ -1,21 +1,38 @@
 from datetime import datetime
-from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 
+from apps.ui.components.actions import PostButton
 from apps.ui.components.lectures import (
     CountdownCard,
     LectureRow,
-    ScheduleList,
     scheduled_at_to_iso,
 )
-from tests.ui.fixtures.sample_ui import fake_lectures
+
+ISO = "2026-08-16T15:00:00+00:00"
 
 
 def test_countdown_card_renders() -> None:
-    viewer = SimpleNamespace(timezone_label="PKT")
-    html = str(CountdownCard(fake_lectures()[0], viewer))
+    html = str(
+        CountdownCard(
+            "Sample lecture",
+            ISO,
+            when="Sun 16 Aug 2026, 8:00 PM to 9:00 PM PKT",
+            detail="Morning · Math",
+            action=PostButton("Join", "/student/lectures/1/join/", new_tab=True),
+            refresh_url="/student/up-next/",
+        )
+    )
     assert "countdown-card" in html
     assert "Sample lecture" in html
+    assert "8:00 PM to 9:00 PM PKT" in html
+    assert 'action="/student/lectures/1/join/"' in html
+    assert 'target="_blank" rel="noopener noreferrer"' in html
+    assert 'hx-get="/student/up-next/" hx-trigger="every 30s"' in html
+
+
+def test_countdown_card_without_refresh_does_not_poll() -> None:
+    html = str(CountdownCard("Sample", ISO))
+    assert "hx-get" not in html
 
 
 def test_scheduled_at_to_iso_rejects_non_datetime_strings() -> None:
@@ -51,14 +68,7 @@ def test_scheduled_at_to_iso_converts_offset_to_utc() -> None:
 
 
 def test_countdown_card_malicious_scheduled_at_not_in_alpine_expression() -> None:
-    payload = "');alert(document.domain);//"
-    lecture = SimpleNamespace(
-        title="Safe title",
-        scheduled_at=payload,
-        meeting_link="https://meet.example.invalid/x",
-    )
-    viewer = SimpleNamespace(timezone_label="PKT")
-    html = str(CountdownCard(lecture, viewer))
+    html = str(CountdownCard("Safe title", "');alert(document.domain);//"))
     assert "countdownCard('" not in html
     assert 'x-data="countdownCard"' in html
     assert "alert(document.domain)" not in html
@@ -66,39 +76,27 @@ def test_countdown_card_malicious_scheduled_at_not_in_alpine_expression() -> Non
 
 
 def test_countdown_card_valid_iso_in_data_attribute() -> None:
-    iso = "2026-08-16T15:00:00+00:00"
-    lecture = SimpleNamespace(
-        title="Sample",
-        scheduled_at=iso,
-        meeting_link="https://meet.example.invalid/x",
-    )
-    html = str(CountdownCard(lecture, SimpleNamespace(timezone_label="PKT")))
-    assert f'data-scheduled-at="{iso}"' in html
+    html = str(CountdownCard("Sample", ISO))
+    assert f'data-scheduled-at="{ISO}"' in html
 
 
 def test_countdown_card_escapes_title() -> None:
     xss = "<script>alert('x')</script>"
-    lecture = SimpleNamespace(
-        title=xss,
-        scheduled_at="2026-08-16T15:00:00+00:00",
-        meeting_link="https://meet.example.invalid/x",
-    )
-    viewer = SimpleNamespace(timezone_label="PKT")
-    html = str(CountdownCard(lecture, viewer))
+    html = str(CountdownCard(xss, ISO, when=xss, detail=xss))
     assert xss not in html
     assert "&lt;script&gt;" in html
 
 
+def test_countdown_card_refuses_unsafe_refresh_url() -> None:
+    html = str(CountdownCard("Sample", ISO, refresh_url="javascript:alert(1)"))
+    assert "javascript:" not in html
+    assert "hx-get" not in html
+
+
 def test_lecture_row_renders() -> None:
-    viewer = SimpleNamespace(timezone_label="PKT")
-    html = str(LectureRow(fake_lectures()[0], viewer))
+    html = str(LectureRow("Algebra", "Mon 17 Aug 2026", detail="Morning · Math"))
     assert "lecture-row" in html
-
-
-def test_schedule_list_renders() -> None:
-    viewer = SimpleNamespace(timezone_label="PKT")
-    html = str(ScheduleList(fake_lectures(), viewer))
-    assert "schedule-list" in html
+    assert "Morning · Math" in html
 
 
 def _day(day, *items, **flags):

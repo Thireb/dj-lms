@@ -1,4 +1,10 @@
-from apps.ui.components.actions import Button, ConfirmDialog, QuickAction, Toast
+from apps.ui.components.actions import (
+    Button,
+    ConfirmDialog,
+    PostButton,
+    QuickAction,
+    Toast,
+)
 from apps.ui.components.base import Component
 from apps.ui.components.data import (
     Avatar,
@@ -23,7 +29,7 @@ from apps.ui.components.layout import (
     TopNav,
     TopNavShell,
 )
-from apps.ui.components.lectures import CountdownCard, LectureRow, ScheduleList
+from apps.ui.components.lectures import Calendar, CountdownCard, LectureRow
 from apps.ui.components.nav import FilterBar, NotificationBell, Pagination
 from apps.ui.components.pdf import PdfHeader
 
@@ -31,6 +37,8 @@ __all__ = [
     "Avatar",
     "Badge",
     "Button",
+    "Calendar",
+    "PostButton",
     "ChartCard",
     "Column",
     "Component",
@@ -49,7 +57,6 @@ __all__ = [
     "PdfHeader",
     "ProgressBar",
     "QuickAction",
-    "ScheduleList",
     "SectionCard",
     "Sidebar",
     "SidebarShell",

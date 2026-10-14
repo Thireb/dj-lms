@@ -140,6 +140,10 @@
   .btn-lg {
     @apply h-12 rounded-xl px-5 text-[15px];
   }
+  /* A state, not an action (for example "Join opens soon"). */
+  .btn:disabled {
+    @apply cursor-not-allowed border-border bg-page text-muted shadow-none hover:bg-page;
+  }
   .btn-primary {
     @apply bg-primary text-white hover:bg-primary-dark;
     box-shadow: var(--shadow-float);

@@ -230,10 +230,11 @@ Left out of 3.1 on purpose; each has a home in a later item.
 | LC2 | Row actions View and Cancel, and the teacher's Start, Whiteboard and Attendance, come with lecture states (3.5), the whiteboard and attendance (4.1). 3.1 has Edit and "Open meeting link". | Low | [ ] |
 | LC3 | `seed_demo` has no lectures yet. Fixed in 3.2: a Mon/Wed/Fri schedule and two single lectures for `demo-teacher@`. Past and live demo lectures need lecture states (LC5). | Low | [x] |
 | LC5 | Past, live and finished demo lectures (SPEC 13) come with lecture states (3.5); the services refuse a start in the past. | Low | [ ] |
-| LC4 | The admin dashboard "lectures today" number and the teacher home lecture count and up-next countdown come with 3.4. | Low | [ ] |
-| LC6 | Student and guardian lists have no Join column and no meeting link yet. Join and its states (SPEC 6.4) come with 3.4 and 3.5. | Low | [ ] |
+| LC4 | The admin dashboard "lectures today" number and the teacher home lecture count and up-next countdown come with 3.4. Fixed in 3.4. | Low | [x] |
+| LC6 | Student and guardian lists have no Join column and no meeting link yet. Join and its states (SPEC 6.4) come with 3.4 and 3.5. Fixed in 3.4: the Join column and the join view; Join becomes possible when 3.5 lets the teacher start. | Low | [x] |
 | LC7 | The guardian picks a child with a filter on "Lectures schedule". The header child switcher that every guardian page follows (UI-GUIDELINES) is not built yet; build it before the next guardian list (Phase 4 attendance) and move this filter to it. | Medium | [ ] |
-| LC8 | `ScheduleList` and `LectureRow` are still the stub components from PR B; 3.3 used `Calendar` and `DataTable`. Use them in 3.4 (up-next and dashboards) or remove them. | Low | [ ] |
+| LC8 | `ScheduleList` and `LectureRow` are still the stub components from PR B; 3.3 used `Calendar` and `DataTable`. Use them in 3.4 (up-next and dashboards) or remove them. Fixed in 3.4: `LectureRow` is rebuilt for the guardian's upcoming classes; `ScheduleList` is removed (`Calendar` does its job). | Low | [x] |
+| LC10 | Join does not record anything yet. Attendance from joins (SPEC 6.3, provider-based) comes with Phase 4; the join view is the place to log it. | Low | [ ] |
 | LC9 | A calendar entry opens only a scheduled lecture (its edit page). Finished and cancelled entries do not link until a lecture detail page exists (3.5). | Low | [ ] |
 
 ## Later (deployment hardening, Phase 12)

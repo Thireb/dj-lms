@@ -77,7 +77,7 @@ The full list, class names, files, and props are in `COMPONENTS.md` section 7. S
 - **Layout:** `TopNavShell` (admin), `SidebarShell` (teacher, student, guardian), `Sidebar`, `TopNav`, `HeroBanner`, `PageHeader`, `SectionCard`, `Tabs`, `Modal`
 - **Data:** `StatCard`, `DataTable`, `Badge`, `Avatar`, `PersonCell`, `PersonList`, `KpiSummary`, `ProgressBar`, `ProgressRing`, `ChartCard`, `EmptyState`
 - **Actions:** `Button`, `QuickAction`, `ConfirmDialog`, `Toast`
-- **Lectures:** `CountdownCard`, `LectureRow`, `ScheduleList`
+- **Lectures:** `CountdownCard`, `LectureRow`, `Calendar`
 - **Navigation:** `NotificationBell`, `FilterBar`, `Pagination`
 - **PDF:** `PdfHeader`
 - **Form layout (crispy):** `Section`, `Row`, `FormActions`

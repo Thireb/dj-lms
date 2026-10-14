@@ -9,7 +9,13 @@ from django.shortcuts import render
 
 from apps.core.menus import ADMIN_MENU_KEYS
 from apps.core.roles import Role
-from apps.ui.components.actions import Button, ConfirmDialog, QuickAction, Toast
+from apps.ui.components.actions import (
+    Button,
+    ConfirmDialog,
+    PostButton,
+    QuickAction,
+    Toast,
+)
 from apps.ui.components.data import (
     Avatar,
     Badge,
@@ -30,7 +36,7 @@ from apps.ui.components.layout import (
     Tabs,
     TopNavShell,
 )
-from apps.ui.components.lectures import CountdownCard, LectureRow, ScheduleList
+from apps.ui.components.lectures import CountdownCard, LectureRow
 from apps.ui.components.nav import FilterBar, NotificationBell, Pagination
 from apps.ui.components.pdf import PdfHeader
 
@@ -85,7 +91,6 @@ def dev_components(request: HttpRequest) -> HttpResponse:
     admin_user = _admin_user()
     teacher_user = _teacher_user()
     lectures = _fake_lectures()
-    viewer = SimpleNamespace(timezone_label="PKT")
 
     institute = _demo_institute()
 
@@ -178,9 +183,19 @@ def dev_components(request: HttpRequest) -> HttpResponse:
             url="#",
         ),
         "toast": Toast("Saved successfully"),
-        "countdown_card": CountdownCard(lectures[0], viewer),
-        "lecture_row": LectureRow(lectures[0], viewer),
-        "schedule_list": ScheduleList(lectures, viewer),
+        "countdown_card": CountdownCard(
+            lectures[0].title,
+            lectures[0].scheduled_at,
+            when="Sun 16 Aug 2026, 8:00 PM to 9:00 PM PKT",
+            detail="Morning · Math",
+            action=PostButton("Join", "#", icon="video"),
+        ),
+        "lecture_row": LectureRow(
+            lectures[1].title,
+            "Mon 17 Aug 2026, 3:00 PM to 4:00 PM PKT",
+            detail="Morning · Physics",
+            trailing=Badge("Scheduled", tone="info"),
+        ),
         "notification_bell": NotificationBell(teacher_user, unread_count=3),
         "filter_bar": FilterBar(
             filters=[

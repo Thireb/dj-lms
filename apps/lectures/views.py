@@ -32,6 +32,11 @@ from apps.lectures.models import (
 from apps.lectures.services import (
     CALENDAR_MONTH,
     CALENDAR_WEEK,
+    JOIN_ENDED,
+    JOIN_NONE,
+    JOIN_OPEN,
+    JOIN_SOON,
+    JOIN_WAITING,
     SHOW_CHOICES,
     SHOW_UPCOMING,
     CalendarRange,
@@ -44,14 +49,18 @@ from apps.lectures.services import (
     create_lecture,
     create_schedule,
     extend_schedule,
+    join_opens_at,
+    join_state,
+    join_window_minutes,
     list_lectures,
     list_schedules,
+    next_lecture,
     preview_schedule,
     stop_schedule,
     update_lecture,
     update_schedule,
 )
-from apps.lectures.times import combine_local, local_date, time_range
+from apps.lectures.times import combine_local, local_date, local_time, time_range
 from apps.lectures.ui import (
     LectureTable,
     SchedulePreviewList,
@@ -60,7 +69,10 @@ from apps.lectures.ui import (
     TeacherLectureTable,
     TeacherScheduleTable,
     calendar_days,
+    join_action,
+    meeting_link_button,
     stop_dialog,
+    up_next_card,
 )
 from apps.people.models import StudentProfile, TeacherProfile
 from apps.ui.components.actions import Button
@@ -243,7 +255,12 @@ class LectureListPage(AdminLectureMixin, ListPage):
     def get_table(self, rows: list[Lecture], filters: dict[str, str]) -> Any:
         if not rows and not self.visible_lectures().exists():
             return self.first_lecture_state()
-        return self.table_class(rows, empty_title=EMPTY_TITLES[filters["show"]])
+        return self.table_class(
+            rows, empty_title=EMPTY_TITLES[filters["show"]], **self.table_kwargs()
+        )
+
+    def table_kwargs(self) -> dict[str, Any]:
+        return {}
 
     def visible_lectures(self) -> Any:
         return Lecture.objects.for_user(self.request.user)
@@ -279,6 +296,9 @@ class StudentLectureListPage(LectureListPage):
 
     def first_lecture_state(self) -> EmptyState:
         return EmptyState("No lectures yet.", text=self.empty_text, icon="video")
+
+    def table_kwargs(self) -> dict[str, Any]:
+        return {"join_window": join_window_minutes(self.get_institute())}
 
 
 class GuardianLectureListPage(StudentLectureListPage):
@@ -355,6 +375,9 @@ class GuardianLectureListPage(StudentLectureListPage):
             return Lecture.objects.none()
         return list_lectures(self.request.user, show="all", student_id=self.child.pk)
 
+    def table_kwargs(self) -> dict[str, Any]:
+        return {}  # guardians see the lectures; the student joins
+
     def first_lecture_state(self) -> EmptyState:
         if self.child is None:
             return EmptyState(
@@ -363,6 +386,76 @@ class GuardianLectureListPage(StudentLectureListPage):
                 icon="graduation-cap",
             )
         return super().first_lecture_state()
+
+
+JOIN_REFUSED = {
+    JOIN_SOON: "Join opens {opens}.",
+    JOIN_WAITING: "The teacher has not started this lecture yet. Try again soon.",
+    JOIN_ENDED: "This lecture has ended.",
+    JOIN_NONE: "This lecture has no meeting link to join.",
+}
+
+
+class StudentLectureJoinView(PortalPageView):
+    """POST from the Join button. The state is checked again here, so a
+    student cannot join early by sending the form by hand (SPEC 6.4)."""
+
+    portal = "student"
+    active_item = "lectures"
+    allowed_roles = [Role.STUDENT]
+    http_method_names = ["post"]
+
+    def post(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        lecture = get_object_or_404(
+            Lecture.objects.for_user(request.user), pk=kwargs["pk"]
+        )
+        window = join_window_minutes(self.get_institute())
+        state = join_state(lecture, now=timezone.now(), window=window)
+        if state == JOIN_OPEN and lecture.meeting_url:
+            return HttpResponseRedirect(lecture.meeting_url)
+        opens = f"at {local_time(join_opens_at(lecture, window))}"
+        messages.warning(request, JOIN_REFUSED[state].format(opens=opens))
+        return HttpResponseRedirect(reverse("student:lecture_list"))
+
+
+def up_next_body(request: HttpRequest, portal: str, institute: Any) -> Any:
+    """The "Up next" card for a teacher or student, or an empty state."""
+    lecture = next_lecture(request.user)
+    if lecture is None:
+        return EmptyState(
+            "No upcoming lectures",
+            text="Your next lecture shows here with a countdown.",
+            icon="calendar",
+            framed=False,
+        )
+    refresh_url = reverse(f"{portal}:up_next")
+    if portal == "teacher":
+        action = meeting_link_button(lecture)
+        return up_next_card(lecture, action=action, refresh_url=refresh_url)
+    window = join_window_minutes(institute)
+    state = join_state(lecture, now=timezone.now(), window=window)
+    return up_next_card(
+        lecture,
+        action=join_action(lecture, state, window),
+        refresh_url=refresh_url,
+        teacher=True,
+    )
+
+
+class UpNextCardView(PortalPageView):
+    """The card alone, for its HTMX refresh every 30 seconds."""
+
+    portal = "teacher"
+    allowed_roles = [Role.TEACHER]
+
+    def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        body = up_next_body(request, self.portal, self.get_institute())
+        return HttpResponse(body.render(request=request))
+
+
+class StudentUpNextCardView(UpNextCardView):
+    portal = "student"
+    allowed_roles = [Role.STUDENT]
 
 
 class TeacherCalendarPage(ListPage):

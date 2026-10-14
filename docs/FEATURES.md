@@ -26,7 +26,7 @@ Plan: **B** = Basic, **P** = Premium. Plan split is from the reference pricing p
 - [ ] Dark / light / auto appearance setting.
 - [x] Currency setting per institute. (verify)
 - [ ] Currency symbol shown on all amounts (with fees, Phase 7).
-- [ ] Per-user time zone; lectures show in the viewer's zone.
+- [x] Per-user time zone; lectures show in the viewer's zone. Built in 3.4: the page clock shows the zone label (for example PKT); lecture times already show it.
 - [ ] "Default portal" and "Toolbar settings" in the profile menu. (verify what they do)
 - [ ] Public site: Home, Features, Portals, Pricing, Contact, Privacy, Terms, Sign in.
 - [ ] Contact / demo-request form that lands in Super Admin.
@@ -71,10 +71,10 @@ Setup order the reference teaches: Campus, Classes, Batches, Subjects, Fee Plans
 - [x] Recurring schedules: weekly (or custom) timetable creates every lecture in one step. Built in 3.2: weekly days, a date range (or number of weeks) and a preview; "custom" rules beyond weekdays are not built.
 - [x] Lecture lists with tabs: Today, Upcoming, Past, All; filter by subject. Built in 3.1 for the admin (All lectures) and teacher (My lectures). Built in 3.3: student "My lectures" and guardian "Lectures schedule" (read only, for one chosen child), and a date range on All lectures.
 - [ ] Teacher actions on a lecture: Start class, open whiteboard, take manual attendance.
-- [ ] Student actions: Join (enabled once the teacher starts), "Waiting for host" state, "Join opens soon" state.
+- [ ] Student actions: Join (enabled once the teacher starts), "Waiting for host" state, "Join opens soon" state. Built in 3.4: the states and the Join button on "My lectures" and "Up next"; Join posts to the server, which checks the state again and opens the link. The teacher starts a lecture in 3.5, so until then Join stays at "Waiting for host".
 - [ ] Teacher calendar view (Schedule) and Lecture History. Built in 3.3: the Schedule calendar (week and month; a scheduled lecture opens its edit page). Lecture History comes with attendance (Phase 4).
 - [ ] Admin Lectures Dashboard / Live Lecture Monitor: live and upcoming classes.
-- [ ] Up-next card with countdown on teacher and student dashboards.
+- [x] Up-next card with countdown on teacher and student dashboards. Built in 3.4: the card refreshes itself every 30 seconds; the teacher card has "Open meeting link" (Start class comes with 3.5); the guardian home lists the next 5 classes with the child's name.
 - [ ] Lecture states: scheduled, live, finished, cancelled.
 
 ## 6. Attendance (B)
@@ -152,13 +152,13 @@ Profile menu: Account Settings, Toolbar Settings, Default Portal, Institute Sett
 Main dashboard: campus hero, clock, 4 stat cards (students, teachers, batches, lectures today), quick actions (Enrol Student, New Lecture, Generate Challan, Live Lecture Monitor), students and teachers sections with active/inactive counts and a ring chart. Built in 2.4: hero with today's date (no live clock), stat cards for students, teachers and running batches, quick actions the user may open, active bars instead of a ring chart (no chart library yet), recent students and teachers. Lectures today and the lecture and fee quick actions come with Phases 3 and 7. Redesigned in R4c: the hero holds the quick actions and the numbers (students, teachers, running batches), and the students and teachers cards have a ring chart (plain SVG) and the five newest people; the date moved to the live clock in the page header.
 
 **Teacher (left sidebar):** Dashboard | Academics (My Lectures, Create Lecture, Schedule Recurring, Schedule, Lecture History, Documents) | Planning (Lesson Plans, Homework, Submit Report) | Assignments | Quizzes & Exams | Messages | People (My Students) | Leave (Apply Leave) | Finance (My Salary) | Account (My Profile, Account Settings, Sign Out).
-Dashboard: welcome banner, subject/batch chips, up-next card with countdown, 4 stat cards (lectures, students, batches, subjects), quick actions. Built in R4c: welcome banner with chips, an empty up-next card, and stat cards for students, batches and subjects. The countdown, the lectures card and quick actions come with Phase 3.
+Dashboard: welcome banner, subject/batch chips, up-next card with countdown, 4 stat cards (lectures, students, batches, subjects), quick actions. Built in R4c: welcome banner with chips, an empty up-next card, and stat cards for students, batches and subjects. Built in 3.4: the up-next card with a countdown and a "Lectures today" card. Quick actions come later.
 
 **Student (left sidebar):** Dashboard | Academics (My Lectures, My Attendance, Leave Requests, Homework, Lesson Plans, Assignments, Quizzes & Exams, Documents) | Messages | Finance (Fee Details) | Account (My Profile, Settings, Sign Out).
-Dashboard: attendance %, homework done %, upcoming count, fee paid %, up-next card, fee KPIs (billed, paid, due, pending challans). Built in R4c: welcome banner with code, class and batch/subject chips, and an empty up-next card. The KPIs come with their phases.
+Dashboard: attendance %, homework done %, upcoming count, fee paid %, up-next card, fee KPIs (billed, paid, due, pending challans). Built in R4c: welcome banner with code, class and batch/subject chips, and an up-next card (with a countdown and Join since 3.4). The KPIs come with their phases.
 
 **Guardian (left sidebar):** Dashboard | Academics (Lectures Schedule, Homework, Lesson Plans, Quizzes & Exams, Class Attendance) | Finance (Fee & Challans, Fee Pay) | Communication (Messages) | Account (Student Profile, Account Settings, Sign Out).
-Dashboard: child switcher in the header, billed / paid / outstanding / upcoming classes, homework progress and 6-month trend chart. One guardian login can cover several children; every page follows the chosen child. Built in R4c: welcome banner, a "Your children" card (code, class, batches, status) and an empty upcoming classes card. The child switcher and the KPIs come with their phases.
+Dashboard: child switcher in the header, billed / paid / outstanding / upcoming classes, homework progress and 6-month trend chart. One guardian login can cover several children; every page follows the chosen child. Built in R4c: welcome banner, a "Your children" card (code, class, batches, status) and an upcoming classes card (the next 5 classes with the child's name since 3.4). The child switcher and the KPIs come with their phases.
 
 ## 14. Analytics
 

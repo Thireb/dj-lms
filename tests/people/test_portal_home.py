@@ -96,7 +96,8 @@ def test_teacher_home_shows_welcome_pairs_up_next_and_stats(school) -> None:
     assert "Good " in page and "hero-banner" in page
     assert ">Morning: Math</li>" in page
     assert "Evening: Physics" not in page
-    assert ">No lectures yet<" in page
+    assert ">No upcoming lectures<" in page
+    assert ">Lectures today<" in page
     assert ">My students<" in page and ">Batches<" in page
     # "Up next" comes before the stat cards (FEATURES 13).
     assert page.index("Up next") < page.index("stat-card")
