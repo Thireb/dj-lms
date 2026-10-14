@@ -85,7 +85,8 @@ class LectureRow(Component):
 @dataclass(frozen=True)
 class CalendarItem:
     """One entry in a calendar day. ``tone`` is ``info``, ``success``,
-    ``neutral`` or ``danger`` (cancelled entries are struck through)."""
+    ``warning``, ``neutral`` or ``danger`` (cancelled entries are struck
+    through)."""
 
     time: str
     title: str

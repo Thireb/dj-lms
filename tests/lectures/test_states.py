@@ -181,7 +181,7 @@ def test_schedule_edit_keeps_a_cancelled_lecture(school) -> None:
 
 
 @pytest.mark.django_db
-def test_lectures_past_their_end_become_finished(school) -> None:
+def test_lectures_past_their_end_close(school) -> None:
     missed = _in(school, -120, title="Missed")
     ran = _set(
         _in(school, -90, title="Ran", starts_at=soon(days=2)),
@@ -201,8 +201,11 @@ def test_lectures_past_their_end_become_finished(school) -> None:
     for lecture in (missed, ran, running, dropped):
         lecture.refresh_from_db()
     assert count == 2
-    assert missed.status == ran.status == LectureStatus.FINISHED
-    assert missed.ended_at == missed.ends_at
+    # Audit P3-7: never started means not held; started means finished.
+    assert missed.status == LectureStatus.NOT_HELD
+    assert missed.ended_at is None
+    assert ran.status == LectureStatus.FINISHED
+    assert ran.ended_at == ran.ends_at
     assert running.status == LectureStatus.LIVE
     assert dropped.status == LectureStatus.CANCELLED
 
@@ -221,7 +224,7 @@ def test_finish_task_runs_for_active_institutes(school, institute_b) -> None:
 
     assert finish_all_ended_lectures() == 1
     missed.refresh_from_db()
-    assert missed.status == LectureStatus.FINISHED
+    assert missed.status == LectureStatus.NOT_HELD
 
 
 def test_taught_minutes_uses_start_and_end_when_known() -> None:
@@ -660,3 +663,76 @@ def test_stopped_schedule_pages_go_back(admin_client, school, action) -> None:
     assert response.redirect_chain[-1][0] == reverse("admin:lecture_schedule_list")
     assert f"A stopped schedule cannot be {verb}." in response.content.decode()
     assert posted.status_code == 302
+
+
+# Phase 3 audit P3-7: "Not held"
+
+
+def _not_held(school, **fields) -> Lecture:
+    lecture = _in(school, -120, **fields)
+    return _set(lecture, status=LectureStatus.NOT_HELD)
+
+
+@pytest.mark.django_db
+def test_not_held_shows_and_filters_but_is_not_history(admin_client, school) -> None:
+    lecture = _not_held(school, title="Skipped class")
+    _finished(school, 3, title="Taught class")
+
+    all_rows = admin_client.get(reverse("admin:lecture_list"), {"show": "all"})
+    filtered = admin_client.get(
+        reverse("admin:lecture_list"), {"show": "all", "status": "not_held"}
+    )
+    page = admin_client.get(_url("admin", "detail", lecture)).content.decode()
+
+    row = table_row(all_rows.content.decode(), "Skipped class")
+    assert cell(row, "status") == ["Not", "held"]
+    assert "badge-tone-warning" in row
+    assert "/cancel/" not in row and "/edit/" not in row
+    assert "Taught class" not in filtered.content.decode()
+    history = list(list_history(school.teacher_1.user))
+    assert [item.title for item in history] == ["Taught class"]
+    assert lecture not in history
+    assert ">Taught<" not in page  # only a finished lecture has taught minutes
+
+
+@pytest.mark.django_db
+def test_not_held_on_the_calendar_and_for_join(school) -> None:
+    from apps.lectures.services import JOIN_ENDED, join_state
+
+    lecture = _not_held(school, title="Skipped class")
+    day = timezone.localtime(lecture.starts_at).date().isoformat()
+
+    html = signed_in(school.teacher_1.user).get(
+        reverse("teacher:schedule"), {"date": day}
+    )
+
+    assert "border-warning" in html.content.decode()
+    assert join_state(lecture, now=lecture.starts_at, window=WINDOW) == JOIN_ENDED
+
+
+@pytest.mark.django_db
+def test_migration_marks_finished_lectures_without_a_start_not_held(school) -> None:
+    import importlib
+
+    from django.apps import apps as django_apps
+
+    migration = importlib.import_module(
+        "apps.lectures.migrations.0008_mark_never_started_not_held"
+    )
+    never = _set(
+        _in(school, -120, title="Never"),
+        status=LectureStatus.FINISHED,
+        ended_at=timezone.now(),
+    )
+    taught = _finished(school, 3, title="Taught")
+    _set(taught, started_at=taught.starts_at)
+
+    # The live registry has the fail-closed manager (a real migration gets
+    # the plain one), so run it inside the tenant context here.
+    with tenant_context(school.morning.institute):
+        migration.mark_not_held(django_apps, None)
+
+    never.refresh_from_db()
+    taught.refresh_from_db()
+    assert never.status == LectureStatus.NOT_HELD and never.ended_at is None
+    assert taught.status == LectureStatus.FINISHED

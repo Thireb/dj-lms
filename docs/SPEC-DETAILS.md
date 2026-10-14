@@ -60,7 +60,7 @@ Menu key `institute`: `institute_admin`, and a `sub_admin` granted Institute.
 | Entity | Statuses (stored) | Badge colors |
 |---|---|---|
 | Student / Teacher | `active`, `inactive` | green, red |
-| Lecture | `scheduled`, `live`, `finished`, `cancelled` | blue, green, grey, red |
+| Lecture | `scheduled`, `live`, `finished`, `not_held`, `cancelled` | blue, green, grey, amber, red |
 | Attendance | `present`, `partial`, `late`, `absent` | green, amber, amber, red |
 | Challan | `pending`, `partial`, `paid`, `cancelled` | amber, blue, green, grey |
 | Challan display only | `overdue` (pending/partial and past due date) | red |
@@ -283,7 +283,7 @@ Full name*, Institute name*, Phone*, Email, Website, Message*. Saved for Super A
 - Join opens at start minus join window. Student Join button states: `Join opens soon` (before window), `Waiting for host` (window open, teacher not started), `Join` (teacher started), `Ended`.
 - 3.4 (assumed): a live lecture shows `Join` even before the window (the teacher started early). Join posts to the server, which checks the state again and only then sends the student to the link; the link is not shown on student pages. An in-person lecture shows "In person"; a cancelled one shows nothing. "Up next" is the running lecture, else the next to start; cancelled and finished lectures are left out. "Lectures today" counts the viewer's today, without cancelled lectures.
 - Teacher presses Start to set status `live`. Finish sets `finished` automatically after the end time unless ended earlier.
-- 3.5 (assumed): Start is open from the join window before the start until the planned end. End class finishes a live lecture early. Every 5 minutes a job sets `finished` on scheduled and live lectures past their planned end, also when the teacher never pressed Start (so a class taught without Start still counts). Only the admin cancels (SPEC 3 All Lectures), and only a scheduled lecture that has not ended; a schedule edit does not bring it back. The meeting link shows only while a lecture is scheduled or live. Lecture History lists finished lectures; Duration is Start to end when both are known, else the planned duration.
+- 3.5 (assumed): Start is open from the join window before the start until the planned end. End class finishes a live lecture early. Every 5 minutes a job closes lectures past their planned end: a live lecture becomes `finished`; a scheduled one the teacher never started becomes `not_held` (owner decision 2026-10-14, Phase 3 audit P3-7), so payroll and attendance, which count only finished lectures, skip it. A not-held lecture cannot be edited, started or cancelled. Only the admin cancels (SPEC 3 All Lectures), and only a scheduled lecture that has not ended; a schedule edit does not bring it back. The meeting link shows only while a lecture is scheduled or live. Lecture History lists finished lectures; Duration is Start to end when both are known, else the planned duration.
 - A student sees a lecture only if enrolled in that batch and subject.
 - Recurring generation: on save creates lectures up to the end date, limited by the horizon setting. A nightly job extends the horizon.
 - Teacher assignment check: a teacher can only create lectures for a batch and subject they are linked to.
@@ -367,7 +367,7 @@ Lectures counted = lectures with status `finished` in the month, taught by the t
 
 **Admin main:** students (total, active, inactive), teachers (total, active), batches (running = batches with at least one active student), lectures today, plus recent 5 students and recent teachers, fee strip (billed this month, collected, outstanding), pending approvals count, waiting receipts count.
 **Salary dashboard:** payroll this month (gross, advances, net), paid vs unpaid teachers, top lecture counts.
-**Lectures dashboard:** live now, starting in the next 2 hours, today by status, teachers on leave today. Built in 3.6, plus a "Late start" list (owner request 2026-10-14): scheduled lectures past their start that the teacher has not started, until their planned end. "Lectures today" leaves out cancelled lectures; the note shows finished and cancelled. Teachers on leave today waits for leave (9.3).
+**Lectures dashboard:** live now, starting in the next 2 hours, today by status, teachers on leave today. Built in 3.6, plus a "Late start" list (owner request 2026-10-14): scheduled lectures past their start that the teacher has not started, until their planned end. "Lectures today" leaves out cancelled lectures; the note shows finished, not held and cancelled. Teachers on leave today waits for leave (9.3).
 **Challan dashboard:** billed, collected, outstanding this month, challans by status, waiting receipts, defaulters count.
 **Teacher:** next lecture (countdown), lectures today and this week, students, batches, subjects, pending reviews (homework and assignments to grade).
 **Student:** attendance %, homework done % (submitted divided by assigned in last 30 days), upcoming lectures (7 days), fee paid % (this academic year), up-next card, fee KPIs (billed, paid, due, pending challans).

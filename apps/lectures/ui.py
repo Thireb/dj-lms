@@ -44,6 +44,7 @@ STATUS_TONES = {
     LectureStatus.SCHEDULED: "info",
     LectureStatus.LIVE: "success",
     LectureStatus.FINISHED: "neutral",
+    LectureStatus.NOT_HELD: "warning",
     LectureStatus.CANCELLED: "danger",
 }
 

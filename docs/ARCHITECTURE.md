@@ -177,7 +177,7 @@ Money: `DecimalField(max_digits=12, decimal_places=2)`. Never float.
 Set up in 3.2: `config/celery.py`, broker `REDIS_URL`, no result backend. Tests and dev run tasks inside the request (`CELERY_TASK_ALWAYS_EAGER`). A task takes ids, never model objects, and opens `tenant_context` itself. Services queue a task with `transaction.on_commit`, so a rolled-back save queues nothing.
 
 - Generate recurring lectures. Built in 3.2: `lectures.tasks.generate_schedule_lectures` after a save, and `extend_all_schedules` nightly at 00:30 UTC (Celery beat).
-- Finish lectures past their end. Built in 3.5: `lectures.tasks.finish_all_ended_lectures` every 5 minutes (Celery beat), for active institutes.
+- Finish lectures past their end. Built in 3.5: `lectures.tasks.finish_all_ended_lectures` every 5 minutes (Celery beat): live lectures become finished and never-started ones not held, for active institutes.
 - Bulk challan generation.
 - Challan and lecture reminders.
 - Monthly payroll run.

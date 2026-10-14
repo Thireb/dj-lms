@@ -201,8 +201,9 @@ def test_seed_demo_adds_a_schedule_and_lectures_once(demo_env) -> None:
     teacher = TeacherProfile.unscoped.get(user__email="demo-teacher@example.com")
     assert schedules.count() == 1
     assert schedules.get().teacher == teacher
-    assert lectures.filter(schedule__isnull=True).count() == 6
+    assert lectures.filter(schedule__isnull=True).count() == 7
     assert lectures.filter(status="finished").count() == 3
+    assert lectures.filter(status="not_held", started_at__isnull=True).count() == 1
     assert lectures.filter(status="live").count() == 1
     # Audit P3-3: the demo student sees them, so Join can be shown.
     from apps.core.tenancy import tenant_context

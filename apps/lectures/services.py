@@ -319,6 +319,7 @@ JOIN_OPEN = "open"  # the teacher started: students may join
 JOIN_ENDED = "ended"
 JOIN_NONE = "none"  # cancelled, or in person: nothing to join
 OPEN_STATUSES = (LectureStatus.SCHEDULED, LectureStatus.LIVE)
+CLOSED_STATUSES = (LectureStatus.FINISHED, LectureStatus.NOT_HELD)
 
 
 def join_window_minutes(institute: Institute | None) -> int:
@@ -342,7 +343,7 @@ def join_state(lecture: Lecture, *, now: datetime, window: int) -> str:
         or lecture.delivery_mode != DeliveryMode.MANUAL_LINK
     ):
         return JOIN_NONE
-    if lecture.status == LectureStatus.FINISHED or now >= lecture.ends_at:
+    if lecture.status in CLOSED_STATUSES or now >= lecture.ends_at:
         return JOIN_ENDED
     if lecture.status == LectureStatus.LIVE:
         return JOIN_OPEN
@@ -450,10 +451,12 @@ def cancel_lecture(lecture: Lecture, *, now: datetime | None = None) -> Lecture:
 
 
 def finish_ended_lectures(institute: Institute, now: datetime | None = None) -> int:
-    """Scheduled and live lectures past their planned end become finished
-    (SPEC 6.4: "Finish sets finished automatically after the end time unless
-    ended earlier"). Runs in the institute's tenant context; returns the
-    count."""
+    """Lectures past their planned end close (SPEC 6.4: "Finish sets finished
+    automatically after the end time unless ended earlier"). A live lecture
+    becomes finished at its planned end; a scheduled one the teacher never
+    started becomes not held (Phase 3 audit P3-7), so payroll and attendance
+    do not count it. Runs in the institute's tenant context; returns the
+    count of both."""
     require_tenant_context(institute)
     now = now or timezone.now()
     ended = (
@@ -461,9 +464,13 @@ def finish_ended_lectures(institute: Institute, now: datetime | None = None) -> 
         .annotate(ends_at_db=ENDS_AT)
         .filter(ends_at_db__lte=now)
     )
-    return Lecture.objects.filter(pk__in=ended.values("pk")).update(
-        status=LectureStatus.FINISHED, ended_at=ENDS_AT, updated_at=now
-    )
+    finished = Lecture.objects.filter(
+        pk__in=ended.filter(status=LectureStatus.LIVE).values("pk")
+    ).update(status=LectureStatus.FINISHED, ended_at=ENDS_AT, updated_at=now)
+    not_held = Lecture.objects.filter(
+        pk__in=ended.filter(status=LectureStatus.SCHEDULED).values("pk")
+    ).update(status=LectureStatus.NOT_HELD, updated_at=now)
+    return finished + not_held
 
 
 def taught_minutes(lecture: Lecture) -> int:

@@ -137,7 +137,7 @@ def test_page_shows_the_numbers_and_three_lists(admin_client, busy_day) -> None:
     assert re.search(r">1</p><p[^>]*>Live now<", html)
     assert re.search(r">1</p><p[^>]*>Late start<", html)
     assert re.search(r">1</p><p[^>]*>Next 2 hours<", html)
-    assert "1 finished" not in html and "0 finished, 1 cancelled" in html
+    assert "1 finished" not in html and "0 finished, 0 not held, 1 cancelled" in html
     assert cell(table_row(html, "Live algebra"), "wait") == ["18", "min"]
     assert cell(table_row(html, "Late algebra"), "wait") == ["7", "min"]
     assert cell(table_row(html, "Soon physics"), "wait") in (

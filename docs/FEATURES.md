@@ -75,7 +75,7 @@ Setup order the reference teaches: Campus, Classes, Batches, Subjects, Fee Plans
 - [ ] Teacher calendar view (Schedule) and Lecture History. Built in 3.3: the Schedule calendar (week and month; a scheduled lecture opens its edit page). Built in 3.5: Lecture history (finished lectures, filter by batch); its Present / Total column fills with attendance (Phase 4).
 - [x] Admin Lectures Dashboard / Live Lecture Monitor: live and upcoming classes. Built in 3.6: Dashboards > Lectures with live now, late start (past its start, not started), the next 2 hours and today by status; it reloads every 30 seconds. "Teachers on leave today" comes with leave (9.3).
 - [x] Up-next card with countdown on teacher and student dashboards. Built in 3.4: the card refreshes itself every 30 seconds; the teacher card has "Open meeting link" (Start class comes with 3.5); the guardian home lists the next 5 classes with the child's name.
-- [x] Lecture states: scheduled, live, finished, cancelled. Built in 3.5: the teacher starts and ends a class, the admin cancels a lecture, and a job finishes lectures past their end every 5 minutes.
+- [x] Lecture states: scheduled, live, finished, cancelled, and not held (Phase 3 audit: past its end, never started). Built in 3.5: the teacher starts and ends a class, the admin cancels a lecture, and a job finishes lectures past their end every 5 minutes.
 
 ## 6. Attendance (B)
 

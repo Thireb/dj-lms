@@ -1207,6 +1207,7 @@ class LecturesDashboardPage(DashboardPage):
     def stats(self, data: LectureMonitor) -> Grid:
         today = data.today
         finished = today.get(LectureStatus.FINISHED, 0)
+        not_held = today.get(LectureStatus.NOT_HELD, 0)
         cancelled = today.get(LectureStatus.CANCELLED, 0)
         return Grid(
             [
@@ -1219,7 +1220,10 @@ class LecturesDashboardPage(DashboardPage):
                     data.today_total,
                     "Lectures today",
                     icon="calendar-days",
-                    note=f"{finished} finished, {cancelled} cancelled",
+                    note=(
+                        f"{finished} finished, {not_held} not held, "
+                        f"{cancelled} cancelled"
+                    ),
                 ),
             ],
             variant="stats",

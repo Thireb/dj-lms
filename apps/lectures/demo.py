@@ -1,6 +1,6 @@
 """Demo lectures for seed_demo (backlog LC3 and LC5): one weekly schedule,
-two single lectures, three finished lectures from last week and one live
-lecture for the first demo teacher.
+two single lectures, three finished lectures and one not held from last
+week, and one live lecture for the first demo teacher.
 
 The services refuse a start in the past, so the past and live lectures are
 saved directly (still inside the tenant context).
@@ -120,6 +120,8 @@ def _seed_past_and_live(institute: Institute, teacher, link) -> None:
         (f"{name} basics 1", now - timedelta(days=7), LectureStatus.FINISHED),
         (f"{name} basics 2", now - timedelta(days=5), LectureStatus.FINISHED),
         (f"{name} basics 3", now - timedelta(days=2), LectureStatus.FINISHED),
+        # Never started by the teacher, so it was not held (audit P3-7).
+        (f"{name} extra class", now - timedelta(days=3), LectureStatus.NOT_HELD),
         # Started 10 minutes ago, so the demo shows a live class and Join.
         (f"{name} live class", now - timedelta(minutes=10), LectureStatus.LIVE),
     ]
@@ -134,7 +136,7 @@ def _seed_past_and_live(institute: Institute, teacher, link) -> None:
             status=status,
             delivery_mode=DeliveryMode.MANUAL_LINK,
             meeting_url=DEMO_MEET_URL,
-            started_at=starts_at,
+            started_at=None if status == LectureStatus.NOT_HELD else starts_at,
             ended_at=starts_at + timedelta(minutes=55)
             if status == LectureStatus.FINISHED
             else None,

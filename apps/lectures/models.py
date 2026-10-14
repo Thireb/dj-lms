@@ -39,6 +39,9 @@ class LectureStatus(models.TextChoices):
     SCHEDULED = "scheduled", "Scheduled"
     LIVE = "live", "Live"
     FINISHED = "finished", "Finished"
+    # Past its end, never started by the teacher (Phase 3 audit P3-7):
+    # payroll and attendance count only finished lectures.
+    NOT_HELD = "not_held", "Not held"
     CANCELLED = "cancelled", "Cancelled"
 
 
