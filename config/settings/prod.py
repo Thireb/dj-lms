@@ -4,6 +4,7 @@ import os
 
 from .base import *  # noqa: F403
 from .db_url import database_config_from_url
+from .proxy import proxy_ssl_header
 
 DEBUG = False
 
@@ -59,6 +60,13 @@ SECURE_SSL_REDIRECT = os.environ.get("SECURE_SSL_REDIRECT", "true").lower() in {
     "true",
     "yes",
 }
+# Behind a TLS proxy every request reaches Django as http, so the redirect
+# above would loop without this (backlog S11).
+SECURE_PROXY_SSL_HEADER = proxy_ssl_header(
+    os.environ.get("TRUSTED_PROXY_SSL_HEADER", "")
+)
+# The uptime check may call the app over plain http (backlog S13).
+SECURE_REDIRECT_EXEMPT = [r"^health/$"]
 SECURE_HSTS_SECONDS = int(os.environ.get("SECURE_HSTS_SECONDS", "31536000"))
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True

@@ -42,6 +42,7 @@ Listed in `.env.example`. Set real values in Pethost, never in git.
 - `DATABASE_URL`
 - `REDIS_URL` (Celery broker and the shared cache for sign-in limits)
 - `TRUSTED_PROXY_IP_HEADER` (for example `HTTP_X_REAL_IP`, a header the proxy always sets)
+- `TRUSTED_PROXY_SSL_HEADER` (for example `HTTP_X_FORWARDED_PROTO`, the scheme header the TLS proxy always sets; Django trusts it, so gunicorn must be reachable only through the proxy)
 - `STORAGE_*` (bucket, key, secret, endpoint)
 - `EMAIL_*`
 - `SENTRY_DSN` (optional)
@@ -51,9 +52,9 @@ Listed in `.env.example`. Set real values in Pethost, never in git.
 - [ ] Answers to "Ask Pethost first" recorded in this file.
 - [ ] `DEBUG=False`, `ALLOWED_HOSTS` set, `CSRF_TRUSTED_ORIGINS` set.
 - [ ] HTTPS-only cookies and HSTS enabled.
-- [ ] `SECURE_PROXY_SSL_HEADER` set for the TLS proxy, or `SECURE_SSL_REDIRECT` loops (not built yet, backlog S11).
+- [ ] `TRUSTED_PROXY_SSL_HEADER` set to the TLS proxy's scheme header, or `SECURE_SSL_REDIRECT` loops (backlog S11). The proxy must overwrite that header on every request.
 - [ ] WhiteNoise serving static files (not built yet, backlog S12).
-- [ ] Health check URL (`/health/`) returns 200 (not built yet, backlog S13).
+- [ ] Health check URL (`/health/`) returns 200 (backlog S13). It answers `{"status": "ok"}`, or 503 when the database does not answer. It is not redirected to https, but the checker must send a host from `ALLOWED_HOSTS`.
 - [ ] Redis cache on, so sign-in limits are shared by every worker.
 - [ ] Seed command creates the first Super Admin.
 - [ ] Backups on for the database.

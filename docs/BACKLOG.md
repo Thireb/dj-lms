@@ -196,9 +196,9 @@ Claims the audit tested that did not hold: overlong cells do not give a 500 on i
 
 | # | Item | Source | Priority | Status |
 |---|---|---|---|---|
-| S11 | `SECURE_PROXY_SSL_HEADER` is not set; behind a TLS proxy `SECURE_SSL_REDIRECT` would loop. Set it with the proxy setup. | Phase 2 audit M7 | High before deploy | [ ] |
+| S11 | `SECURE_PROXY_SSL_HEADER` is not set; behind a TLS proxy `SECURE_SSL_REDIRECT` would loop. Set it with the proxy setup. Fixed: `TRUSTED_PROXY_SSL_HEADER` names the proxy's scheme header (for example `HTTP_X_FORWARDED_PROTO`); a wrong name stops the start. | Phase 2 audit M7 | High before deploy | [x] |
 | S12 | WhiteNoise is not installed, so static files do not load with `DEBUG=False`. New dependency (ask first). | Phase 2 audit M7 | High before deploy | [ ] |
-| S13 | No `/health/` route for the uptime check. | Phase 2 audit M7 | High before deploy | [ ] |
+| S13 | No `/health/` route for the uptime check. Fixed: `/health/` checks the database (200 or 503, no details), open to everyone, not cached, not redirected to https. | Phase 2 audit M7 | High before deploy | [x] |
 | S14 | The sign-in limits need one shared cache; `prod.py` uses Redis when `REDIS_URL` is set, but the `redis` package is not installed (new dependency, ask first). Fixed in 3.2: `redis` and `celery` added with the owner's approval. | Phase 2 audit H1 | High before deploy | [x] |
 | S15 | Sub-admins have no `allowed_menus` until 9.3c, so `demo-sub` gets 403 on every admin page. 9.3c must add the field, the seed grants (Finance and People per SPEC 10) and tests; the dashboard already hides people names without People. | Phase 2 audit M9 | Medium | [ ] |
 | S16 | openpyxl parses XML without `defusedxml`. No attack worked against Python 3.13's expat limits; add `defusedxml` as defense in depth when dependencies are next reviewed. | Phase 2 audit | Low | [ ] |
@@ -217,7 +217,7 @@ The audit called these L1-L8; renamed RA1-RA8 because L1-L12 are already used ab
 | RA4 | Checkboxes were a 20px target. The whole row is one label, 40px tall. | Low | [x] |
 | RA5 | The logo link's `aria-label="LEXICON home"` did not match its visible text (axe label-content-name-mismatch). The label is gone; the name is the visible "LEXICON" plus a screen-reader-only "home". | Low | [x] |
 | RA6 | The sign-in panel promised live classes, homework and challans, which do not exist yet. It now lists what exists and says the rest is coming. | Low | [x] |
-| RA7 | No `/health/` route. Already S13 (Phase 12). | High before deploy | [ ] see S13 |
+| RA7 | No `/health/` route. Already S13 (Phase 12). Fixed with S13. | High before deploy | [x] |
 | RA8 | No query-count tests. `tests/people/test_dashboard_queries.py` sets a budget per dashboard (admin 13, teacher 7, student 7, guardian 8) with more people than the pages list, so an N+1 query fails it. | Low | [x] |
 
 ## Build of 3.1 (lectures)

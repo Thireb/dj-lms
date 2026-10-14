@@ -35,6 +35,7 @@ PUBLIC_ALLOWLIST = {
     "accounts:forgot_password",
     "accounts:set_password",
     "dev_components",
+    "health",  # uptime check (S13), no data
     "root",
 }
 SKIPPED_NAMESPACES = {"developer"}  # /django-admin/, gated by middleware tests.
