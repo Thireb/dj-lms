@@ -1807,8 +1807,8 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
     (
         "schedule needs a date on its days",
         "apps/lectures/services.py",
-        "    if not occurrences(details, details.start_date, details.end_date):\n",
-        "    if False:\n",
+        '    if not starts:\n        errors.add("weekdays"',
+        '    if False:\n        errors.add("weekdays"',
     ),
     (
         "extend needs a later date",
@@ -2263,14 +2263,14 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
     (
         "monitor late needs past the start",
         "apps/lectures/services.py",
-        "        late=list(scheduled.filter(starts_at__lte=now, ends_at_db__gt=now)),\n",
-        "        late=list(scheduled.filter(ends_at_db__gt=now)),\n",
+        "        late=_monitor_list(scheduled.filter(starts_at__lte=now, ends_at_db__gt=now)),\n",
+        "        late=_monitor_list(scheduled.filter(ends_at_db__gt=now)),\n",
     ),
     (
         "monitor late leaves at the end",
         "apps/lectures/services.py",
-        "        late=list(scheduled.filter(starts_at__lte=now, ends_at_db__gt=now)),\n",
-        "        late=list(scheduled.filter(starts_at__lte=now)),\n",
+        "        late=_monitor_list(scheduled.filter(starts_at__lte=now, ends_at_db__gt=now)),\n",
+        "        late=_monitor_list(scheduled.filter(starts_at__lte=now)),\n",
     ),
     (
         "monitor late only scheduled",
