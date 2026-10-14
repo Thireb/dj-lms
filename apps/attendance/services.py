@@ -5,6 +5,8 @@ the lecture's batch and one of its subjects, and was made before the
 lecture ended. A student who already has a mark is expected too, so a mark
 stays counted after the enrolment is removed. An expected student with no
 mark counts as absent in the percentage and shows as "Not marked".
+An inactive student (one who left) is expected only where they have a mark,
+so the form does not start them at Present.
 """
 
 from __future__ import annotations
@@ -25,7 +27,7 @@ from apps.academics.models import StudentBatchSubject
 from apps.attendance.models import Attendance, AttendanceSource, AttendanceStatus
 from apps.lectures.models import Lecture, LectureStatus
 from apps.lectures.times import combine_local
-from apps.people.models import StudentProfile
+from apps.people.models import ProfileStatus, StudentProfile
 
 STATUS_KEYS = {key for key, _ in AttendanceStatus.choices}
 HALF = Decimal("0.5")
@@ -40,9 +42,11 @@ class Enrolment:
 
 
 def _enrolments(rows: Any) -> list[Enrolment]:
+    """The enrolments of active students only (see the module text)."""
+    active = rows.filter(student__status=ProfileStatus.ACTIVE)
     return [
         Enrolment(*values)
-        for values in rows.values_list(
+        for values in active.values_list(
             "student_id", "batch_id", "subject_id", "created_at"
         )
     ]
