@@ -278,6 +278,7 @@ Full name*, Institute name*, Phone*, Email, Website, Message*. Saved for Super A
 - Provider-based (later): time joined divided by lecture duration. At least Present threshold = Present; at least Partial threshold = Partial; below = Absent. Joining after the Late minutes sets Late if otherwise Present.
 - Attendance % = (Present + Late + 0.5 x Partial) divided by finished lectures the student was expected in.
 - Only finished lectures count. A cancelled lecture never counts.
+- 4.1 (assumed, owner approved 2026-10-14): the teacher marks only a finished lecture (not a scheduled, live, not-held or cancelled one) and can change the marks later. The admin sees the marks on the lecture page and does not mark. A student is expected in a lecture when an enrolment of theirs has the lecture's batch and one of its subjects, made before the lecture ended; a student who already has a mark stays expected after the enrolment is removed. An expected student with no mark shows "Not marked" and counts as absent in the %. The form starts every unmarked student at Present, so the teacher changes only the others. Lecture History "Present / Total" = students marked Present, Late or Partial / expected students; "Not taken" before the first mark.
 
 ### 6.4 Lectures
 - Join opens at start minus join window. Student Join button states: `Join opens soon` (before window), `Waiting for host` (window open, teacher not started), `Join` (teacher started), `Ended`.

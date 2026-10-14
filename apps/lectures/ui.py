@@ -14,6 +14,8 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateformat import format as date_format
 
+from apps.attendance.services import LectureCount
+from apps.attendance.ui import present_total
 from apps.lectures.models import (
     DeliveryMode,
     Lecture,
@@ -107,6 +109,12 @@ def start_button(lecture: Lecture) -> PostButton:
     )
 
 
+def attendance_button(lecture: Lecture, *, marked: bool) -> Button:
+    label = "Edit attendance" if marked else "Take attendance"
+    url = lecture_url("teacher", "attendance", lecture)
+    return Button(label, url=url, icon="clipboard-check")
+
+
 def end_dialog(lecture: Lecture) -> ConfirmDialog:
     return ConfirmDialog(
         f"End {lecture.title} now? Students can no longer join.",
@@ -185,6 +193,13 @@ class TeacherLectureTable(LectureTable):
     def state_actions(self, lecture: Lecture) -> list[Any]:
         if can_start(lecture, now=self.now, window=self.window):
             return [start_button(lecture)]
+        if lecture.status == LectureStatus.FINISHED:
+            url = lecture_url(self.portal, "attendance", lecture)
+            return [
+                IconButton(
+                    "clipboard-check", f"Attendance for {lecture.title}", url=url
+                )
+            ]
         return []
 
 
@@ -194,13 +209,20 @@ def history_duration(lecture: Lecture) -> str:
 
 class HistoryTable(DataTable):
     """Teacher "Lecture history" (SPEC 3); the admin table adds the teacher.
-    Present / Total comes with attendance (Phase 4)."""
+    ``counts`` fills Present / Total (roadmap 4.1)."""
 
     portal = "teacher"
     empty_title = "No finished lectures yet."
     show_teacher = False
 
-    def __init__(self, rows: list[Lecture], **props):
+    def __init__(
+        self,
+        rows: list[Lecture],
+        *,
+        counts: dict[int, LectureCount] | None = None,
+        **props,
+    ):
+        self.counts = counts or {}
         super().__init__(rows=rows, **props)
 
     @property
@@ -211,12 +233,15 @@ class HistoryTable(DataTable):
             Column("batch", "Batch", lambda lecture: lecture.batch.name),
             Column("subjects", "Subjects", lecture_subjects),
             Column("duration", "Duration", history_duration),
-            Column("attendance", "Present / Total", lambda lecture: "Not taken"),
+            Column("attendance", "Present / Total", self.present_total),
             Column("actions", "", self.view_button),
         ]
         if self.show_teacher:
             columns.insert(2, Column("teacher", "Teacher", lecture_teacher))
         return columns
+
+    def present_total(self, lecture: Lecture) -> str:
+        return present_total(self.counts.get(lecture.pk))
 
     def view_button(self, lecture: Lecture) -> IconButton:
         url = lecture_url(self.portal, "detail", lecture)

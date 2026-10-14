@@ -80,7 +80,7 @@ The product owner did not accept the current look (navigation, tables, forms, si
 
 ## Phase 4: Attendance
 
-- [ ] 4.1 Teacher marks attendance per lecture.
+- [x] 4.1 Teacher marks attendance per lecture. Built: the `attendance` app (`Attendance`, one row per lecture and student), "Take attendance" for a finished lecture (form starts at Present), the marks on the lecture page, the "Attendance" row action and Lecture history Present / Total.
 - [ ] 4.2 Student and guardian attendance views.
 - [ ] 4.3 Monthly summary and percentages.
 

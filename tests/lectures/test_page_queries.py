@@ -45,14 +45,16 @@ def _detail(school) -> str:
 
 PAGES = [
     ("admin", lambda s: reverse("admin:lecture_list") + "?show=all", 11),
-    ("admin", _detail, 7),
+    # +3 (roadmap 4.1): the attendance card's marks, enrolments and students.
+    ("admin", _detail, 10),
     # +1: the teacher links for "Needs attention", one query per page.
     ("admin", lambda s: reverse("admin:lecture_schedule_list"), 10),
-    ("admin", lambda s: reverse("admin:teacher_lecture_history"), 9),
+    # +2 (roadmap 4.1): enrolments and marks for Present / Total, per page.
+    ("admin", lambda s: reverse("admin:teacher_lecture_history"), 11),
     ("admin", lambda s: reverse("admin:dashboard_lectures"), 8),
     ("teacher_1", lambda s: reverse("teacher:lecture_list") + "?show=all", 10),
     ("teacher_1", lambda s: reverse("teacher:schedule") + "?view=month", 6),
-    ("teacher_1", lambda s: reverse("teacher:lecture_history"), 8),
+    ("teacher_1", lambda s: reverse("teacher:lecture_history"), 10),
     ("student_1", lambda s: reverse("student:lecture_list") + "?show=all", 10),
     ("guardian_1", lambda s: reverse("guardian:lecture_schedule") + "?show=all", 9),
 ]

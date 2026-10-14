@@ -227,7 +227,7 @@ Left out of 3.1 on purpose; each has a home in a later item.
 | # | Item | Priority | Status |
 |---|---|---|---|
 | LC1 | All lectures has no date-range filter yet (SPEC 3 lists one). The Today, Upcoming, Past and All tabs and the teacher, batch, subject and status filters are built. Add the range with the schedule views (3.3). Fixed in 3.3: From and To date fields (days in the viewer's zone, both included). | Low | [x] |
-| LC2 | Row actions View and Cancel, and the teacher's Start, Whiteboard and Attendance, come with lecture states (3.5), the whiteboard and attendance (4.1). 3.1 has Edit and "Open meeting link". 3.5 adds View, Cancel (admin) and Start class (teacher); Whiteboard and Attendance stay for Phase 4. | Low | [ ] |
+| LC2 | Row actions View and Cancel, and the teacher's Start, Whiteboard and Attendance, come with lecture states (3.5), the whiteboard and attendance (4.1). 3.1 has Edit and "Open meeting link". 3.5 adds View, Cancel (admin) and Start class (teacher). 4.1 adds Attendance (finished lectures). Only Whiteboard stays open; it comes with the ROADMAP "Live whiteboard" item (feature key `whiteboard`). | Low | [ ] |
 | LC3 | `seed_demo` has no lectures yet. Fixed in 3.2: a Mon/Wed/Fri schedule and two single lectures for `demo-teacher@`. Past and live demo lectures need lecture states (LC5). | Low | [x] |
 | LC5 | Past, live and finished demo lectures (SPEC 13) come with lecture states (3.5); the services refuse a start in the past. Fixed in 3.5: three finished lectures from last week and one live lecture for `demo-teacher@`. | Low | [x] |
 | LC4 | The admin dashboard "lectures today" number and the teacher home lecture count and up-next countdown come with 3.4. Fixed in 3.4. | Low | [x] |

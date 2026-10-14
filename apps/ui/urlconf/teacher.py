@@ -1,5 +1,6 @@
 from django.urls import path
 
+from apps.attendance import views as attendance
 from apps.lectures import views as lectures
 from apps.ui.views import portal_home
 
@@ -34,6 +35,11 @@ urlpatterns = [
         "lectures/<int:pk>/end/",
         lectures.TeacherLectureEndView.as_view(),
         name="lecture_end",
+    ),
+    path(
+        "lectures/<int:pk>/attendance/",
+        attendance.TakeAttendancePage.as_view(),
+        name="lecture_attendance",
     ),
     path(
         "lectures/history/",

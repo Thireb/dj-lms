@@ -19,7 +19,7 @@ from apps.academics.services import set_teacher_batch_subjects
 from apps.accounts.models import User
 from apps.core.roles import Role
 from apps.core.tenancy import tenant_context
-from apps.lectures.models import Lecture, RecurringSchedule
+from apps.lectures.models import Lecture, LectureStatus, RecurringSchedule
 from apps.people.models import StudentProfile, TeacherProfile
 from apps.people.services import create_student_profile, create_teacher_profile
 from apps.ui.views.pages import PortalPageView
@@ -171,6 +171,16 @@ def _lecture(institute) -> int:
     return lecture.pk
 
 
+def _finished_lecture(institute) -> int:
+    """Attendance opens only for a finished lecture."""
+    pk = _lecture(institute)
+    # unscoped: test setup outside a tenant context.
+    Lecture.unscoped.filter(pk=pk).update(
+        starts_at=timezone.now() - timedelta(days=1), status=LectureStatus.FINISHED
+    )
+    return pk
+
+
 def _schedule(institute) -> int:
     lecture = Lecture.unscoped.get(pk=_lecture(institute))
     with tenant_context(institute):
@@ -214,6 +224,7 @@ ROUTE_OBJECTS = {
     "teacher:lecture_start": _lecture,
     "teacher:lecture_end": _lecture,
     "student:lecture_join": _lecture,
+    "teacher:lecture_attendance": _finished_lecture,
     **{
         f"{portal}:lecture_schedule_{action}": _schedule
         for portal in ("admin", "teacher")
