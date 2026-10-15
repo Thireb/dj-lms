@@ -3268,6 +3268,66 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "    attempts, _ = QuizAttempt.unscoped.filter(institute=institute).delete()\n",
         "    attempts = 0\n",
     ),
+    (
+        "only an exam records flags (5.3 2c)",
+        "apps/assessments/services.py",
+        "    if quiz.kind != QuizKind.EXAM:\n        return set()\n",
+        "    if False:\n        return set()\n",
+    ),
+    (
+        "tab flags only when the exam asks (5.3 2c)",
+        "apps/assessments/services.py",
+        "    if quiz.flag_tab_leaving:\n",
+        "    if True:\n",
+    ),
+    (
+        "full screen flags only when the exam asks (5.3 2c)",
+        "apps/assessments/services.py",
+        "    if quiz.require_full_screen:\n        kinds.add(",
+        "    if True:\n        kinds.add(",
+    ),
+    (
+        "no flags after the attempt ends (5.3 2c)",
+        "apps/assessments/services.py",
+        "            locked.status != AttemptStatus.IN_PROGRESS\n            or now > locked.deadline + ANSWER_GRACE\n",
+        "            now > locked.deadline + ANSWER_GRACE\n",
+    ),
+    (
+        "no flags after the deadline (5.3 2c)",
+        "apps/assessments/services.py",
+        "            or now > locked.deadline + ANSWER_GRACE\n            or kind not in flagged_kinds(locked.quiz)\n",
+        "            or kind not in flagged_kinds(locked.quiz)\n",
+    ),
+    (
+        "flags stop at the cap (5.3 2c)",
+        "apps/assessments/services.py",
+        "            or AttemptEvent.objects.filter(attempt=locked).count() >= MAX_EVENTS\n",
+        "",
+    ),
+    (
+        "students do not read flags (5.3 2c)",
+        "apps/assessments/models.py",
+        'EVENT_LOOKUPS = {Role.TEACHER: "attempt__quiz__teacher__user_id"}\n',
+        'EVENT_LOOKUPS = {\n    Role.TEACHER: "attempt__quiz__teacher__user_id",\n    Role.STUDENT: "attempt__student__user_id",\n}\n',
+    ),
+    (
+        "the paper shows the exam guard (5.3 2c)",
+        "apps/assessments/views.py",
+        "        if kinds:\n            guard.append(\n",
+        "        if False:\n            guard.append(\n",
+    ),
+    (
+        "results show the flag counts (5.3 2c)",
+        "apps/assessments/views.py",
+        "            flags=event_counts(self.quiz) if flagged_kinds(self.quiz) else None,\n",
+        "            flags=None,\n",
+    ),
+    (
+        "the event view uses the student's own attempt (5.3 2c)",
+        "apps/assessments/views.py",
+        "        attempt = QuizAttempt.objects.filter(quiz=quiz, student=self.student).first()\n        if attempt is not None:\n            log_attempt_event(",
+        "        attempt = QuizAttempt.objects.filter(quiz=quiz).first()\n        if attempt is not None:\n            log_attempt_event(",
+    ),
 ]
 
 
