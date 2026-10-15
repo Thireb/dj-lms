@@ -2878,6 +2878,90 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "whitespace-pre-line ",
         "",
     ),
+    (
+        "a teacher reads only their own question bank (5.2)",
+        "apps/assessments/models.py",
+        'QUESTION_LOOKUPS = {Role.TEACHER: "teacher__user_id"}\n',
+        'QUESTION_LOOKUPS = {Role.TEACHER: "teacher__user_id", Role.STUDENT: "subject__student_links__student__user_id"}\n',
+    ),
+    (
+        "a teacher reads only their own question options (5.2)",
+        "apps/assessments/models.py",
+        'OPTION_LOOKUPS = {Role.TEACHER: "question__teacher__user_id"}\n',
+        'OPTION_LOOKUPS = {Role.TEACHER: "institute__isnull"}\n',
+    ),
+    (
+        "question subject must be the teacher's (5.2)",
+        "apps/assessments/services.py",
+        "        if not taught:\n",
+        "        if False:\n",
+    ),
+    (
+        "short answer question has no options (5.2)",
+        "apps/assessments/services.py",
+        "        if details.options:\n",
+        "        if False:\n",
+    ),
+    (
+        "MCQ has 2 to 6 options (5.2)",
+        "apps/assessments/services.py",
+        "    if not MIN_OPTIONS <= len(options) <= MAX_OPTIONS:\n",
+        "    if False:\n",
+    ),
+    (
+        "MCQ option cannot be empty (5.2)",
+        "apps/assessments/services.py",
+        "    elif any(not option.strip() for option in options):\n",
+        "    elif False:\n",
+    ),
+    (
+        "MCQ options are different (5.2)",
+        "apps/assessments/services.py",
+        "    elif len({option.strip().casefold() for option in options}) < len(options):\n",
+        "    elif False:\n",
+    ),
+    (
+        "MCQ correct option is one of the options (5.2)",
+        "apps/assessments/services.py",
+        "    if details.correct is None or not 0 <= details.correct < len(options):\n",
+        "    if details.correct is None:\n",
+    ),
+    (
+        "question edit replaces the options (5.2)",
+        "apps/assessments/services.py",
+        "        QuestionOption.objects.filter(question=row).delete()\n",
+        "",
+    ),
+    (
+        "the chosen option is saved as correct (5.2)",
+        "apps/assessments/services.py",
+        "                is_correct=position - 1 == details.correct,\n",
+        "                is_correct=position == details.correct,\n",
+    ),
+    (
+        "question form short answer drops the option boxes (5.2)",
+        "apps/assessments/forms.py",
+        '        if cleaned.get("kind") != QuestionKind.MCQ:\n',
+        "        if False:\n",
+    ),
+    (
+        "question form refuses an empty correct box (5.2)",
+        "apps/assessments/forms.py",
+        "        if chosen is not None and chosen not in numbers:\n",
+        "        if False:\n",
+    ),
+    (
+        "question form maps the correct box past empty boxes (5.2)",
+        "apps/assessments/forms.py",
+        '        cleaned["correct_index"] = numbers.index(chosen) if chosen in numbers else None\n',
+        '        cleaned["correct_index"] = chosen - 1 if chosen in numbers else None\n',
+    ),
+    (
+        "question delete is POST only (5.2)",
+        "apps/assessments/views.py",
+        '    http_method_names = ["post"]\n',
+        '    http_method_names = ["get", "post"]\n',
+    ),
 ]
 
 
