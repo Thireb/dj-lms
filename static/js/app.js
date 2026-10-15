@@ -37,6 +37,63 @@ document.addEventListener("alpine:init", () => {
       this.remaining = `Starts in ${formatRemaining(diffMs)}`;
     },
   }));
+
+  // Quiz attempt countdown (AttemptTimer): at zero it submits the form
+  // with auto_submit=1, once. The server keeps its own deadline.
+  Alpine.data("attemptTimer", () => ({
+    remaining: "--:--",
+    urgent: false,
+    announce: "",
+    _timer: null,
+    _sent: false,
+
+    init() {
+      const iso = this.$el.dataset.deadline || "";
+      if (!isStrictIsoDateTime(iso)) {
+        return;
+      }
+      this.tick(iso);
+      this._timer = window.setInterval(() => this.tick(iso), 1000);
+    },
+
+    destroy() {
+      if (this._timer !== null) {
+        window.clearInterval(this._timer);
+        this._timer = null;
+      }
+    },
+
+    tick(iso) {
+      const diffMs = Date.parse(iso) - Date.now();
+      if (diffMs <= 0) {
+        this.remaining = "00:00";
+        this.destroy();
+        this.send();
+        return;
+      }
+      this.remaining = formatRemaining(diffMs);
+      const wasUrgent = this.urgent;
+      this.urgent = diffMs <= 60000;
+      if (this.urgent && !wasUrgent) {
+        this.announce = "One minute left. Your answers are sent when the time ends.";
+      }
+    },
+
+    send() {
+      const form = document.getElementById(this.$el.dataset.form || "");
+      if (this._sent || form === null) {
+        return;
+      }
+      this._sent = true;
+      const flag = document.createElement("input");
+      flag.type = "hidden";
+      flag.name = "auto_submit";
+      flag.value = "1";
+      form.appendChild(flag);
+      // A button named "submit" hides form.submit, so call the method itself.
+      HTMLFormElement.prototype.submit.call(form);
+    },
+  }));
 });
 
 /** 2d 3h, then 1:02:03, then 04:05. */

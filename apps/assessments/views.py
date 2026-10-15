@@ -2,7 +2,8 @@
 Add / Edit, the answers and the grade page; student Assignments and the
 assignment page with the answer form. Teacher "Question bank" (roadmap
 5.2): list, Add, Edit and Delete. Teacher "Quizzes and exams" set-up
-(roadmap 5.3): list, Add, Edit, the quiz page, Add questions, Publish."""
+(roadmap 5.3): list, Add, Edit, the quiz page, Add questions, Publish;
+student "Quizzes and exams", the quiz page, Start and the attempt."""
 
 from __future__ import annotations
 
@@ -23,15 +24,18 @@ from apps.assessments.forms import (
     AddQuestionsForm,
     AnswerForm,
     AssignmentForm,
+    AttemptForm,
     GradeForm,
     QuestionForm,
     QuizForm,
 )
 from apps.assessments.models import (
     Assignment,
+    AttemptStatus,
     Question,
     QuestionKind,
     Quiz,
+    QuizAttempt,
     QuizKind,
     QuizQuestion,
     QuizStatus,
@@ -45,7 +49,10 @@ from apps.assessments.services import (
     QuizDetails,
     add_questions,
     assignment_counts,
+    attempt_answers,
+    attempt_items,
     bank_choices,
+    close_expired,
     create_assignment,
     create_quiz,
     delete_question,
@@ -59,9 +66,13 @@ from apps.assessments.services import (
     publish_quiz,
     quiz_items,
     quiz_status,
+    quiz_total,
     remove_question,
+    save_attempt,
     save_question,
+    start_attempt,
     student_assignments,
+    student_quizzes,
     submission_rows,
     submission_status,
     submit_answer,
@@ -73,13 +84,18 @@ from apps.assessments.ui import (
     QuestionTable,
     QuizItemTable,
     StudentAssignmentTable,
+    StudentQuizTable,
     SubmissionTable,
     TeacherAssignmentTable,
     TeacherQuizTable,
     assignment_detail_rows,
+    attempt_badge,
     form_card,
+    minutes_text,
     quiz_detail_rows,
+    quiz_status_badge,
     quiz_url,
+    score_text,
     submission_badge,
     when,
 )
@@ -88,10 +104,12 @@ from apps.core.responses import forbidden_response
 from apps.core.roles import Role
 from apps.people.models import StudentProfile, TeacherProfile
 from apps.ui.components.actions import Button, PostButton
-from apps.ui.components.block_stack import ButtonRow
+from apps.ui.components.block_stack import BlockStack, ButtonRow
 from apps.ui.components.data import DetailList, EmptyState, TextBlock
+from apps.ui.components.forms import CrispyForm, PortalPostForm
 from apps.ui.components.layout import SectionCard
 from apps.ui.components.nav import FilterBar, Pagination
+from apps.ui.components.quizzes import AttemptTimer
 from apps.ui.views.pages import DetailPage, FormPage, ListPage, PortalPageView
 
 PAGE_SIZE = 25
@@ -1156,3 +1174,198 @@ class QuizRemoveQuestionView(QuizActionView):
             QuizQuestion.objects.filter(quiz=quiz), pk=self.kwargs["item_pk"]
         )
         remove_question(quiz, item)
+
+
+# Student quizzes and attempts (roadmap 5.3)
+
+ATTEMPT_FORM_ID = "attempt-form"
+
+
+class StudentQuizMixin(StudentAssignmentMixin):
+    active_item = "quizzes"
+
+    def get_quiz(self) -> Quiz:
+        """A published quiz of the student's batch and subject, through
+        ``for_user`` (404 otherwise)."""
+        rows = Quiz.objects.for_user(self.request.user).select_related("subject")
+        return get_object_or_404(rows, pk=self.kwargs["pk"])
+
+    def get_attempt(self, quiz: Quiz) -> QuizAttempt | None:
+        attempt = QuizAttempt.objects.filter(quiz=quiz, student=self.student).first()
+        return close_expired(attempt) if attempt is not None else None
+
+    def quiz_url(self, action: str, quiz: Quiz) -> str:
+        return reverse(f"student:quiz_{action}", kwargs={"pk": quiz.pk})
+
+
+class StudentQuizListPage(StudentQuizMixin, ListPage):
+    title = "Quizzes and exams"
+
+    def get_subtitle(self) -> str:
+        return "Start a quiz while it is live. You have one attempt."
+
+    def get_components(self) -> dict[str, Any]:
+        if self.student is None:
+            return {"table": self.no_student}
+        rows = student_quizzes(self.student)
+        page = Paginator(rows, PAGE_SIZE).get_page(self.request.GET.get("page"))
+        return {
+            "table": StudentQuizTable(list(page.object_list)),
+            "pagination": Pagination(page),
+        }
+
+
+class StudentQuizPage(StudentQuizMixin, DetailPage):
+    """One quiz: when it opens, Start while live, then the result."""
+
+    title = "Quiz"
+
+    def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        if self.student is None:
+            return forbidden_response(request)
+        self.quiz = self.get_quiz()
+        self.title = self.quiz.title
+        self.now = timezone.now()
+        self.status = quiz_status(self.quiz, self.now)
+        self.attempt = self.get_attempt(self.quiz)
+        self.total = quiz_total(self.quiz)
+        return super().get(request, *args, **kwargs)
+
+    def get_subtitle(self) -> str:
+        quiz = self.quiz
+        if self.status == QuizStatus.SCHEDULED:
+            return f"Opens {when(quiz.opens_at)}."
+        if self.status == QuizStatus.LIVE:
+            return f"Live now. It closes {when(quiz.closes_at)}."
+        return f"Closed {when(quiz.closes_at)}."
+
+    def get_actions(self) -> list[Any]:
+        attempt = self.attempt
+        if attempt is not None and attempt.status == AttemptStatus.IN_PROGRESS:
+            url = self.quiz_url("attempt", self.quiz)
+            return [Button("Continue", url=url, icon="square-pen")]
+        if attempt is None and self.status == QuizStatus.LIVE:
+            url = self.quiz_url("start", self.quiz)
+            return [PostButton("Start", url, icon="clock")]
+        return []
+
+    def get_primary_cards(self) -> list[Any]:
+        attempt = self.attempt
+        if attempt is None:
+            minutes = self.quiz.duration_minutes
+            text = (
+                f"You get {minutes} minutes from Start, or until the quiz "
+                "closes if that is sooner. Your answers are sent when the "
+                "time ends. You have one attempt."
+            )
+            return [SectionCard(title="Before you start", icon="info", body=text)]
+        rows: list[tuple[str, Any]] = [
+            ("Status", attempt_badge(attempt)),
+            ("Score", score_text(attempt, self.total)),
+            ("Started", when(attempt.started_at)),
+            ("Submitted", when(attempt.submitted_at)),
+        ]
+        if attempt.auto_submitted:
+            rows.append(("Note", "Sent when the time ended."))
+        if attempt.status == AttemptStatus.SUBMITTED:
+            rows.append(("Marks", "Your teacher marks the written answers."))
+        return [SectionCard(title="Your attempt", icon="check", body=DetailList(rows))]
+
+    def get_sidebar_cards(self) -> list[Any]:
+        quiz = self.quiz
+        rows = [
+            ("Status", quiz_status_badge(self.status)),
+            ("Type", quiz.get_kind_display()),
+            ("Subject", quiz.subject.name),
+            ("Opens", when(quiz.opens_at)),
+            ("Duration", minutes_text(quiz.duration_minutes)),
+            ("Total marks", str(self.total)),
+        ]
+        return [SectionCard(title="Details", icon="list", body=DetailList(rows))]
+
+
+class StudentQuizStartView(StudentQuizMixin, PortalPageView):
+    """POST only: start (or continue) the student's attempt."""
+
+    http_method_names = ["post"]
+
+    def post(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        if self.student is None:
+            return forbidden_response(request)
+        quiz = self.get_quiz()
+        try:
+            start_attempt(quiz, self.student)
+        except ValidationError as error:
+            messages.error(request, " ".join(error.messages))
+            return HttpResponseRedirect(self.quiz_url("detail", quiz))
+        return HttpResponseRedirect(self.quiz_url("attempt", quiz))
+
+
+class StudentAttemptPage(StudentQuizMixin, FormPage):
+    """The paper: the timer and every question. Save keeps the attempt
+    open; Submit, or the timer at zero, ends it."""
+
+    title = "Quiz"
+    form_class = AttemptForm
+
+    def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        return self.load() or super().get(request, *args, **kwargs)
+
+    def post(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        return self.load() or super().post(request, *args, **kwargs)
+
+    def load(self) -> HttpResponse | None:
+        if self.student is None:
+            return forbidden_response(self.request)
+        self.quiz = self.get_quiz()
+        self.title = self.quiz.title
+        self.attempt = self.get_attempt(self.quiz)
+        if self.attempt is None or self.attempt.status != AttemptStatus.IN_PROGRESS:
+            if self.attempt is not None:
+                messages.info(self.request, "Your answers were submitted.")
+            return HttpResponseRedirect(self.quiz_url("detail", self.quiz))
+        self.items = attempt_items(self.attempt)
+        return None
+
+    def get_subtitle(self) -> str:
+        count = len(self.items)
+        noun = "question" if count == 1 else "questions"
+        return f"{count} {noun}. Answers are sent when the time ends."
+
+    def get_form_kwargs(self) -> dict[str, Any]:
+        return {"items": self.items, "answers": attempt_answers(self.attempt)}
+
+    def get_form_wrapper(self, form: Any) -> Any:
+        return BlockStack(
+            blocks=[
+                AttemptTimer(
+                    self.attempt.deadline,
+                    ATTEMPT_FORM_ID,
+                    label=f"Ends {when(self.attempt.deadline)}",
+                ),
+                PortalPostForm(
+                    action=self.request.path,
+                    body=CrispyForm(form=form),
+                    form_id=ATTEMPT_FORM_ID,
+                ),
+            ]
+        )
+
+    def form_valid(self, form: AttemptForm) -> HttpResponse:
+        post = self.request.POST
+        auto = bool(post.get("auto_submit"))
+        try:
+            attempt = save_attempt(
+                self.attempt,
+                form.answers(),
+                submit=bool(post.get("submit")) or auto,
+                auto=auto,
+            )
+        except ValidationError as error:
+            messages.error(self.request, " ".join(error.messages))
+            return HttpResponseRedirect(self.quiz_url("detail", self.quiz))
+        if attempt.status == AttemptStatus.IN_PROGRESS:
+            messages.success(self.request, "Answers saved. The time is still running.")
+            return HttpResponseRedirect(self.request.path)
+        messages.success(self.request, "Answers submitted.")
+        return HttpResponseRedirect(self.quiz_url("detail", self.quiz))

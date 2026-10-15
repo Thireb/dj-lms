@@ -327,6 +327,7 @@ Lectures counted = lectures with status `finished` in the month, taught by the t
 - Quiz: status becomes `live` at Opens and `closed` after opens + duration + 10 minutes. Student attempt has a countdown timer. Auto-submit when the timer ends. MCQ marked instantly. Short answers wait for the teacher. One attempt only.
 - Exam mode: leaving the tab or exiting full screen is logged and shown to the teacher. It does not auto-fail.
 - Guardian sees scores only after the quiz is graded.
+- Built in 5.3 part 2a (assumed, check against the demo): an active student of the quiz's batch and subject starts while it is live. The countdown is the duration from Start, but ends when the quiz closes if that is sooner. Save keeps the answers and the time running; Submit, or the timer at zero, ends the attempt. Answers that reach the server more than 1 minute after the deadline are not saved, and the attempt is submitted with the answers it has (also when the student closed the page: the next page that shows the attempt submits it). An empty MCQ answer gets 0. MCQ only: graded at once, with the score. With a short answer: "Submitted" until the teacher marks it (5.3 part 2b). The questions keep one order per attempt (shuffled when the quiz says so). Students list published quizzes only; a closed quiz without an attempt shows "Not taken".
 
 ### 6.9 Approvals
 - If approval is required: new homework, lesson plan, or report is `pending_approval`. Students and guardians see it only after `approved` (homework: `published`).

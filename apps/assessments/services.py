@@ -1,6 +1,6 @@
 """Publish, submit and grade assignments (roadmap 5.1, SPEC 4.16 and 6.8),
-keep the teacher's question bank (roadmap 5.2) and set up quizzes and exams
-(roadmap 5.3).
+keep the teacher's question bank (roadmap 5.2), set up quizzes and exams
+and run the students' attempts (roadmap 5.3).
 
 A student is expected to answer an assignment when an enrolment of theirs
 has the assignment's batch and subject and was made before the due time.
@@ -14,9 +14,10 @@ has "Missed" (SPEC 6.8 allows late answers for homework only).
 
 from __future__ import annotations
 
+import random
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
@@ -35,10 +36,13 @@ from apps.assessments.models import (
     MAX_OPTIONS,
     MIN_OPTIONS,
     Assignment,
+    AttemptAnswer,
+    AttemptStatus,
     Question,
     QuestionKind,
     QuestionOption,
     Quiz,
+    QuizAttempt,
     QuizKind,
     QuizQuestion,
     QuizStatus,
@@ -775,3 +779,195 @@ def question_in_opened_quiz(question: Question, now: datetime | None = None) -> 
         quiz__is_published=True,
         quiz__opens_at__lte=now or timezone.now(),
     ).exists()
+
+
+# Quiz attempts (roadmap 5.3, SPEC 6.8)
+#
+# A student of the quiz's batch and subject starts it while it is live and
+# has one attempt. The countdown ends at the attempt's deadline: the
+# duration from the start, but no later than the quiz closes. When it ends
+# the page sends the answers; answers that arrive more than a minute late
+# are not saved, and an attempt left open is submitted with the answers it
+# has. MCQ answers are marked at submit; short answers wait for the teacher.
+
+ANSWER_GRACE = timedelta(minutes=1)  # network delay for the timer's submit
+NOT_LIVE_MESSAGE = "This quiz is not live."
+DONE_MESSAGE = "This attempt is already submitted."
+
+
+def is_quiz_student(quiz: Quiz, student: StudentProfile) -> bool:
+    """An active student enrolled in the quiz's batch and subject."""
+    return StudentBatchSubject.objects.filter(
+        student=student,
+        batch_id=quiz.batch_id,
+        subject_id=quiz.subject_id,
+        student__status=ProfileStatus.ACTIVE,
+    ).exists()
+
+
+def start_attempt(
+    quiz: Quiz, student: StudentProfile, *, now: datetime | None = None
+) -> QuizAttempt:
+    """Start the student's one attempt, or return it if it exists."""
+    now = now or timezone.now()
+    with transaction.atomic():
+        locked = Quiz.objects.select_for_update().get(pk=quiz.pk)
+        existing = QuizAttempt.objects.filter(quiz=locked, student=student).first()
+        if existing is not None:
+            return existing
+        if quiz_status(locked, now) != QuizStatus.LIVE:
+            raise ValidationError(NOT_LIVE_MESSAGE)
+        if not is_quiz_student(locked, student):
+            raise ValidationError("This quiz is not for this student.")
+        order = [item.pk for item in quiz_items(locked)]
+        if locked.shuffle_questions:
+            random.SystemRandom().shuffle(order)
+        attempt = QuizAttempt(
+            institute=locked.institute,
+            quiz=locked,
+            started_at=now,
+            deadline=min(
+                now + timedelta(minutes=locked.duration_minutes), locked.closes_at
+            ),
+            question_order=order,
+        )
+        attempt.student = student
+        attempt.save()
+        return attempt
+
+
+def attempt_items(attempt: QuizAttempt) -> list[QuizQuestion]:
+    """The attempt's questions in the order this student sees them."""
+    items = {item.pk: item for item in quiz_items(attempt.quiz)}
+    return [items[pk] for pk in attempt.question_order if pk in items]
+
+
+def attempt_answers(attempt: QuizAttempt) -> dict[int, AttemptAnswer]:
+    return {row.item_id: row for row in AttemptAnswer.objects.filter(attempt=attempt)}
+
+
+def _write_answers(
+    attempt: QuizAttempt, items: list[QuizQuestion], answers: dict[int, Any]
+) -> None:
+    """``answers`` maps an item pk to an option pk (MCQ) or text (short)."""
+    saved = attempt_answers(attempt)
+    for item in items:
+        if item.pk not in answers:
+            continue
+        value = answers[item.pk]
+        row = saved.get(item.pk) or AttemptAnswer(
+            institute=attempt.institute, attempt=attempt, item=item
+        )
+        if item.question.kind == QuestionKind.MCQ:
+            options = {str(option.pk): option for option in item.question.options.all()}
+            if value not in (None, "") and str(value) not in options:
+                raise ValidationError("Choose one of the question's options.")
+            row.option = options.get(str(value))
+        else:
+            row.text = str(value or "").strip()
+        row.save()
+
+
+def _finish(
+    attempt: QuizAttempt, items: list[QuizQuestion], *, auto: bool, now: datetime
+) -> None:
+    """Mark the MCQ answers; graded at once when there is no short answer."""
+    saved = attempt_answers(attempt)
+    short = False
+    total = Decimal(0)
+    for item in items:
+        question = item.question
+        if question.kind == QuestionKind.SHORT:
+            short = True
+            continue
+        row = saved.get(item.pk) or AttemptAnswer(
+            institute=attempt.institute, attempt=attempt, item=item
+        )
+        right = row.option is not None and row.option.is_correct
+        row.marks = Decimal(question.marks) if right else Decimal(0)
+        row.save()
+        total += row.marks
+    attempt.status = AttemptStatus.SUBMITTED if short else AttemptStatus.GRADED
+    attempt.score = None if short else total
+    attempt.submitted_at = min(now, attempt.deadline)
+    attempt.auto_submitted = auto
+    attempt.save()
+
+
+def save_attempt(
+    attempt: QuizAttempt,
+    answers: dict[int, Any],
+    *,
+    submit: bool = False,
+    auto: bool = False,
+    now: datetime | None = None,
+) -> QuizAttempt:
+    """Save the answers; ``submit`` ends the attempt. Answers that arrive
+    after the deadline and its grace minute are not saved, and the attempt
+    is submitted with what it has."""
+    now = now or timezone.now()
+    with transaction.atomic():
+        locked = QuizAttempt.objects.select_for_update().get(pk=attempt.pk)
+        if locked.status != AttemptStatus.IN_PROGRESS:
+            raise ValidationError(DONE_MESSAGE)
+        items = attempt_items(locked)
+        late = now > locked.deadline + ANSWER_GRACE
+        if not late:
+            _write_answers(locked, items, answers)
+        if submit or late:
+            _finish(locked, items, auto=auto or late, now=now)
+        return locked
+
+
+def close_expired(attempt: QuizAttempt, *, now: datetime | None = None) -> QuizAttempt:
+    """Submit an attempt left open past its deadline (the student closed the
+    page). Pages call this before they show an attempt."""
+    now = now or timezone.now()
+    if (
+        attempt.status != AttemptStatus.IN_PROGRESS
+        or now <= attempt.deadline + ANSWER_GRACE
+    ):
+        return attempt
+    return save_attempt(attempt, {}, auto=True, now=now)
+
+
+@dataclass(frozen=True)
+class StudentQuiz:
+    quiz: Quiz
+    attempt: QuizAttempt | None
+    status: str  # the quiz status (SPEC 2)
+
+
+def student_quizzes(
+    student: StudentProfile, *, now: datetime | None = None
+) -> list[StudentQuiz]:
+    """The published quizzes of the student's batches and subjects, the
+    live and next ones first, then the newest closed ones."""
+    now = now or timezone.now()
+    links = StudentBatchSubject.objects.filter(
+        student=student, student__status=ProfileStatus.ACTIVE
+    ).values_list("batch_id", "subject_id")
+    enrolled = Q(pk__in=[])
+    for batch_id, link_subject_id in links:
+        enrolled |= Q(batch_id=batch_id, subject_id=link_subject_id)
+    attempts = {
+        row.quiz_id: close_expired(row, now=now)
+        for row in QuizAttempt.objects.filter(student=student)
+    }
+    quizzes = Quiz.objects.filter(enrolled | Q(pk__in=attempts), is_published=True)
+    rows = [
+        StudentQuiz(quiz, attempts.get(quiz.pk), quiz_status(quiz, now))
+        for quiz in quizzes.select_related("subject").annotate(
+            total_marks=Sum("items__question__marks")
+        )
+    ]
+    open_rows = sorted(
+        (row for row in rows if row.status != QuizStatus.CLOSED),
+        key=lambda row: (row.quiz.opens_at, row.quiz.pk),
+    )
+    closed = sorted(
+        (row for row in rows if row.status == QuizStatus.CLOSED),
+        key=lambda row: (row.quiz.opens_at, row.quiz.pk),
+        reverse=True,
+    )
+    return open_rows + closed

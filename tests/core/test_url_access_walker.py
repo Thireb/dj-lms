@@ -25,6 +25,7 @@ from apps.assessments.models import (
     Question,
     QuestionKind,
     Quiz,
+    QuizAttempt,
     QuizQuestion,
     Submission,
 )
@@ -298,6 +299,43 @@ def _quiz_item(institute) -> dict[str, int]:
     return {"pk": quiz.pk, "item_pk": item.pk}
 
 
+def _live_quiz(institute) -> int:
+    """A published quiz that opened a minute ago, in the batch and subject
+    of the walker student (made by ``_assignment``)."""
+    # unscoped: test setup outside a tenant context.
+    assignment = Assignment.unscoped.get(pk=_assignment(institute))
+    quiz = Quiz.unscoped.get(pk=_quiz(institute))
+    Quiz.unscoped.filter(pk=quiz.pk).update(
+        batch=assignment.batch,
+        subject=assignment.subject,
+        is_published=True,
+        opens_at=timezone.now() - timedelta(minutes=1),
+    )
+    return quiz.pk
+
+
+def _attempt(institute) -> int:
+    """The attempt page needs an open attempt of the walker student."""
+    pk = _live_quiz(institute)
+    walker = User.objects.filter(email=f"{Role.STUDENT}-walker@example.com").first()
+    # unscoped: test setup outside a tenant context.
+    student = StudentProfile.unscoped.filter(user=walker).first()
+    if student is not None:
+        now = timezone.now()
+        with tenant_context(institute):
+            QuizAttempt.objects.get_or_create(
+                institute=institute,
+                quiz_id=pk,
+                student=student,
+                defaults={
+                    "started_at": now,
+                    "deadline": now + timedelta(minutes=30),
+                    "question_order": [0],  # an attempt always has questions
+                },
+            )
+    return pk
+
+
 ROUTE_OBJECTS = {
     **{
         f"admin:{prefix}_{action}": _name_row(model)
@@ -333,6 +371,9 @@ ROUTE_OBJECTS = {
         for action in ("detail", "edit", "add_questions", "publish", "unpublish")
     },
     "teacher:quiz_remove_question": _quiz_item,
+    "student:quiz_detail": _live_quiz,
+    "student:quiz_start": _live_quiz,
+    "student:quiz_attempt": _attempt,
     **{
         f"{portal}:lecture_schedule_{action}": _schedule
         for portal in ("admin", "teacher")

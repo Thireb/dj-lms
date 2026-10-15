@@ -1,6 +1,6 @@
 """Assignment form (SPEC 4.16), the student's answer form and the
 teacher's grade form (roadmap 5.1), the question form (roadmap 5.2) and
-the quiz forms (roadmap 5.3)."""
+the quiz forms and the attempt form (roadmap 5.3)."""
 
 from __future__ import annotations
 
@@ -26,6 +26,7 @@ from apps.assessments.models import (
     QuestionKind,
     Quiz,
     QuizKind,
+    QuizQuestion,
 )
 from apps.lectures.times import combine_local, missing_time_message, wall_time_missing
 from apps.people.models import TeacherProfile
@@ -34,6 +35,7 @@ from apps.ui.forms.widgets import (
     ChipRadios,
     DatePicker,
     GroupedCheckboxes,
+    OptionRadios,
     TimePicker,
 )
 
@@ -455,3 +457,59 @@ class AddQuestionsForm(BaseForm):
 
     def chosen(self) -> list[Question]:
         return [self.questions[pk] for pk in self.cleaned_data["questions"]]
+
+
+ITEM_PREFIX = "item_"
+
+
+class AttemptForm(BaseForm):
+    """The questions of an attempt, in the student's order: options for an
+    MCQ question, a text box for a short answer. Every answer may be empty;
+    an empty MCQ answer gets 0 marks."""
+
+    def __init__(
+        self, *args: Any, items: list[QuizQuestion], answers: dict, **kwargs: Any
+    ):
+        super().__init__(*args, **kwargs)
+        for number, item in enumerate(items, start=1):
+            question = item.question
+            noun = "mark" if question.marks == 1 else "marks"
+            label = f"{number}. {question.text} ({question.marks} {noun})"
+            saved = answers.get(item.pk)
+            if question.kind == QuestionKind.MCQ:
+                field: forms.Field = forms.ChoiceField(
+                    label=label,
+                    required=False,
+                    choices=[(str(o.pk), o.text) for o in question.options.all()],
+                    widget=OptionRadios(group_label=f"Question {number}"),
+                    initial=str(saved.option_id) if saved and saved.option_id else None,
+                )
+            else:
+                field = forms.CharField(
+                    label=label,
+                    required=False,
+                    widget=forms.Textarea(attrs={"rows": 4}),
+                    initial=saved.text if saved else "",
+                )
+            self.fields[f"{ITEM_PREFIX}{item.pk}"] = field
+        style_widgets(self)
+        self.helper.layout = self.get_layout()
+
+    def get_layout(self) -> Layout:
+        return Layout(
+            Section(
+                "",
+                *self.fields.keys(),
+                description="Save keeps your answers and the time running. "
+                "Submit ends the attempt.",
+            ),
+            FormActions(
+                "Submit answers", save_name="submit", second=("Save answers", "save")
+            ),
+        )
+
+    def answers(self) -> dict[int, Any]:
+        return {
+            int(name.removeprefix(ITEM_PREFIX)): value
+            for name, value in self.cleaned_data.items()
+        }

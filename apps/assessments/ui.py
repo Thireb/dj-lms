@@ -13,9 +13,11 @@ from django.utils.text import Truncator
 
 from apps.assessments.models import (
     Assignment,
+    AttemptStatus,
     Question,
     QuestionKind,
     Quiz,
+    QuizAttempt,
     QuizKind,
     QuizQuestion,
     QuizStatus,
@@ -24,6 +26,7 @@ from apps.assessments.models import (
 from apps.assessments.services import (
     AssignmentCount,
     StudentAssignment,
+    StudentQuiz,
     SubmissionRow,
     correct_option,
     has_opened,
@@ -422,3 +425,72 @@ def quiz_detail_rows(quiz: Quiz, *, total: int, now: datetime) -> list[tuple]:
             ("Tab leaving", "Flagged" if quiz.flag_tab_leaving else "No"),
         ]
     return rows
+
+
+# Quiz attempts (roadmap 5.3)
+
+# SPEC 2: blue, amber, green.
+ATTEMPT_TONES = {
+    AttemptStatus.IN_PROGRESS: "info",
+    AttemptStatus.SUBMITTED: "warning",
+    AttemptStatus.GRADED: "success",
+}
+NOT_TAKEN = "Not taken"
+
+
+def attempt_badge(attempt: QuizAttempt) -> Badge:
+    status = AttemptStatus(attempt.status)
+    return Badge(status.label, tone=ATTEMPT_TONES[status])
+
+
+def student_quiz_badge(row: StudentQuiz) -> Badge:
+    """The attempt's status once started; before that the quiz status, and
+    "Not taken" for a closed quiz without an attempt."""
+    if row.attempt is not None:
+        return attempt_badge(row.attempt)
+    if row.status == QuizStatus.CLOSED:
+        return Badge(NOT_TAKEN, tone="danger")
+    return quiz_status_badge(row.status)
+
+
+def score_text(attempt: QuizAttempt | None, total: int | None) -> str:
+    """Example: 7 / 10; a dash until graded (SPEC 6.8)."""
+    return marks_text(attempt.score if attempt else None, total or 0)
+
+
+def student_quiz_url(action: str, quiz: Quiz) -> str:
+    return reverse(f"student:quiz_{action}", kwargs={"pk": quiz.pk})
+
+
+class StudentQuizTable(DataTable):
+    """Student "Quizzes and exams" (SPEC 3): Title, Type, Opens, Duration,
+    Status, Score."""
+
+    empty_title = "No quizzes yet."
+
+    def __init__(self, rows: list[StudentQuiz], **props):
+        super().__init__(rows=rows, **props)
+
+    @property
+    def columns(self) -> list[Column]:  # type: ignore[override]
+        return [
+            Column("title", "Title", lambda row: row.quiz.title),
+            Column("kind", "Type", lambda row: row.quiz.get_kind_display()),
+            Column("opens", "Opens", lambda row: when(row.quiz.opens_at)),
+            Column(
+                "duration",
+                "Duration",
+                lambda row: minutes_text(row.quiz.duration_minutes),
+            ),
+            Column("status", "Status", student_quiz_badge),
+            Column(
+                "score",
+                "Score",
+                lambda row: score_text(row.attempt, row.quiz.total_marks),
+            ),
+            Column("actions", "", self.open_button),
+        ]
+
+    def open_button(self, row: StudentQuiz) -> IconButton:
+        url = student_quiz_url("detail", row.quiz)
+        return IconButton("eye", f"Open {row.quiz.title}", url=url)

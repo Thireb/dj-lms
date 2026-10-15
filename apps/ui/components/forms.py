@@ -34,8 +34,12 @@ class PortalPostForm(Component):
 
     template_name = "ui/components/portal_post_form.html"
 
-    def __init__(self, *, action: str, body, framed: bool = True, **props):
-        super().__init__(action=action, body=body, framed=framed, **props)
+    def __init__(
+        self, *, action: str, body, framed: bool = True, form_id: str = "", **props
+    ):
+        super().__init__(
+            action=action, body=body, framed=framed, form_id=form_id, **props
+        )
 
     def render(self, request=None):
         ctx = self.get_context()

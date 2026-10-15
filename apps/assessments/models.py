@@ -15,6 +15,7 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from django.conf import settings
+from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
@@ -472,6 +473,150 @@ class QuizQuestion(SameInstituteMixin, TenantModel):
 
     def __str__(self) -> str:
         return f"{self.quiz} - {self.question}"
+
+    def clean(self) -> None:
+        super().clean()
+        self.check_institutes()
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        self.full_clean(validate_unique=False, validate_constraints=False)
+        super().save(*args, **kwargs)
+
+
+# Quiz attempts (roadmap 5.3, SPEC 6.8)
+
+
+class AttemptStatus(models.TextChoices):
+    IN_PROGRESS = "in_progress", "In progress"
+    SUBMITTED = "submitted", "Submitted"
+    GRADED = "graded", "Graded"
+
+
+ATTEMPT_LOOKUPS = {
+    Role.TEACHER: "quiz__teacher__user_id",
+    Role.STUDENT: "student__user_id",
+    Role.GUARDIAN: "student__guardian_links__guardian__user_id",
+}
+ANSWER_LOOKUPS = {
+    Role.TEACHER: "attempt__quiz__teacher__user_id",
+    Role.STUDENT: "attempt__student__user_id",
+}
+
+
+class AttemptQuerySet(TenantQuerySet):
+    """Admins see the institute, a teacher the attempts at their quizzes, a
+    student their own, a guardian their children's."""
+
+    def for_user(self, user: Any) -> AttemptQuerySet:
+        scoped = super().for_user(user)
+        role = user_role(user)
+        if role in INSTITUTE_WIDE_ROLES:
+            return scoped
+        lookup = ATTEMPT_LOOKUPS.get(role or "")
+        if lookup is None:
+            return scoped.none()
+        return scoped.filter(**{lookup: getattr(user, "pk", None)}).distinct()
+
+
+class AttemptAnswerQuerySet(TenantQuerySet):
+    """Admins see the institute, a teacher the answers at their quizzes, a
+    student their own. Guardians see scores, not answers (SPEC 6.8)."""
+
+    def for_user(self, user: Any) -> AttemptAnswerQuerySet:
+        scoped = super().for_user(user)
+        role = user_role(user)
+        if role in INSTITUTE_WIDE_ROLES:
+            return scoped
+        lookup = ANSWER_LOOKUPS.get(role or "")
+        if lookup is None:
+            return scoped.none()
+        return scoped.filter(**{lookup: getattr(user, "pk", None)})
+
+
+class QuizAttempt(SameInstituteMixin, TenantModel):
+    """A student's one attempt at a quiz (SPEC 6.8). ``deadline`` is fixed at
+    the start: the duration from then, but no later than the quiz closes.
+    ``question_order`` keeps the order this student sees (shuffled or not)."""
+
+    quiz = models.ForeignKey(Quiz, on_delete=models.PROTECT, related_name="attempts")
+    student = models.ForeignKey(
+        "people.StudentProfile",
+        on_delete=models.PROTECT,
+        related_name="quiz_attempts",
+    )
+    status = models.CharField(
+        max_length=16,
+        choices=AttemptStatus.choices,
+        default=AttemptStatus.IN_PROGRESS,
+    )
+    started_at = models.DateTimeField()
+    deadline = models.DateTimeField()
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    auto_submitted = models.BooleanField(default=False)
+    question_order = ArrayField(models.PositiveBigIntegerField(), default=list)
+    score = models.DecimalField(max_digits=6, decimal_places=1, null=True, blank=True)
+
+    objects = TenantManager.from_queryset(AttemptQuerySet)()
+    unscoped = UnscopedTenantManager.from_queryset(AttemptQuerySet)()
+
+    same_institute = ("quiz", "student")
+
+    class Meta:
+        ordering = ["quiz_id", "student_id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["quiz", "student"], name="attempt_quiz_student_unique"
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.student} - {self.quiz}"
+
+    def clean(self) -> None:
+        super().clean()
+        self.check_institutes()
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        self.full_clean(validate_unique=False, validate_constraints=False)
+        super().save(*args, **kwargs)
+
+
+class AttemptAnswer(SameInstituteMixin, TenantModel):
+    """One answer in an attempt: the chosen option (MCQ) or text (short
+    answer). ``marks`` is set at submit for an MCQ, by the teacher for a
+    short answer."""
+
+    attempt = models.ForeignKey(
+        QuizAttempt, on_delete=models.CASCADE, related_name="answers"
+    )
+    item = models.ForeignKey(
+        QuizQuestion, on_delete=models.PROTECT, related_name="answers"
+    )
+    option = models.ForeignKey(
+        QuestionOption,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+    text = models.TextField(blank=True)
+    marks = models.DecimalField(max_digits=5, decimal_places=1, null=True, blank=True)
+
+    objects = TenantManager.from_queryset(AttemptAnswerQuerySet)()
+    unscoped = UnscopedTenantManager.from_queryset(AttemptAnswerQuerySet)()
+
+    same_institute = ("attempt", "item")
+
+    class Meta:
+        ordering = ["attempt_id", "item_id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["attempt", "item"], name="answer_attempt_item_unique"
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.attempt} - {self.item.position}"
 
     def clean(self) -> None:
         super().clean()

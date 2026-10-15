@@ -1,0 +1,5 @@
+{% load ui_icons %}<div class="attempt-timer sticky top-2 z-10 flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-border bg-surface px-4 py-3 shadow-sm" x-data="attemptTimer" data-deadline="{{ deadline_iso }}" data-form="{{ form_id }}" :class="urgent && 'border-danger'">
+  <p class="flex items-center gap-2 text-sm font-semibold text-ink-2">{% icon "clock" "h-4 w-4" %}Time left</p>
+  <p class="text-lg font-semibold tabular-nums text-primary" :class="urgent && 'text-danger'" role="timer" x-text="remaining">{{ label }}</p>
+  <p class="sr-only" aria-live="assertive" x-text="announce"></p>
+</div>

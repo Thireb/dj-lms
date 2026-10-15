@@ -57,7 +57,12 @@ class StudentMenu:
                         "list-checks",
                         menu_key="assignments",
                     ),
-                    MenuItem("Quizzes and exams", "student:quiz_list", "square-pen"),
+                    MenuItem(
+                        "Quizzes and exams",
+                        "student:quiz_list",
+                        "square-pen",
+                        menu_key="quizzes",
+                    ),
                     MenuItem("Documents", "student:documents", "folder-open"),
                 ),
             ),
