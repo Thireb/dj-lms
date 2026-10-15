@@ -90,7 +90,8 @@ document.addEventListener("alpine:init", () => {
       flag.name = "auto_submit";
       flag.value = "1";
       form.appendChild(flag);
-      form.submit();
+      // A button named "submit" hides form.submit, so call the method itself.
+      HTMLFormElement.prototype.submit.call(form);
     },
   }));
 });
