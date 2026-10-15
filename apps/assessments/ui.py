@@ -24,7 +24,10 @@ from apps.assessments.models import (
     SubmissionStatus,
 )
 from apps.assessments.services import (
+    AnswerRow,
     AssignmentCount,
+    QuizCount,
+    ResultRow,
     StudentAssignment,
     StudentQuiz,
     SubmissionRow,
@@ -326,20 +329,21 @@ def minutes_text(minutes: int) -> str:
     return f"{minutes} min"
 
 
-def questions_text(count: int, marks: int | None) -> str:
-    """Example: 5 questions, 12 marks."""
-    noun = "question" if count == 1 else "questions"
-    return f"{count} {noun}, {marks or 0} marks"
-
-
 class TeacherQuizTable(DataTable):
-    """Teacher "Quizzes and exams" (SPEC 3). Attempts come with the
-    student attempt (5.3, part 2); until then the column shows the
-    questions."""
+    """Teacher "Quizzes and exams" (SPEC 3): Title, Type, Batch, Opens,
+    Duration, Attempts, Status (with the attempts to mark)."""
 
     empty_title = "No quizzes match these filters."
 
-    def __init__(self, rows: list[Quiz], *, now: datetime | None = None, **props):
+    def __init__(
+        self,
+        rows: list[Quiz],
+        *,
+        counts: dict[int, QuizCount] | None = None,
+        now: datetime | None = None,
+        **props,
+    ):
+        self.counts = counts or {}
         self.now = now or timezone.now()
         super().__init__(rows=rows, **props)
 
@@ -351,18 +355,22 @@ class TeacherQuizTable(DataTable):
             Column("batch", "Batch", lambda quiz: quiz.batch.name),
             Column("opens", "Opens", lambda quiz: when(quiz.opens_at)),
             Column("duration", "Duration", lambda q: minutes_text(q.duration_minutes)),
-            Column(
-                "questions",
-                "Questions",
-                lambda quiz: questions_text(quiz.question_count, quiz.total_marks),
-            ),
-            Column(
-                "status",
-                "Status",
-                lambda quiz: quiz_status_badge(quiz_status(quiz, self.now)),
-            ),
+            Column("attempts", "Attempts", self.attempts),
+            Column("status", "Status", self.status),
             Column("actions", "", self.actions),
         ]
+
+    def attempts(self, quiz: Quiz) -> str:
+        """Example: 12 / 30."""
+        count = self.counts.get(quiz.pk)
+        return f"{count.attempts} / {count.total}" if count else "0 / 0"
+
+    def status(self, quiz: Quiz) -> Any:
+        badge = quiz_status_badge(quiz_status(quiz, self.now))
+        count = self.counts.get(quiz.pk)
+        if count is None or not count.to_mark:
+            return badge
+        return BadgeNote(badge, f"{count.to_mark} to mark")
 
     def actions(self, quiz: Quiz) -> ButtonRow:
         items: list[Any] = [
@@ -494,3 +502,105 @@ class StudentQuizTable(DataTable):
     def open_button(self, row: StudentQuiz) -> IconButton:
         url = student_quiz_url("detail", row.quiz)
         return IconButton("eye", f"Open {row.quiz.title}", url=url)
+
+
+# Quiz results and marking (roadmap 5.3 part 2b)
+
+NO_ANSWER = "No answer"
+
+
+def result_badge(row: ResultRow, status: str) -> Badge:
+    """The attempt's status; without one, "Not taken" once the quiz is
+    closed and "Not started" before."""
+    if row.attempt is not None:
+        return attempt_badge(row.attempt)
+    if status == QuizStatus.CLOSED:
+        return Badge(NOT_TAKEN, tone="danger")
+    return Badge("Not started", tone="neutral")
+
+
+def teacher_attempt_url(quiz: Quiz, attempt: QuizAttempt) -> str:
+    return quiz_url("attempt", quiz, attempt_pk=attempt.pk)
+
+
+class QuizResultTable(DataTable):
+    """The students of one quiz on the teacher's quiz page: Student,
+    Status, Submitted, Score; a row opens the answers to mark."""
+
+    empty_title = "No students take this batch and subject."
+
+    def __init__(
+        self, rows: list[ResultRow], *, quiz: Quiz, total: int, status: str, **props
+    ):
+        self.quiz = quiz
+        self.total = total
+        self.status = status
+        super().__init__(rows=rows, **props)
+
+    @property
+    def columns(self) -> list[Column]:  # type: ignore[override]
+        return [
+            Column(
+                "student",
+                "Student",
+                lambda row: PersonCell(
+                    str(row.student), detail=row.student.student_code
+                ),
+            ),
+            Column("status", "Status", lambda row: result_badge(row, self.status)),
+            Column("submitted", "Submitted", self.submitted),
+            Column("score", "Score", lambda row: score_text(row.attempt, self.total)),
+            Column("actions", "", self.open_button),
+        ]
+
+    def submitted(self, row: ResultRow) -> str:
+        attempt = row.attempt
+        if attempt is None or attempt.submitted_at is None:
+            return "-"
+        text = when(attempt.submitted_at)
+        return f"{text} (time ended)" if attempt.auto_submitted else text
+
+    def open_button(self, row: ResultRow) -> Any:
+        attempt = row.attempt
+        if attempt is None:
+            return ""
+        label = "Mark" if attempt.status == AttemptStatus.SUBMITTED else "Open"
+        icon = "square-pen" if label == "Mark" else "eye"
+        url = teacher_attempt_url(self.quiz, attempt)
+        return IconButton(icon, f"{label}: {row.student}", url=url)
+
+
+def answer_text(row: AnswerRow) -> str:
+    """The chosen option of an MCQ question, or the written answer."""
+    answer = row.answer
+    if answer is None:
+        return NO_ANSWER
+    if row.item.question.kind == QuestionKind.MCQ:
+        return answer.option.text if answer.option else NO_ANSWER
+    return answer.text or NO_ANSWER
+
+
+class AnswerTable(DataTable):
+    """One attempt's answers in the student's order, with the right answer
+    and the marks, on the teacher's attempt page."""
+
+    empty_title = "This quiz has no questions."
+
+    def __init__(self, rows: list[AnswerRow], **props):
+        super().__init__(rows=rows, **props)
+
+    @property
+    def columns(self) -> list[Column]:  # type: ignore[override]
+        return [
+            Column("number", "No.", lambda row: str(row.number)),
+            Column("question", "Question", lambda row: row.item.question.text),
+            Column("answer", "Answer", answer_text),
+            Column(
+                "right", "Right answer", lambda row: question_answer(row.item.question)
+            ),
+            Column("marks", "Marks", self.marks),
+        ]
+
+    def marks(self, row: AnswerRow) -> str:
+        marks = row.answer.marks if row.answer else None
+        return marks_text(marks, row.item.question.marks)

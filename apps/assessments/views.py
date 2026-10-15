@@ -3,7 +3,8 @@ Add / Edit, the answers and the grade page; student Assignments and the
 assignment page with the answer form. Teacher "Question bank" (roadmap
 5.2): list, Add, Edit and Delete. Teacher "Quizzes and exams" set-up
 (roadmap 5.3): list, Add, Edit, the quiz page, Add questions, Publish;
-student "Quizzes and exams", the quiz page, Start and the attempt."""
+the results and the attempt page with the marks; student "Quizzes and
+exams", the quiz page, Start and the attempt."""
 
 from __future__ import annotations
 
@@ -26,6 +27,7 @@ from apps.assessments.forms import (
     AssignmentForm,
     AttemptForm,
     GradeForm,
+    MarkForm,
     QuestionForm,
     QuizForm,
 )
@@ -43,6 +45,7 @@ from apps.assessments.models import (
     SubmissionStatus,
 )
 from apps.assessments.services import (
+    MARK_OPEN_MESSAGE,
     OPENED_MESSAGE,
     AssignmentDetails,
     QuestionDetails,
@@ -51,6 +54,7 @@ from apps.assessments.services import (
     assignment_counts,
     attempt_answers,
     attempt_items,
+    attempt_review,
     bank_choices,
     close_expired,
     create_assignment,
@@ -62,14 +66,18 @@ from apps.assessments.services import (
     is_open,
     list_questions,
     list_quizzes,
+    mark_attempt,
     marks_text,
     publish_quiz,
+    quiz_counts,
     quiz_items,
+    quiz_results,
     quiz_status,
     quiz_total,
     remove_question,
     save_attempt,
     save_question,
+    short_items,
     start_attempt,
     student_assignments,
     student_quizzes,
@@ -81,8 +89,10 @@ from apps.assessments.services import (
     update_quiz,
 )
 from apps.assessments.ui import (
+    AnswerTable,
     QuestionTable,
     QuizItemTable,
+    QuizResultTable,
     StudentAssignmentTable,
     StudentQuizTable,
     SubmissionTable,
@@ -918,7 +928,9 @@ class TeacherQuizListPage(QuizMixin, ListPage):
                     },
                 ]
             ),
-            "table": TeacherQuizTable(list(page.object_list)),
+            "table": TeacherQuizTable(
+                list(page.object_list), counts=quiz_counts(list(page.object_list))
+            ),
             "pagination": Pagination(page, query=query),
         }
 
@@ -1068,7 +1080,7 @@ class TeacherQuizDetailPage(QuizMixin, DetailPage):
             body=QuizItemTable(self.items, editable=self.editable),
         )
         if not self.editable:
-            return [card]
+            return [self.results_card(), card]
         buttons = ButtonRow(
             items=[
                 Button(
@@ -1086,9 +1098,115 @@ class TeacherQuizDetailPage(QuizMixin, DetailPage):
         )
         return [buttons, card]
 
+    def results_card(self) -> SectionCard:
+        """Once the quiz opens: every student with their attempt."""
+        table = QuizResultTable(
+            quiz_results(self.quiz, now=self.now),
+            quiz=self.quiz,
+            total=self.total(),
+            status=quiz_status(self.quiz, self.now),
+        )
+        return SectionCard(title="Results", icon="users", body=table)
+
+    def total(self) -> int:
+        return sum(item.question.marks for item in self.items)
+
     def get_sidebar_cards(self) -> list[Any]:
-        total = sum(item.question.marks for item in self.items)
-        rows = quiz_detail_rows(self.quiz, total=total, now=self.now)
+        rows = quiz_detail_rows(self.quiz, total=self.total(), now=self.now)
+        return [SectionCard(title="Details", icon="list", body=DetailList(rows))]
+
+
+class TeacherAttemptPage(QuizMixin, DetailPage):
+    """One student's attempt: each answer with the right answer and the
+    marks, and the marks form for the short answers once it is submitted."""
+
+    title = "Attempt"
+
+    def load(self) -> None:
+        self.quiz = self.get_quiz()
+        rows = QuizAttempt.objects.for_user(self.request.user).select_related(
+            "student__user"
+        )
+        attempt = get_object_or_404(rows, pk=self.kwargs["attempt_pk"], quiz=self.quiz)
+        self.attempt = close_expired(attempt)
+        self.title = f"{self.quiz.title}: {self.attempt.student}"
+        self.short = short_items(self.attempt)
+        self.form: MarkForm | None = None
+
+    def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        self.load()
+        if self.markable():
+            self.form = self.make_form()
+        return super().get(request, *args, **kwargs)
+
+    def post(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        self.load()
+        if not self.markable():
+            messages.error(request, MARK_OPEN_MESSAGE)
+            return HttpResponseRedirect(request.path)
+        self.form = self.make_form(request.POST)
+        if self.form.is_valid():
+            try:
+                mark_attempt(self.attempt, self.form.marks())
+            except ValidationError as error:
+                self.form.add_error(None, error)
+            else:
+                messages.success(request, f"Marks saved for {self.attempt.student}.")
+                return HttpResponseRedirect(self.url("detail", pk=self.quiz.pk))
+        return self.render_to_response(self.get_context_data())
+
+    def markable(self) -> bool:
+        return bool(self.short) and self.attempt.status != AttemptStatus.IN_PROGRESS
+
+    def make_form(self, data: Any = None) -> MarkForm:
+        return MarkForm(
+            data,
+            items=self.short,
+            answers=attempt_answers(self.attempt),
+            cancel_url=self.url("detail", pk=self.quiz.pk),
+        )
+
+    def get_subtitle(self) -> str:
+        if self.attempt.status == AttemptStatus.IN_PROGRESS:
+            return MARK_OPEN_MESSAGE
+        if self.attempt.status == AttemptStatus.SUBMITTED:
+            return "Mark the written answers to give the score."
+        return "Graded."
+
+    def get_primary_cards(self) -> list[Any]:
+        if self.attempt.status == AttemptStatus.IN_PROGRESS:
+            return []
+        cards: list[Any] = [
+            SectionCard(
+                title="Answers",
+                icon="list-checks",
+                body=AnswerTable(attempt_review(self.attempt)),
+            )
+        ]
+        if self.form is not None:
+            cards.append(
+                form_card(
+                    "Marks for written answers",
+                    self.form,
+                    self.request.path,
+                    "square-pen",
+                )
+            )
+        return cards
+
+    def get_sidebar_cards(self) -> list[Any]:
+        attempt = self.attempt
+        total = quiz_total(self.quiz)
+        rows: list[tuple[str, Any]] = [
+            ("Student", str(attempt.student)),
+            ("Student ID", attempt.student.student_code),
+            ("Status", attempt_badge(attempt)),
+            ("Score", score_text(attempt, total)),
+            ("Started", when(attempt.started_at)),
+            ("Submitted", when(attempt.submitted_at)),
+        ]
+        if attempt.auto_submitted:
+            rows.append(("Note", "Sent when the time ended."))
         return [SectionCard(title="Details", icon="list", body=DetailList(rows))]
 
 

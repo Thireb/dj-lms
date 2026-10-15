@@ -153,4 +153,9 @@ urlpatterns = [
         assessments.QuizUnpublishView.as_view(),
         name="quiz_unpublish",
     ),
+    path(
+        "quizzes/<int:pk>/attempts/<int:attempt_pk>/",
+        assessments.TeacherAttemptPage.as_view(),
+        name="quiz_attempt",
+    ),
 ]

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
+
 import pytest
 from apps.academics.models import Batch, ClassLabel, StudentBatchSubject, Subject
 from apps.accounts.models import User
@@ -287,10 +289,25 @@ def test_seed_demo_adds_assessments_once(demo_env) -> None:
 
     # unscoped: test assertion outside a tenant context.
     quizzes = Quiz.unscoped.filter(institute=institute)
-    assert sorted(quiz_status(quiz) for quiz in quizzes) == ["live", "scheduled"]
+    assert sorted(quiz_status(quiz) for quiz in quizzes) == [
+        "closed",
+        "live",
+        "scheduled",
+    ]
     with tenant_context(institute):
-        assert Quiz.objects.for_user(student.user).count() == 2
+        assert Quiz.objects.for_user(student.user).count() == 3
+    from apps.assessments.models import QuizAttempt
+
+    # unscoped: test assertion outside a tenant context.
+    attempts = QuizAttempt.unscoped.filter(institute=institute)
+    assert sorted(attempts.values_list("status", flat=True)) == [
+        "graded",
+        "submitted",
+    ]
+    mine = attempts.get(student=student)
+    assert mine.status == "graded" and mine.score == Decimal("3.5")
+    # An attempt keeps its quiz (PROTECT): the reset deletes attempts first.
     call_command("seed_demo", "--reset")
-    assert not quizzes.all().exists()
+    assert not quizzes.all().exists() and not attempts.all().exists()
     assert not assignments.exists() and not answers.exists()
     assert not questions.all().exists()  # all(): a new query, not the cache
