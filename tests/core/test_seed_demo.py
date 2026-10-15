@@ -306,6 +306,12 @@ def test_seed_demo_adds_assessments_once(demo_env) -> None:
     ]
     mine = attempts.get(student=student)
     assert mine.status == "graded" and mine.score == Decimal("3.5")
+    from apps.assessments.models import AttemptEvent
+
+    # unscoped: test assertion outside a tenant context. One exam flag, on
+    # the attempt that waits for marks.
+    flags = AttemptEvent.unscoped.filter(institute=institute)
+    assert [row.attempt.status for row in flags] == ["submitted"]
     # An attempt keeps its quiz (PROTECT): the reset deletes attempts first.
     call_command("seed_demo", "--reset")
     assert not quizzes.all().exists() and not attempts.all().exists()

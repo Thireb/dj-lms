@@ -625,3 +625,59 @@ class AttemptAnswer(SameInstituteMixin, TenantModel):
     def save(self, *args: Any, **kwargs: Any) -> None:
         self.full_clean(validate_unique=False, validate_constraints=False)
         super().save(*args, **kwargs)
+
+
+# Exam mode (roadmap 5.3 part 2c, SPEC 6.8)
+
+
+class AttemptEventKind(models.TextChoices):
+    LEFT_PAGE = "left_page", "Left the page"
+    LEFT_FULL_SCREEN = "left_full_screen", "Left full screen"
+
+
+EVENT_LOOKUPS = {Role.TEACHER: "attempt__quiz__teacher__user_id"}
+
+
+class AttemptEventQuerySet(TenantQuerySet):
+    """Admins see the institute, a teacher the flags at their quizzes.
+    Students and guardians do not read them."""
+
+    def for_user(self, user: Any) -> AttemptEventQuerySet:
+        scoped = super().for_user(user)
+        role = user_role(user)
+        if role in INSTITUTE_WIDE_ROLES:
+            return scoped
+        lookup = EVENT_LOOKUPS.get(role or "")
+        if lookup is None:
+            return scoped.none()
+        return scoped.filter(**{lookup: getattr(user, "pk", None)})
+
+
+class AttemptEvent(SameInstituteMixin, TenantModel):
+    """One exam flag in an attempt: the student left the page or full
+    screen. Shown to the teacher; it never changes the score."""
+
+    attempt = models.ForeignKey(
+        QuizAttempt, on_delete=models.CASCADE, related_name="events"
+    )
+    kind = models.CharField(max_length=20, choices=AttemptEventKind.choices)
+    at = models.DateTimeField()
+
+    objects = TenantManager.from_queryset(AttemptEventQuerySet)()
+    unscoped = UnscopedTenantManager.from_queryset(AttemptEventQuerySet)()
+
+    same_institute = ("attempt",)
+
+    class Meta:
+        ordering = ["attempt_id", "at", "pk"]
+
+    def __str__(self) -> str:
+        return f"{self.attempt} - {self.get_kind_display()}"
+
+    def clean(self) -> None:
+        super().clean()
+        self.check_institutes()
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        self.full_clean(validate_unique=False, validate_constraints=False)
+        super().save(*args, **kwargs)

@@ -37,6 +37,8 @@ from apps.assessments.models import (
     MIN_OPTIONS,
     Assignment,
     AttemptAnswer,
+    AttemptEvent,
+    AttemptEventKind,
     AttemptStatus,
     Question,
     QuestionKind,
@@ -1111,3 +1113,62 @@ def short_items(attempt: QuizAttempt) -> list[tuple[int, QuizQuestion]]:
         for number, item in enumerate(attempt_items(attempt), start=1)
         if item.question.kind == QuestionKind.SHORT
     ]
+
+
+# Exam mode (roadmap 5.3 part 2c, SPEC 6.8)
+#
+# An exam can flag leaving the page and require full screen. The paper
+# posts a flag when the student leaves; the teacher sees the flags with the
+# attempt. Flags never change the score or end the attempt.
+
+MAX_EVENTS = 200  # per attempt: a page that loops cannot fill the table
+
+
+def flagged_kinds(quiz: Quiz) -> set[str]:
+    """The flags this quiz records (only an exam has any)."""
+    if quiz.kind != QuizKind.EXAM:
+        return set()
+    kinds = set()
+    if quiz.flag_tab_leaving:
+        kinds.add(AttemptEventKind.LEFT_PAGE)
+    if quiz.require_full_screen:
+        kinds.add(AttemptEventKind.LEFT_FULL_SCREEN)
+    return kinds
+
+
+def log_attempt_event(
+    attempt: QuizAttempt, kind: str, *, now: datetime | None = None
+) -> AttemptEvent | None:
+    """Record a flag of an attempt in progress, before its deadline and its
+    grace minute. Returns None when it is not recorded."""
+    now = now or timezone.now()
+    with transaction.atomic():
+        locked = QuizAttempt.objects.select_for_update().get(pk=attempt.pk)
+        if (
+            locked.status != AttemptStatus.IN_PROGRESS
+            or now > locked.deadline + ANSWER_GRACE
+            or kind not in flagged_kinds(locked.quiz)
+            or AttemptEvent.objects.filter(attempt=locked).count() >= MAX_EVENTS
+        ):
+            return None
+        return AttemptEvent.objects.create(
+            institute=locked.institute, attempt=locked, kind=kind, at=now
+        )
+
+
+def attempt_events(attempt: QuizAttempt) -> list[AttemptEvent]:
+    return list(AttemptEvent.objects.filter(attempt=attempt))
+
+
+def event_counts(quiz: Quiz) -> dict[int, dict[str, int]]:
+    """For each attempt of the quiz: how many flags of each kind."""
+    counts: dict[int, dict[str, int]] = defaultdict(dict)
+    rows = (
+        AttemptEvent.objects.filter(attempt__quiz=quiz)
+        .values_list("attempt_id", "kind")
+        .annotate(total=Count("pk"))
+        .order_by()
+    )
+    for attempt_id, kind, total in rows:
+        counts[attempt_id][kind] = total
+    return dict(counts)

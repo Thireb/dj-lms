@@ -1,8 +1,9 @@
 """Demo assignments and questions for seed_demo (SPEC 10): three
 assignments of the demo teacher, in the batch and subject the demo student
 also takes, six questions in the demo teacher's bank, and three quizzes
-from them: one live now, one opening tomorrow, and one closed with
-attempts (one graded, one waiting for marks) (SPEC 10).
+from them: one live now, one exam opening in 2 days, and one closed exam
+with attempts (one graded, one waiting for marks with an exam flag)
+(SPEC 10).
 
 - one open for a week, which the demo student has not answered yet;
 - one due tomorrow, answered by the demo student and waiting for marks;
@@ -22,6 +23,7 @@ from django.utils import timezone
 
 from apps.assessments.models import (
     Assignment,
+    AttemptEventKind,
     Question,
     QuestionKind,
     Quiz,
@@ -37,6 +39,7 @@ from apps.assessments.services import (
     create_assignment,
     create_quiz,
     grade_submission,
+    log_attempt_event,
     mark_attempt,
     publish_quiz,
     quiz_results,
@@ -175,18 +178,21 @@ def _seed_quizzes(institute: Institute, teacher, link, questions, now) -> None:
 
 
 def _seed_closed_quiz(institute: Institute, teacher, link, questions, now) -> None:
-    """A quiz that closed 3 days ago (moved back like the live one). The
-    demo student's attempt is graded; one other attempt waits for marks."""
+    """An exam in exam mode that closed 3 days ago (moved back like the
+    live quiz). The demo student's attempt is graded; one other attempt
+    waits for marks and left the page once."""
     quiz = create_quiz(
         institute,
         QuizDetails(
-            title=f"{link.subject.name} practice quiz",
-            kind=QuizKind.QUIZ,
+            title=f"{link.subject.name} unit exam",
+            kind=QuizKind.EXAM,
             teacher=teacher,
             batch=link.batch,
             subject=link.subject,
             opens_at=now + timedelta(days=1),
             duration_minutes=20,
+            require_full_screen=True,
+            flag_tab_leaving=True,
         ),
     )
     add_questions(quiz, questions)
@@ -201,6 +207,10 @@ def _seed_closed_quiz(institute: Institute, teacher, link, questions, now) -> No
     for number, student in enumerate(takers):
         start = opens + timedelta(minutes=2 + number)
         attempt = start_attempt(quiz, student, now=start)
+        if student != demo:
+            log_attempt_event(
+                attempt, AttemptEventKind.LEFT_PAGE, now=start + timedelta(minutes=5)
+            )
         items = {item.question.text: item for item in quiz.items.all()}
         answers = {}
         for question in questions:

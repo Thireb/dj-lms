@@ -20,3 +20,28 @@ class AttemptTimer(Component):
             label=label,
             **props,
         )
+
+
+class ExamGuard(Component):
+    """Exam mode on the attempt page (SPEC 6.8). It says what is recorded
+    and, with ``full_screen``, offers "Enter full screen". ``examGuard``
+    (``static/js/app.js``) posts ``kind=left_page`` when the page is hidden
+    (with ``flag_leaving``) and ``kind=left_full_screen`` when full screen
+    ends (with ``full_screen``) to ``event_url``, with the CSRF token of
+    the form ``form_id``. Nothing is sent while the page itself navigates
+    (Submit or the timer). It never blocks the answers."""
+
+    template_name = "ui/components/exam_guard.html"
+
+    def __init__(
+        self, event_url, form_id, *, full_screen=False, flag_leaving=False, **props
+    ):
+        from apps.ui.safe_url import safe_url
+
+        super().__init__(
+            event_url=safe_url(event_url),
+            form_id=form_id,
+            full_screen=full_screen,
+            flag_leaving=flag_leaving,
+            **props,
+        )

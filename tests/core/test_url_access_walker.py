@@ -394,6 +394,7 @@ ROUTE_OBJECTS = {
     "teacher:quiz_attempt": _quiz_attempt,
     "student:quiz_detail": _live_quiz,
     "student:quiz_start": _live_quiz,
+    "student:quiz_event": _live_quiz,
     "student:quiz_attempt": _attempt,
     **{
         f"{portal}:lecture_schedule_{action}": _schedule
