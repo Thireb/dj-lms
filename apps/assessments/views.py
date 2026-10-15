@@ -1,6 +1,7 @@
 """Assignment pages (roadmap 5.1, SPEC 3 and 4.16): teacher Assignments,
 Add / Edit, the answers and the grade page; student Assignments and the
-assignment page with the answer form."""
+assignment page with the answer form. Teacher "Question bank" (roadmap
+5.2): list, Add, Edit and Delete."""
 
 from __future__ import annotations
 
@@ -17,16 +18,31 @@ from django.urls import reverse
 from django.utils import timezone
 
 from apps.academics.models import Batch, Subject
-from apps.assessments.forms import AnswerForm, AssignmentForm, GradeForm
-from apps.assessments.models import Assignment, Submission, SubmissionStatus
+from apps.assessments.forms import (
+    AnswerForm,
+    AssignmentForm,
+    GradeForm,
+    QuestionForm,
+)
+from apps.assessments.models import (
+    Assignment,
+    Question,
+    QuestionKind,
+    Submission,
+    SubmissionStatus,
+)
 from apps.assessments.services import (
     AssignmentDetails,
+    QuestionDetails,
     assignment_counts,
     create_assignment,
+    delete_question,
     grade_submission,
     is_expected,
     is_open,
+    list_questions,
     marks_text,
+    save_question,
     student_assignments,
     submission_rows,
     submission_status,
@@ -34,6 +50,7 @@ from apps.assessments.services import (
     update_assignment,
 )
 from apps.assessments.ui import (
+    QuestionTable,
     StudentAssignmentTable,
     SubmissionTable,
     TeacherAssignmentTable,
@@ -50,7 +67,7 @@ from apps.ui.components.actions import Button
 from apps.ui.components.data import DetailList, EmptyState, TextBlock
 from apps.ui.components.layout import SectionCard
 from apps.ui.components.nav import FilterBar, Pagination
-from apps.ui.views.pages import DetailPage, FormPage, ListPage
+from apps.ui.views.pages import DetailPage, FormPage, ListPage, PortalPageView
 
 PAGE_SIZE = 25
 STATUS_OPTIONS = [("", "Any status"), *SubmissionStatus.choices]
@@ -562,3 +579,177 @@ class StudentAssignmentPage(StudentAssignmentMixin, DetailPage):
             ),
         ]
         return [SectionCard(title="Details", icon="list", body=DetailList(rows))]
+
+
+# Question bank (roadmap 5.2)
+
+KIND_OPTIONS = [("", "Any type"), *QuestionKind.choices]
+
+# Service error keys, mapped onto form fields.
+QUESTION_FIELDS = {"options": "option_1", "teacher": None}
+
+
+class QuestionMixin(TeacherAssignmentMixin):
+    active_item = "questions"
+
+    def url(self, action: str, **kwargs: Any) -> str:
+        return reverse(f"teacher:question_{action}", kwargs=kwargs or None)
+
+    def get_question(self) -> Question:
+        """The question from the URL, through ``for_user`` (404 when not the
+        teacher's own)."""
+        rows = Question.objects.for_user(self.request.user).prefetch_related("options")
+        return get_object_or_404(rows, pk=self.kwargs["pk"])
+
+
+class QuestionListPage(QuestionMixin, ListPage):
+    title = "Question bank"
+    filter_keys = ("q", "subject", "kind")
+
+    def get_subtitle(self) -> str:
+        return "Your saved questions. Quizzes and exams take them from here."
+
+    def get_actions(self) -> list[Any]:
+        return [Button("Add question", url=self.url("create"), icon="plus")]
+
+    def get_components(self) -> dict[str, Any]:
+        user = self.request.user
+        if not Question.objects.for_user(user).exists():
+            return {
+                "table": EmptyState(
+                    "No questions yet.",
+                    text="Save MCQ and short answer questions to use in quizzes.",
+                    icon="square-pen",
+                    action=Button("Add your first question", url=self.url("create")),
+                )
+            }
+        filters = {
+            key: search_param(self.request.GET.get(key)) for key in self.filter_keys
+        }
+        if filters["kind"] not in QuestionKind.values:
+            filters["kind"] = ""
+        rows = list_questions(
+            user,
+            subject_id=id_param(filters["subject"]),
+            kind=filters["kind"],
+            search=filters["q"],
+        )
+        page = Paginator(rows, PAGE_SIZE).get_page(self.request.GET.get("page"))
+        query = urlencode({key: value for key, value in filters.items() if value})
+        return {
+            "filters": FilterBar(self.filter_fields(filters)),
+            "table": QuestionTable(list(page.object_list)),
+            "pagination": Pagination(page, query=query),
+        }
+
+    def filter_fields(self, filters: dict[str, str]) -> list[dict[str, Any]]:
+        subjects = Subject.objects.for_user(self.request.user).order_by("name")
+        return [
+            {
+                "name": "q",
+                "label": "Search questions",
+                "value": filters["q"],
+                "placeholder": "Words in the question",
+            },
+            {
+                "name": "subject",
+                "label": "Subject",
+                "value": filters["subject"],
+                "options": _options(subjects, "Any subject"),
+            },
+            {
+                "name": "kind",
+                "label": "Type",
+                "value": filters["kind"],
+                "options": KIND_OPTIONS,
+            },
+        ]
+
+
+class QuestionFormPage(QuestionMixin, FormPage):
+    title = "Add question"
+    form_class = QuestionForm
+    save_label = "Add question"
+    success_message = "Question added to your bank."
+    question: Question | None = None
+
+    def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        return self.load() or super().get(request, *args, **kwargs)
+
+    def post(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        return self.load() or super().post(request, *args, **kwargs)
+
+    def load(self) -> HttpResponse | None:
+        """Runs after the access mixins. A teacher without a profile has no
+        bank, so they get 403."""
+        self.teacher = self.own_teacher()
+        if self.teacher is None:
+            return forbidden_response(self.request)
+        return None
+
+    def get_form_kwargs(self) -> dict[str, Any]:
+        return {
+            "user": self.request.user,
+            "teacher": self.teacher,
+            "cancel_url": self.url("list"),
+            "save_label": self.save_label,
+            "question": self.question,
+            "initial": self.get_initial(),
+        }
+
+    def get_initial(self) -> dict[str, Any]:
+        return {}
+
+    def form_valid(self, form: QuestionForm) -> HttpResponse:
+        data = form.cleaned_data
+        details = QuestionDetails(
+            teacher=self.teacher,
+            subject=data["subject"],
+            kind=data["kind"],
+            text=data["text"],
+            marks=data["marks"],
+            explanation=data["explanation"],
+            options=data["options"],
+            correct=data["correct_index"],
+        )
+        try:
+            save_question(self.get_institute(), details, self.question)
+        except ValidationError as error:
+            for name, field_errors in error.message_dict.items():
+                name = QUESTION_FIELDS.get(name, name)
+                form.add_error(name if name in form.fields else None, field_errors)
+            return self.form_invalid(form)
+        messages.success(self.request, self.success_message)
+        return HttpResponseRedirect(self.url("list"))
+
+
+class QuestionCreatePage(QuestionFormPage):
+    pass
+
+
+class QuestionEditPage(QuestionFormPage):
+    title = "Edit question"
+    save_label = "Save changes"
+    success_message = "Question saved."
+
+    def load(self) -> HttpResponse | None:
+        denied = super().load()
+        if denied is not None:
+            return denied
+        self.question = self.get_question()
+        return None
+
+    def get_initial(self) -> dict[str, Any]:
+        return QuestionForm.initial_for(self.question)
+
+
+class QuestionDeleteView(QuestionMixin, PortalPageView):
+    """POST only: delete one of the teacher's questions (confirm dialog on
+    the list)."""
+
+    http_method_names = ["post"]
+
+    def post(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        delete_question(self.get_question())
+        messages.success(request, "Question deleted.")
+        return HttpResponseRedirect(self.url("list"))

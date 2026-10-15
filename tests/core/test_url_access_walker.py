@@ -20,7 +20,7 @@ from apps.academics.services import (
     set_teacher_batch_subjects,
 )
 from apps.accounts.models import User
-from apps.assessments.models import Assignment, Submission
+from apps.assessments.models import Assignment, Question, QuestionKind, Submission
 from apps.core.roles import Role
 from apps.core.tenancy import tenant_context
 from apps.lectures.models import Lecture, LectureStatus, RecurringSchedule
@@ -246,6 +246,23 @@ def _answer(institute) -> dict[str, int]:
     return {"pk": assignment.pk, "submission_pk": answer.pk}
 
 
+def _question(institute) -> int:
+    """A short answer question in the walker teacher's bank."""
+    # unscoped: test setup outside a tenant context.
+    lecture = Lecture.unscoped.get(pk=_lecture(institute))
+    subject = Subject.unscoped.get(pk=_name_row(Subject)(institute))
+    with tenant_context(institute):
+        question = Question.objects.create(
+            institute=institute,
+            teacher=lecture.teacher,
+            subject=subject,
+            kind=QuestionKind.SHORT,
+            text="Walker?",
+            marks=1,
+        )
+    return question.pk
+
+
 ROUTE_OBJECTS = {
     **{
         f"admin:{prefix}_{action}": _name_row(model)
@@ -274,6 +291,8 @@ ROUTE_OBJECTS = {
     "teacher:assignment_edit": _assignment,
     "teacher:assignment_grade": _answer,
     "student:assignment_detail": _assignment,
+    "teacher:question_edit": _question,
+    "teacher:question_delete": _question,
     **{
         f"{portal}:lecture_schedule_{action}": _schedule
         for portal in ("admin", "teacher")

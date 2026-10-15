@@ -1,4 +1,5 @@
-"""Publish, submit and grade assignments (roadmap 5.1, SPEC 4.16 and 6.8).
+"""Publish, submit and grade assignments (roadmap 5.1, SPEC 4.16 and 6.8),
+and keep the teacher's question bank (roadmap 5.2).
 
 A student is expected to answer an assignment when an enrolment of theirs
 has the assignment's batch and subject and was made before the due time.
@@ -29,7 +30,16 @@ from apps.academics.models import (
     Subject,
     TeacherBatchSubject,
 )
-from apps.assessments.models import Assignment, Submission, SubmissionStatus
+from apps.assessments.models import (
+    MAX_OPTIONS,
+    MIN_OPTIONS,
+    Assignment,
+    Question,
+    QuestionKind,
+    QuestionOption,
+    Submission,
+    SubmissionStatus,
+)
 from apps.institutes.models import Institute
 from apps.people.models import ProfileStatus, StudentProfile, TeacherProfile
 
@@ -375,3 +385,128 @@ def marks_text(marks: Decimal | None, total: int) -> str:
     if marks is None:
         return "-"
     return f"{_marks_text(marks)} / {total}"
+
+
+# Question bank (roadmap 5.2, SPEC 4.16)
+#
+# Each teacher has their own bank. A question has one of the teacher's
+# subjects (any of their batches). An MCQ question has 2 to 6 options and
+# exactly one correct; a short answer question has no options.
+
+
+@dataclass(frozen=True)
+class QuestionDetails:
+    teacher: TeacherProfile
+    subject: Subject
+    kind: str
+    text: str
+    marks: int
+    explanation: str = ""
+    options: tuple[str, ...] = ()
+    correct: int | None = None  # index into options
+
+
+def _check_question(
+    institute: Institute, details: QuestionDetails, old: Question | None
+) -> None:
+    errors: dict[str, list[str]] = defaultdict(list)
+    for name in ("teacher", "subject"):
+        if getattr(details, name).institute_id != institute.pk:
+            errors[name].append("Must belong to this institute.")
+    if errors:
+        raise ValidationError(dict(errors))
+    if old is None or old.subject_id != details.subject.pk:
+        taught = TeacherBatchSubject.objects.filter(
+            teacher=details.teacher, subject=details.subject
+        ).exists()
+        if not taught:
+            errors["subject"].append("The teacher does not teach this subject.")
+        elif not details.subject.is_active:
+            errors["subject"].append("This subject is inactive.")
+    if not details.text.strip():
+        errors["text"].append("Write the question.")
+    if details.kind == QuestionKind.MCQ:
+        _check_options(details, errors)
+    elif details.kind == QuestionKind.SHORT:
+        if details.options:
+            errors["options"].append("A short answer question has no options.")
+    else:
+        errors["kind"].append("Choose MCQ or Short answer.")
+    if errors:
+        raise ValidationError(dict(errors))
+
+
+def _check_options(details: QuestionDetails, errors: dict[str, list[str]]) -> None:
+    options = details.options
+    if not MIN_OPTIONS <= len(options) <= MAX_OPTIONS:
+        errors["options"].append(
+            f"Give {MIN_OPTIONS} to {MAX_OPTIONS} options for an MCQ question."
+        )
+    elif any(not option.strip() for option in options):
+        errors["options"].append("An option is empty.")
+    elif len({option.strip().casefold() for option in options}) < len(options):
+        errors["options"].append("Two options are the same.")
+    if details.correct is None or not 0 <= details.correct < len(options):
+        errors["correct"].append("Choose the correct option.")
+
+
+def save_question(
+    institute: Institute,
+    details: QuestionDetails,
+    question: Question | None = None,
+) -> Question:
+    """Add a question, or replace one (its options too). The teacher stays
+    the same."""
+    if question is not None and details.teacher.pk != question.teacher_id:
+        raise ValidationError({"teacher": "The teacher cannot change."})
+    _check_question(institute, details, question)
+    with transaction.atomic():
+        row = question or Question(institute=institute, teacher=details.teacher)
+        row.subject = details.subject
+        row.kind = details.kind
+        row.text = details.text
+        row.marks = details.marks
+        row.explanation = details.explanation
+        row.save()
+        QuestionOption.objects.filter(question=row).delete()
+        for position, text in enumerate(details.options, start=1):
+            QuestionOption.objects.create(
+                institute=institute,
+                question=row,
+                position=position,
+                text=text.strip(),
+                is_correct=position - 1 == details.correct,
+            )
+    return row
+
+
+def delete_question(question: Question) -> None:
+    question.delete()
+
+
+def list_questions(
+    user: Any,
+    *,
+    subject_id: int | None = None,
+    kind: str = "",
+    search: str = "",
+) -> Any:
+    """The viewer's questions, the newest change first, with their subject
+    and options (2 queries for a page)."""
+    rows = (
+        Question.objects.for_user(user)
+        .select_related("subject")
+        .prefetch_related("options")
+    )
+    if subject_id is not None:
+        rows = rows.filter(subject_id=subject_id)
+    if kind:
+        rows = rows.filter(kind=kind)
+    if search:
+        rows = rows.filter(text__icontains=search)
+    return rows
+
+
+def correct_option(question: Question) -> QuestionOption | None:
+    """The correct option of an MCQ question (uses the prefetched options)."""
+    return next((row for row in question.options.all() if row.is_correct), None)

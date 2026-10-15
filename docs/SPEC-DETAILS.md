@@ -226,6 +226,7 @@ Date*, Batch*, Subject, Student (optional, for one-student reports), Topic cover
   - Answer: a text answer (required), which the student can change until the due time or until it is graded. Grade: marks 0 to the total (steps of 0.5) and optional feedback; the teacher can change a grade.
 - Quiz or exam: Title*, Type* (Quiz / Exam), Batch*, Subject*, Opens at*, Duration (min)*, Total marks, Pass marks, Shuffle questions, Require full screen (exam), Flag tab leaving (exam). Questions: pick from bank or add new.
 - Question: Text*, Type* (MCQ / Short answer), Options (MCQ, 2 to 6) with one correct*, Marks*, Subject*, Explanation (optional).
+  - Built in 5.2 (assumed, check against the demo): each teacher has their own bank; other teachers do not see it. Subject is one of the teacher's active subjects. Marks 1 to 100. The form has 6 option boxes; empty boxes are skipped, two options may not be the same (ignoring case), and the correct option is chosen by its number. A short answer question ignores the option boxes. The teacher can delete a question (confirm dialog); quizzes (5.3) must keep a question they use (backlog AS6).
 
 ### 4.17 Fee Pay (guardian)
 Child* (S), Challan(s) or months* (multi), Amount* (default = selected balance), Paid on* (date), Reference (text), Receipt file* (JPG, PNG, WEBP, PDF, up to 5 MB). On submit: status `waiting`, admins notified.

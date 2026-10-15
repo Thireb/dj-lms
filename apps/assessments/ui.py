@@ -1,4 +1,5 @@
-"""Assignment badges, tables and cards (roadmap 5.1, SPEC 2 and 3)."""
+"""Assignment badges, tables and cards (roadmap 5.1, SPEC 2 and 3), and
+the question bank table (roadmap 5.2)."""
 
 from __future__ import annotations
 
@@ -8,17 +9,24 @@ from typing import Any
 from django import forms
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.text import Truncator
 
-from apps.assessments.models import Assignment, SubmissionStatus
+from apps.assessments.models import (
+    Assignment,
+    Question,
+    QuestionKind,
+    SubmissionStatus,
+)
 from apps.assessments.services import (
     AssignmentCount,
     StudentAssignment,
     SubmissionRow,
+    correct_option,
     is_open,
     marks_text,
 )
 from apps.lectures.times import local_date, local_time
-from apps.ui.components.actions import IconButton
+from apps.ui.components.actions import ConfirmDialog, IconButton
 from apps.ui.components.block_stack import ButtonRow
 from apps.ui.components.data import (
     Badge,
@@ -224,3 +232,63 @@ def form_card(title: str, form: forms.Form, action: str, icon: str) -> SectionCa
         icon=icon,
         body=PortalPostForm(action=action, body=CrispyForm(form=form), framed=False),
     )
+
+
+# Question bank (roadmap 5.2)
+
+QUESTION_PREVIEW = 90  # characters of the question in the table
+
+
+def question_url(action: str, question: Question) -> str:
+    return reverse(f"teacher:question_{action}", kwargs={"pk": question.pk})
+
+
+def question_answer(question: Question) -> str:
+    """The correct option of an MCQ question; the teacher marks the rest."""
+    if question.kind == QuestionKind.SHORT:
+        return "Marked by the teacher"
+    option = correct_option(question)
+    return f"{option.position}. {option.text}" if option else "-"
+
+
+def delete_question_dialog(question: Question) -> ConfirmDialog:
+    return ConfirmDialog(
+        "Delete this question from your bank? This cannot be undone.",
+        "Delete question",
+        url=question_url("delete", question),
+        trigger_label="Delete",
+        dismiss_label="Keep question",
+    )
+
+
+class QuestionTable(DataTable):
+    """Teacher "Question bank": Question, Subject, Type, Marks, Answer."""
+
+    empty_title = "No questions match these filters."
+
+    @property
+    def columns(self) -> list[Column]:  # type: ignore[override]
+        return [
+            Column(
+                "question",
+                "Question",
+                lambda row: Truncator(row.text).chars(QUESTION_PREVIEW),
+            ),
+            Column("subject", "Subject", lambda row: row.subject.name),
+            Column("kind", "Type", lambda row: row.get_kind_display()),
+            Column("marks", "Marks", lambda row: str(row.marks)),
+            Column("answer", "Answer", question_answer),
+            Column("actions", "", self.actions),
+        ]
+
+    def actions(self, question: Question) -> ButtonRow:
+        return ButtonRow(
+            items=[
+                IconButton(
+                    "square-pen",
+                    f"Edit question: {Truncator(question.text).chars(40)}",
+                    url=question_url("edit", question),
+                ),
+                delete_question_dialog(question),
+            ]
+        )

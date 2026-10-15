@@ -1,4 +1,5 @@
-"""Assignments (roadmap 5.1, SPEC 4.16 and 6.8).
+"""Assignments (roadmap 5.1, SPEC 4.16 and 6.8) and the question bank
+(roadmap 5.2).
 
 A teacher publishes an assignment to one batch and subject. Each student
 enrolled in that batch and subject sends one text answer before the due
@@ -23,6 +24,9 @@ from apps.core.models import TenantModel
 from apps.core.roles import INSTITUTE_WIDE_ROLES, Role, user_role
 
 MAX_TOTAL_MARKS = 1000
+MAX_QUESTION_MARKS = 100
+MIN_OPTIONS = 2
+MAX_OPTIONS = 6
 
 # A student or guardian sees an assignment only through an enrolment in its
 # batch and subject. Both conditions sit in one filter() call, so they must
@@ -202,5 +206,121 @@ class Submission(SameInstituteMixin, TenantModel):
     def save(self, *args: Any, **kwargs: Any) -> None:
         # The fail-closed manager would hide rows from unique checks; the
         # database constraint enforces uniqueness instead.
+        self.full_clean(validate_unique=False, validate_constraints=False)
+        super().save(*args, **kwargs)
+
+
+# Question bank (roadmap 5.2, SPEC 4.16)
+
+
+class QuestionKind(models.TextChoices):
+    MCQ = "mcq", "MCQ"
+    SHORT = "short", "Short answer"
+
+
+# From a question row to the user who may see it, by role.
+QUESTION_LOOKUPS = {Role.TEACHER: "teacher__user_id"}
+OPTION_LOOKUPS = {Role.TEACHER: "question__teacher__user_id"}
+
+
+class QuestionQuerySet(TenantQuerySet):
+    """Admins see the institute, a teacher their own bank. Students and
+    guardians see questions only inside a quiz (roadmap 5.3)."""
+
+    def for_user(self, user: Any) -> QuestionQuerySet:
+        scoped = super().for_user(user)
+        role = user_role(user)
+        if role in INSTITUTE_WIDE_ROLES:
+            return scoped
+        lookup = QUESTION_LOOKUPS.get(role or "")
+        if lookup is None:
+            return scoped.none()
+        return scoped.filter(**{lookup: getattr(user, "pk", None)})
+
+
+class QuestionOptionQuerySet(TenantQuerySet):
+    """The same rule as the questions: the correct option is not for
+    students."""
+
+    def for_user(self, user: Any) -> QuestionOptionQuerySet:
+        scoped = super().for_user(user)
+        role = user_role(user)
+        if role in INSTITUTE_WIDE_ROLES:
+            return scoped
+        lookup = OPTION_LOOKUPS.get(role or "")
+        if lookup is None:
+            return scoped.none()
+        return scoped.filter(**{lookup: getattr(user, "pk", None)})
+
+
+class Question(SameInstituteMixin, TenantModel):
+    """One question in a teacher's bank. An MCQ question has 2 to 6
+    options with one correct; a short answer question has none (the
+    teacher marks the answer)."""
+
+    teacher = models.ForeignKey(
+        "people.TeacherProfile", on_delete=models.PROTECT, related_name="questions"
+    )
+    subject = models.ForeignKey(
+        "academics.Subject", on_delete=models.PROTECT, related_name="questions"
+    )
+    kind = models.CharField(max_length=8, choices=QuestionKind.choices)
+    text = models.TextField()
+    marks = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(MAX_QUESTION_MARKS)]
+    )
+    explanation = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    objects = TenantManager.from_queryset(QuestionQuerySet)()
+    unscoped = UnscopedTenantManager.from_queryset(QuestionQuerySet)()
+
+    same_institute = ("teacher", "subject")
+
+    class Meta:
+        ordering = ["-updated_at", "-pk"]
+
+    def __str__(self) -> str:
+        return self.text[:60]
+
+    def clean(self) -> None:
+        super().clean()
+        self.check_institutes()
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        self.full_clean(validate_unique=False, validate_constraints=False)
+        super().save(*args, **kwargs)
+
+
+class QuestionOption(SameInstituteMixin, TenantModel):
+    question = models.ForeignKey(
+        Question, on_delete=models.CASCADE, related_name="options"
+    )
+    position = models.PositiveSmallIntegerField()  # 1 to 6, in the form's order
+    text = models.CharField(max_length=500)
+    is_correct = models.BooleanField(default=False)
+
+    objects = TenantManager.from_queryset(QuestionOptionQuerySet)()
+    unscoped = UnscopedTenantManager.from_queryset(QuestionOptionQuerySet)()
+
+    same_institute = ("question",)
+
+    class Meta:
+        ordering = ["question_id", "position"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["question", "position"], name="option_question_position_unique"
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return self.text
+
+    def clean(self) -> None:
+        super().clean()
+        self.check_institutes()
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
         self.full_clean(validate_unique=False, validate_constraints=False)
         super().save(*args, **kwargs)

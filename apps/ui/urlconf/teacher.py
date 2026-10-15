@@ -97,4 +97,24 @@ urlpatterns = [
         assessments.GradePage.as_view(),
         name="assignment_grade",
     ),
+    path(
+        "questions/",
+        assessments.QuestionListPage.as_view(),
+        name="question_list",
+    ),
+    path(
+        "questions/add/",
+        assessments.QuestionCreatePage.as_view(),
+        name="question_create",
+    ),
+    path(
+        "questions/<int:pk>/edit/",
+        assessments.QuestionEditPage.as_view(),
+        name="question_edit",
+    ),
+    path(
+        "questions/<int:pk>/delete/",
+        assessments.QuestionDeleteView.as_view(),
+        name="question_delete",
+    ),
 ]

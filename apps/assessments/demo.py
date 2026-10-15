@@ -1,5 +1,6 @@
-"""Demo assignments for seed_demo (SPEC 10): three assignments of the demo
-teacher, in the batch and subject the demo student also takes.
+"""Demo assignments and questions for seed_demo (SPEC 10): three
+assignments of the demo teacher, in the batch and subject the demo student
+also takes, and six questions in the demo teacher's bank.
 
 - one open for a week, which the demo student has not answered yet;
 - one due tomorrow, answered by the demo student and waiting for marks;
@@ -17,11 +18,13 @@ from decimal import Decimal
 
 from django.utils import timezone
 
-from apps.assessments.models import Assignment, Submission
+from apps.assessments.models import Assignment, Question, QuestionKind, Submission
 from apps.assessments.services import (
     AssignmentDetails,
+    QuestionDetails,
     create_assignment,
     grade_submission,
+    save_question,
     submission_rows,
     submit_answer,
 )
@@ -61,6 +64,7 @@ def seed_assignments(institute: Institute) -> None:
             )
             return create_assignment(institute, details)
 
+        _seed_questions(institute, teacher, link.subject)
         add(f"{name} project", 7, 20)
         tomorrow = add(f"{name} practice sheet", 1, 10)
         closed = add(f"{name} chapter questions", 1, 10)
@@ -89,8 +93,40 @@ def _seed_answers(tomorrow, closed, teacher, now) -> None:
     )
 
 
+# (kind, text, marks, options, index of the correct option)
+QUESTIONS = (
+    (QuestionKind.MCQ, "Which of these numbers is prime?", 1, ("4", "7", "9"), 1),
+    (QuestionKind.MCQ, "What is 15% of 200?", 2, ("15", "30", "35", "45"), 1),
+    (QuestionKind.MCQ, "Is 0.5 the same as 1/2?", 1, ("Yes", "No"), 0),
+    (
+        QuestionKind.MCQ,
+        "Which unit is used for time?",
+        1,
+        ("Metre", "Second", "Kilogram", "Ampere", "Kelvin", "Mole"),
+        1,
+    ),
+    (QuestionKind.SHORT, "Explain in two sentences what an average is.", 3, (), None),
+    (QuestionKind.SHORT, "Write one rule you use to check your answers.", 2, (), None),
+)
+
+
+def _seed_questions(institute: Institute, teacher, subject) -> None:
+    for kind, text, marks, options, correct in QUESTIONS:
+        details = QuestionDetails(
+            teacher=teacher,
+            subject=subject,
+            kind=kind,
+            text=text,
+            marks=marks,
+            options=options,
+            correct=correct,
+        )
+        save_question(institute, details)
+
+
 def reset_assignments(institute: Institute) -> int:
-    """Delete the institute's answers and assignments (before its people).
+    """Delete the institute's answers, assignments and questions (before its
+    people).
 
     Uses ``unscoped`` on purpose: a management command, one institute.
     """
@@ -98,4 +134,7 @@ def reset_assignments(institute: Institute) -> int:
     answers, _ = Submission.unscoped.filter(institute=institute).delete()
     # unscoped: seed_demo --reset, limited to the demo institute.
     assignments, _ = Assignment.unscoped.filter(institute=institute).delete()
-    return answers + assignments
+    # unscoped: seed_demo --reset, limited to the demo institute (the
+    # options go with their questions).
+    questions, _ = Question.unscoped.filter(institute=institute).delete()
+    return answers + assignments + questions

@@ -1,5 +1,5 @@
 """Assignment form (SPEC 4.16), the student's answer form and the
-teacher's grade form (roadmap 5.1)."""
+teacher's grade form (roadmap 5.1), and the question form (roadmap 5.2)."""
 
 from __future__ import annotations
 
@@ -9,13 +9,21 @@ from typing import Any
 
 from crispy_forms.layout import Layout
 from django import forms
+from django.db.models import Q
 
 from apps.academics.models import Batch, Subject, TeacherBatchSubject
-from apps.assessments.models import MAX_TOTAL_MARKS, Assignment
+from apps.assessments.models import (
+    MAX_OPTIONS,
+    MAX_QUESTION_MARKS,
+    MAX_TOTAL_MARKS,
+    Assignment,
+    Question,
+    QuestionKind,
+)
 from apps.lectures.times import combine_local, missing_time_message, wall_time_missing
 from apps.people.models import TeacherProfile
-from apps.ui.forms.base import BaseForm, FormActions, Section
-from apps.ui.forms.widgets import DatePicker, TimePicker
+from apps.ui.forms.base import BaseForm, FormActions, Section, style_widgets
+from apps.ui.forms.widgets import ChipRadios, DatePicker, TimePicker
 
 DEFAULT_DUE_TIME = time(23, 59)
 
@@ -173,3 +181,115 @@ class GradeForm(BaseForm):
             Section("", "marks", "feedback"),
             FormActions(self.save_label, self.cancel_url),
         )
+
+
+OPTION_FIELDS = tuple(f"option_{number}" for number in range(1, MAX_OPTIONS + 1))
+
+
+class QuestionForm(BaseForm):
+    """SPEC 4.16 question: Text, Type, Options (MCQ, 2 to 6) with one
+    correct, Marks, Subject, Explanation. Empty option boxes are skipped,
+    so the teacher fills as many as they need."""
+
+    kind = forms.ChoiceField(
+        label="Type",
+        choices=QuestionKind.choices,
+        initial=QuestionKind.MCQ,
+        widget=ChipRadios(group_label="Question type"),
+    )
+    text = forms.CharField(label="Question", widget=forms.Textarea(attrs={"rows": 4}))
+    marks = forms.IntegerField(
+        label="Marks", min_value=1, max_value=MAX_QUESTION_MARKS, initial=1
+    )
+    explanation = forms.CharField(
+        label="Explanation",
+        required=False,
+        widget=forms.Textarea(attrs={"rows": 3}),
+        help_text="Optional. Why the answer is right.",
+    )
+    correct = forms.ChoiceField(
+        label="Correct option",
+        required=False,
+        choices=[(str(n), str(n)) for n in range(1, MAX_OPTIONS + 1)],
+        widget=ChipRadios(group_label="Correct option"),
+    )
+
+    def __init__(
+        self,
+        *args: Any,
+        user: Any,
+        teacher: TeacherProfile,
+        cancel_url: str,
+        save_label: str,
+        question: Question | None = None,
+        **kwargs: Any,
+    ):
+        self.cancel_url = cancel_url
+        self.save_label = save_label
+        super().__init__(*args, **kwargs)
+        for number, name in enumerate(OPTION_FIELDS, start=1):
+            self.fields[name] = forms.CharField(
+                label=f"Option {number}", required=False, max_length=500
+            )
+        kept = question.subject_id if question else None
+        taught = TeacherBatchSubject.objects.for_user(user).filter(teacher=teacher)
+        subjects = (
+            Subject.objects.for_user(user)
+            .filter(pk__in=taught.values("subject_id"))
+            .filter(Q(is_active=True) | Q(pk=kept))
+            .order_by("name")
+        )
+        self.fields["subject"] = forms.ModelChoiceField(
+            label="Subject", queryset=subjects, empty_label="Choose a subject"
+        )
+        style_widgets(self)
+        self.helper.layout = self.get_layout()
+
+    def get_layout(self) -> Layout:
+        return Layout(
+            Section("Question", "kind", "subject", "text", "marks"),
+            Section(
+                "Options",
+                *OPTION_FIELDS,
+                "correct",
+                description="For an MCQ question: 2 to 6 options and the "
+                "number of the correct one. A short answer question "
+                "ignores them.",
+                columns=2,
+            ),
+            Section("Explanation", "explanation"),
+            FormActions(self.save_label, self.cancel_url),
+        )
+
+    def clean(self) -> dict[str, Any]:
+        cleaned = super().clean()
+        if cleaned.get("kind") != QuestionKind.MCQ:
+            cleaned["options"], cleaned["correct_index"] = (), None
+            return cleaned
+        filled = [
+            (number, cleaned.get(name, "").strip())
+            for number, name in enumerate(OPTION_FIELDS, start=1)
+            if cleaned.get(name, "").strip()
+        ]
+        cleaned["options"] = tuple(text for _, text in filled)
+        chosen = int(cleaned["correct"]) if cleaned.get("correct") else None
+        numbers = [number for number, _ in filled]
+        if chosen is not None and chosen not in numbers:
+            self.add_error("correct", "The correct option is empty.")
+        cleaned["correct_index"] = numbers.index(chosen) if chosen in numbers else None
+        return cleaned
+
+    @staticmethod
+    def initial_for(question: Question) -> dict[str, Any]:
+        initial: dict[str, Any] = {
+            "kind": question.kind,
+            "subject": question.subject_id,
+            "text": question.text,
+            "marks": question.marks,
+            "explanation": question.explanation,
+        }
+        for option in question.options.all():
+            initial[f"option_{option.position}"] = option.text
+            if option.is_correct:
+                initial["correct"] = str(option.position)
+        return initial
