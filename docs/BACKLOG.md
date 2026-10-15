@@ -300,6 +300,7 @@ Left out of 5.1 on purpose, or found while building.
 | AS1 | SPEC 4.16 has an optional assignment file, and students may want to attach work. There is no file storage yet (no `MEDIA` settings, no private download view; ARCHITECTURE plans S3, which is a new dependency). 5.1 takes text answers only. Decide the storage with course documents (FEATURES 7, Phase 9) and add the file then. | Medium | [ ] |
 | AS2 | The guardian sees no assignments yet. The guardian menu (FEATURES 13) has no "Assignments" item; scores come with roadmap 5.4. `Assignment.objects.for_user` and `Submission.objects.for_user` already cover guardians (tested). | Low | [ ] |
 | AS3 | A teacher cannot delete an assignment made by mistake; they can edit it until the first answer. Add Delete (confirm dialog) when the admin overview comes (FEATURES 7, approval queues). | Low | [ ] |
+| AS5 | axe (best-practice rules) on the 5.1 pages, and the same on the existing lecture pages: `empty-table-header` (the `DataTable` actions column has an empty header; give it a screen-reader label such as "Actions") and `heading-order` (form `Section` titles skip a heading level after the page title). Shared components, so one fix covers every page. | Low | [ ] |
 | AS4 | Notifications for "assignment published", "submission received" and "graded" (SPEC 7) wait for the notification service (roadmap 6.1 and 6.2). | Low | [ ] |
 
 ## Later (deployment hardening, Phase 12)
