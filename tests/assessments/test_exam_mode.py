@@ -11,6 +11,7 @@ from apps.assessments.models import (
     AttemptEvent,
     AttemptEventKind,
     AttemptStatus,
+    Quiz,
     QuizKind,
 )
 from apps.assessments.services import flagged_kinds, log_attempt_event
@@ -19,7 +20,7 @@ from apps.core.tenancy import tenant_context
 from django.test import Client
 from django.urls import reverse
 
-from tests.assessments.test_attempts import _save, _start, live_quiz
+from tests.assessments.test_attempts import _make_student, _save, _start, live_quiz
 from tests.conftest import cell, make_user, table_row
 from tests.lectures.conftest import signed_in
 
@@ -65,6 +66,13 @@ def _event_url(quiz) -> str:
 @pytest.mark.django_db
 def test_only_an_exam_flags_and_only_what_it_asks(school) -> None:
     quiz, _ = live_quiz(school, title="Plain")
+    assert flagged_kinds(quiz) == set()
+    # A plain quiz with the flags set (the services clear them) still has none.
+    # unscoped: test set-up outside a tenant context.
+    Quiz.unscoped.filter(pk=quiz.pk).update(
+        flag_tab_leaving=True, require_full_screen=True
+    )
+    quiz.refresh_from_db()
     assert flagged_kinds(quiz) == set()
     assert flagged_kinds(live_exam(school)) == {LEFT_PAGE, LEFT_FULL}
     leaving = live_exam(school, require_full_screen=False)
@@ -177,6 +185,7 @@ def test_event_view_needs_the_csrf_token(school) -> None:
 @pytest.mark.django_db
 def test_event_view_without_an_attempt_records_nothing(school) -> None:
     exam = live_exam(school)
+    _start(exam, _make_student(school))  # another student's attempt
     response = signed_in(school.student_1.user).post(
         _event_url(exam), {"kind": "left_page"}
     )
