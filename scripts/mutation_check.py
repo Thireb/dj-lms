@@ -3328,6 +3328,36 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "        attempt = QuizAttempt.objects.filter(quiz=quiz, student=self.student).first()\n        if attempt is not None:\n            log_attempt_event(",
         "        attempt = QuizAttempt.objects.filter(quiz=quiz).first()\n        if attempt is not None:\n            log_attempt_event(",
     ),
+    (
+        "admin quizzes need the academic menu (5.3 2d)",
+        "apps/assessments/views.py",
+        "    menu_key = menu_keys.ACADEMIC\n",
+        "    menu_key = None\n",
+    ),
+    (
+        "admin quiz page has no mark links (5.3 2d)",
+        "apps/assessments/views.py",
+        "    open_links = False\n",
+        "    open_links = True\n",
+    ),
+    (
+        "admin quiz page cannot edit (5.3 2d)",
+        "apps/assessments/views.py",
+        "    def can_edit(self) -> bool:\n        return False\n",
+        "    def can_edit(self) -> bool:\n        return True\n",
+    ),
+    (
+        "admin quiz page shows results only once opened (5.3 2d)",
+        "apps/assessments/views.py",
+        "        if not has_opened(self.quiz, self.now):\n            return [questions]\n",
+        "        if False:\n            return [questions]\n",
+    ),
+    (
+        "results hide the mark buttons when asked (5.3 2d)",
+        "apps/assessments/ui.py",
+        '            *([Column("actions", "", self.open_button)] if self.open_links else []),\n',
+        '            Column("actions", "", self.open_button),\n',
+    ),
 ]
 
 
