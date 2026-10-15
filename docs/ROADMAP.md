@@ -89,7 +89,7 @@ The product owner did not accept the current look (navigation, tables, forms, si
 
 - [x] 5.1 Assignments: publish, submit, grade. Built: the `assessments` app (`Assignment`, `Submission`), teacher "Assignments" (list, Add, Edit, the answers of every expected student, the grade page with marks and feedback), student "Assignments" (status and subject filters) and the assignment page with the answer form, the teacher dashboard card "Answers to grade", and demo assignments. Text answers only (backlog AS1); the guardian view comes with 5.4 (AS2).
 - [x] 5.2 Question bank. Built: `Question` and `QuestionOption` in `assessments`; teacher "Question bank" (Quizzes and exams menu group) with search, subject and type filters, Add, Edit and Delete (confirm dialog); MCQ (2 to 6 options, one correct) and short answer questions; six demo questions.
-- [ ] 5.3 Quizzes and exams: timed attempt, auto-grade.
+- [ ] 5.3 Quizzes and exams: timed attempt, auto-grade. Part 1 built (set-up): `Quiz` and `QuizQuestion`; teacher "Quizzes and exams" (list with type and status filters, Add, Edit, the quiz page, Add from bank, New question, Remove, Publish, Back to draft); the status rule (SPEC 6.8); a question in a quiz stays in the bank (backlog AS6); two demo quizzes (one live). Part 2: the student list and timed attempt, MCQ auto-marking, teacher marking of short answers, exam mode and the Attempts column.
 - [ ] 5.4 Scores on student and guardian portals.
 
 ## Phase 6: Notifications and messaging

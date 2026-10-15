@@ -83,7 +83,12 @@ class TeacherMenu:
             MenuGroup(
                 label="Quizzes and exams",
                 items=(
-                    MenuItem("Quizzes and exams", "teacher:quiz_list", "square-pen"),
+                    MenuItem(
+                        "Quizzes and exams",
+                        "teacher:quiz_list",
+                        "square-pen",
+                        menu_key="quizzes",
+                    ),
                     MenuItem(
                         "Question bank",
                         "teacher:question_list",

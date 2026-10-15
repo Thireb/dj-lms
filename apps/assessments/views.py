@@ -1,7 +1,8 @@
 """Assignment pages (roadmap 5.1, SPEC 3 and 4.16): teacher Assignments,
 Add / Edit, the answers and the grade page; student Assignments and the
 assignment page with the answer form. Teacher "Question bank" (roadmap
-5.2): list, Add, Edit and Delete."""
+5.2): list, Add, Edit and Delete. Teacher "Quizzes and exams" set-up
+(roadmap 5.3): list, Add, Edit, the quiz page, Add questions, Publish."""
 
 from __future__ import annotations
 
@@ -19,43 +20,66 @@ from django.utils import timezone
 
 from apps.academics.models import Batch, Subject
 from apps.assessments.forms import (
+    AddQuestionsForm,
     AnswerForm,
     AssignmentForm,
     GradeForm,
     QuestionForm,
+    QuizForm,
 )
 from apps.assessments.models import (
     Assignment,
     Question,
     QuestionKind,
+    Quiz,
+    QuizKind,
+    QuizQuestion,
+    QuizStatus,
     Submission,
     SubmissionStatus,
 )
 from apps.assessments.services import (
+    OPENED_MESSAGE,
     AssignmentDetails,
     QuestionDetails,
+    QuizDetails,
+    add_questions,
     assignment_counts,
+    bank_choices,
     create_assignment,
+    create_quiz,
     delete_question,
     grade_submission,
+    has_opened,
     is_expected,
     is_open,
     list_questions,
+    list_quizzes,
     marks_text,
+    publish_quiz,
+    quiz_items,
+    quiz_status,
+    remove_question,
     save_question,
     student_assignments,
     submission_rows,
     submission_status,
     submit_answer,
+    unpublish_quiz,
     update_assignment,
+    update_quiz,
 )
 from apps.assessments.ui import (
     QuestionTable,
+    QuizItemTable,
     StudentAssignmentTable,
     SubmissionTable,
     TeacherAssignmentTable,
+    TeacherQuizTable,
     assignment_detail_rows,
     form_card,
+    quiz_detail_rows,
+    quiz_url,
     submission_badge,
     when,
 )
@@ -63,7 +87,8 @@ from apps.core.query import id_param, search_param
 from apps.core.responses import forbidden_response
 from apps.core.roles import Role
 from apps.people.models import StudentProfile, TeacherProfile
-from apps.ui.components.actions import Button
+from apps.ui.components.actions import Button, PostButton
+from apps.ui.components.block_stack import ButtonRow
 from apps.ui.components.data import DetailList, EmptyState, TextBlock
 from apps.ui.components.layout import SectionCard
 from apps.ui.components.nav import FilterBar, Pagination
@@ -78,6 +103,17 @@ FORM_FIELDS = {
     "subject": "batch_subject",
     "due_at": "due_time",
 }
+
+
+def add_errors(form: Any, error: ValidationError, names: dict) -> None:
+    """Put a service error on the form: a field error on its field (``names``
+    maps service keys to form fields), any other on the whole form."""
+    if not hasattr(error, "error_dict"):
+        form.add_error(None, error)
+        return
+    for name, field_errors in error.message_dict.items():
+        name = names.get(name, name)
+        form.add_error(name if name in form.fields else None, field_errors)
 
 
 def _options(rows: Any, empty_label: str) -> list[tuple[str, str]]:
@@ -713,18 +749,52 @@ class QuestionFormPage(QuestionMixin, FormPage):
             correct=data["correct_index"],
         )
         try:
-            save_question(self.get_institute(), details, self.question)
+            saved = save_question(self.get_institute(), details, self.question)
         except ValidationError as error:
-            for name, field_errors in error.message_dict.items():
-                name = QUESTION_FIELDS.get(name, name)
-                form.add_error(name if name in form.fields else None, field_errors)
+            add_errors(form, error, QUESTION_FIELDS)
             return self.form_invalid(form)
         messages.success(self.request, self.success_message)
-        return HttpResponseRedirect(self.url("list"))
+        return HttpResponseRedirect(self.done_url(saved))
+
+    def done_url(self, question: Question) -> str:
+        return self.url("list")
 
 
 class QuestionCreatePage(QuestionFormPage):
-    pass
+    """``?quiz=<pk>`` adds the new question to that quiz too (SPEC 4.16:
+    "pick from bank or add new")."""
+
+    @cached_property
+    def quiz(self) -> Quiz | None:
+        wanted = id_param(search_param(self.request.GET.get("quiz")))
+        if wanted is None:
+            return None
+        return Quiz.objects.for_user(self.request.user).filter(pk=wanted).first()
+
+    def get_subtitle(self) -> str:
+        if self.quiz is None:
+            return ""
+        return f"It is saved in your bank and added to {self.quiz.title}."
+
+    def get_form_kwargs(self) -> dict[str, Any]:
+        kwargs = super().get_form_kwargs()
+        if self.quiz is not None:
+            kwargs["cancel_url"] = quiz_url("detail", self.quiz)
+        return kwargs
+
+    def get_initial(self) -> dict[str, Any]:
+        return {"subject": self.quiz.subject_id} if self.quiz else {}
+
+    def done_url(self, question: Question) -> str:
+        if self.quiz is None:
+            return self.url("list")
+        try:
+            add_questions(self.quiz, [question])
+        except ValidationError as error:
+            messages.warning(
+                self.request, f"Saved in your bank only. {' '.join(error.messages)}"
+            )
+        return quiz_url("detail", self.quiz)
 
 
 class QuestionEditPage(QuestionFormPage):
@@ -750,6 +820,339 @@ class QuestionDeleteView(QuestionMixin, PortalPageView):
     http_method_names = ["post"]
 
     def post(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
-        delete_question(self.get_question())
-        messages.success(request, "Question deleted.")
+        try:
+            delete_question(self.get_question())
+        except ValidationError as error:
+            messages.error(request, " ".join(error.messages))
+        else:
+            messages.success(request, "Question deleted.")
         return HttpResponseRedirect(self.url("list"))
+
+
+# Quizzes and exams: set-up (roadmap 5.3)
+
+QUIZ_STATUS_OPTIONS = [("", "Any status"), *QuizStatus.choices]
+QUIZ_KIND_OPTIONS = [("", "Any type"), *QuizKind.choices]
+QUIZ_FIELDS = {
+    "batch": "batch_subject",
+    "subject": "batch_subject",
+    "opens_at": "opens_time",
+}
+
+
+class QuizMixin(TeacherAssignmentMixin):
+    active_item = "quizzes"
+
+    def url(self, action: str, **kwargs: Any) -> str:
+        return reverse(f"teacher:quiz_{action}", kwargs=kwargs or None)
+
+    def get_quiz(self) -> Quiz:
+        """The quiz from the URL, through ``for_user`` (404 when not the
+        teacher's own)."""
+        rows = Quiz.objects.for_user(self.request.user).select_related(
+            "batch", "subject"
+        )
+        return get_object_or_404(rows, pk=self.kwargs["pk"])
+
+
+class TeacherQuizListPage(QuizMixin, ListPage):
+    title = "Quizzes and exams"
+    filter_keys = ("kind", "status")
+
+    def get_actions(self) -> list[Any]:
+        return [Button("Add quiz", url=self.url("create"), icon="plus")]
+
+    def get_components(self) -> dict[str, Any]:
+        user = self.request.user
+        if not Quiz.objects.for_user(user).exists():
+            return {
+                "table": EmptyState(
+                    "No quizzes yet.",
+                    text="Add a quiz, pick questions from your bank, then publish.",
+                    icon="square-pen",
+                    action=Button("Add your first quiz", url=self.url("create")),
+                )
+            }
+        filters = {
+            key: search_param(self.request.GET.get(key)) for key in self.filter_keys
+        }
+        if filters["kind"] not in QuizKind.values:
+            filters["kind"] = ""
+        if filters["status"] not in QuizStatus.values:
+            filters["status"] = ""
+        rows = list_quizzes(user, kind=filters["kind"], status=filters["status"])
+        page = Paginator(rows, PAGE_SIZE).get_page(self.request.GET.get("page"))
+        query = urlencode({key: value for key, value in filters.items() if value})
+        return {
+            "filters": FilterBar(
+                [
+                    {
+                        "name": "kind",
+                        "label": "Type",
+                        "value": filters["kind"],
+                        "options": QUIZ_KIND_OPTIONS,
+                    },
+                    {
+                        "name": "status",
+                        "label": "Status",
+                        "value": filters["status"],
+                        "options": QUIZ_STATUS_OPTIONS,
+                    },
+                ]
+            ),
+            "table": TeacherQuizTable(list(page.object_list)),
+            "pagination": Pagination(page, query=query),
+        }
+
+
+class QuizFormPage(QuizMixin, FormPage):
+    title = "Add quiz"
+    form_class = QuizForm
+    save_label = "Add quiz"
+    success_message = "Quiz added as a draft. Add questions, then publish it."
+    quiz: Quiz | None = None
+
+    def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        return self.load() or super().get(request, *args, **kwargs)
+
+    def post(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        return self.load() or super().post(request, *args, **kwargs)
+
+    def load(self) -> HttpResponse | None:
+        self.teacher = self.own_teacher()
+        if self.teacher is None:
+            return forbidden_response(self.request)
+        return None
+
+    def get_form_kwargs(self) -> dict[str, Any]:
+        return {
+            "user": self.request.user,
+            "teacher": self.teacher,
+            "cancel_url": self.url("list"),
+            "save_label": self.save_label,
+            "quiz": self.quiz,
+            "initial": self.get_initial(),
+        }
+
+    def get_initial(self) -> dict[str, Any]:
+        return {}
+
+    def form_valid(self, form: QuizForm) -> HttpResponse:
+        data = form.cleaned_data
+        batch, subject = form.selection()
+        details = QuizDetails(
+            title=data["title"],
+            kind=data["kind"],
+            teacher=self.teacher,
+            batch=batch,
+            subject=subject,
+            opens_at=data["opens_at"],
+            duration_minutes=data["duration_minutes"],
+            pass_marks=data["pass_marks"],
+            shuffle_questions=data["shuffle_questions"],
+            require_full_screen=data["require_full_screen"],
+            flag_tab_leaving=data["flag_tab_leaving"],
+        )
+        try:
+            saved = self.save(details)
+        except ValidationError as error:
+            add_errors(form, error, QUIZ_FIELDS)
+            return self.form_invalid(form)
+        messages.success(self.request, self.success_message)
+        return HttpResponseRedirect(self.url("detail", pk=saved.pk))
+
+    def save(self, details: QuizDetails) -> Quiz:
+        return create_quiz(self.get_institute(), details)
+
+
+class QuizCreatePage(QuizFormPage):
+    pass
+
+
+class QuizEditPage(QuizFormPage):
+    title = "Edit quiz"
+    save_label = "Save changes"
+    success_message = "Quiz saved."
+
+    def load(self) -> HttpResponse | None:
+        denied = super().load()
+        if denied is not None:
+            return denied
+        self.quiz = self.get_quiz()
+        if has_opened(self.quiz):
+            messages.error(self.request, OPENED_MESSAGE)
+            return HttpResponseRedirect(self.url("detail", pk=self.quiz.pk))
+        return None
+
+    def get_initial(self) -> dict[str, Any]:
+        return QuizForm.initial_for(self.quiz)
+
+    def save(self, details: QuizDetails) -> Quiz:
+        return update_quiz(self.quiz, details)
+
+
+class TeacherQuizDetailPage(QuizMixin, DetailPage):
+    """The quiz settings and its questions, with Add questions, Publish and
+    Back to draft until it opens."""
+
+    title = "Quiz"
+
+    def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        self.quiz = self.get_quiz()
+        self.title = self.quiz.title
+        self.now = timezone.now()
+        self.items = quiz_items(self.quiz)
+        self.editable = not has_opened(self.quiz, self.now)
+        return super().get(request, *args, **kwargs)
+
+    def get_subtitle(self) -> str:
+        quiz = self.quiz
+        status = QuizStatus(quiz_status(quiz, self.now))
+        if status == QuizStatus.DRAFT:
+            return "Draft: students do not see it until you publish it."
+        if status == QuizStatus.SCHEDULED:
+            return f"Students see it now. It opens {when(quiz.opens_at)}."
+        return f"{status.label}. It closes {when(quiz.closes_at)}."
+
+    def get_actions(self) -> list[Any]:
+        if not self.editable:
+            return []
+        quiz = self.quiz
+        actions: list[Any] = []
+        if quiz.is_published:
+            actions.append(
+                PostButton(
+                    "Back to draft",
+                    self.url("unpublish", pk=quiz.pk),
+                    variant="secondary",
+                    icon="eye-off",
+                )
+            )
+        else:
+            actions.append(
+                PostButton("Publish", self.url("publish", pk=quiz.pk), icon="send")
+            )
+        actions.append(
+            Button(
+                "Edit",
+                variant="secondary",
+                url=self.url("edit", pk=quiz.pk),
+                icon="square-pen",
+            )
+        )
+        return actions
+
+    def get_primary_cards(self) -> list[Any]:
+        quiz = self.quiz
+        card = SectionCard(
+            title="Questions",
+            icon="list-checks",
+            body=QuizItemTable(self.items, editable=self.editable),
+        )
+        if not self.editable:
+            return [card]
+        buttons = ButtonRow(
+            items=[
+                Button(
+                    "Add from bank",
+                    url=self.url("add_questions", pk=quiz.pk),
+                    icon="plus",
+                ),
+                Button(
+                    "New question",
+                    variant="secondary",
+                    url=reverse("teacher:question_create") + f"?quiz={quiz.pk}",
+                    icon="file-plus",
+                ),
+            ]
+        )
+        return [buttons, card]
+
+    def get_sidebar_cards(self) -> list[Any]:
+        total = sum(item.question.marks for item in self.items)
+        rows = quiz_detail_rows(self.quiz, total=total, now=self.now)
+        return [SectionCard(title="Details", icon="list", body=DetailList(rows))]
+
+
+class QuizAddQuestionsPage(QuizMixin, FormPage):
+    title = "Add questions"
+    form_class = AddQuestionsForm
+
+    def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        return self.load() or super().get(request, *args, **kwargs)
+
+    def post(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        return self.load() or super().post(request, *args, **kwargs)
+
+    def load(self) -> HttpResponse | None:
+        self.quiz = self.get_quiz()
+        if has_opened(self.quiz):
+            messages.error(self.request, OPENED_MESSAGE)
+            return HttpResponseRedirect(self.detail_url())
+        return None
+
+    def detail_url(self) -> str:
+        return self.url("detail", pk=self.quiz.pk)
+
+    def get_subtitle(self) -> str:
+        return f"{self.quiz.title}: your {self.quiz.subject.name} questions."
+
+    def get_form_kwargs(self) -> dict[str, Any]:
+        return {
+            "choices": list(bank_choices(self.quiz)),
+            "cancel_url": self.detail_url(),
+        }
+
+    def form_valid(self, form: AddQuestionsForm) -> HttpResponse:
+        try:
+            added = add_questions(self.quiz, form.chosen())
+        except ValidationError as error:
+            add_errors(form, error, {})
+            return self.form_invalid(form)
+        noun = "question" if added == 1 else "questions"
+        messages.success(self.request, f"{added} {noun} added.")
+        return HttpResponseRedirect(self.detail_url())
+
+
+class QuizActionView(QuizMixin, PortalPageView):
+    """POST only: change a quiz, then go back to its page."""
+
+    http_method_names = ["post"]
+    success_message = ""
+
+    def post(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        quiz = self.get_quiz()
+        try:
+            self.change(quiz)
+        except ValidationError as error:
+            messages.error(request, " ".join(error.messages))
+        else:
+            messages.success(request, self.success_message)
+        return HttpResponseRedirect(self.url("detail", pk=quiz.pk))
+
+    def change(self, quiz: Quiz) -> None:
+        raise NotImplementedError
+
+
+class QuizPublishView(QuizActionView):
+    success_message = "Quiz published. Students see it now."
+
+    def change(self, quiz: Quiz) -> None:
+        publish_quiz(quiz)
+
+
+class QuizUnpublishView(QuizActionView):
+    success_message = "Quiz moved back to draft. Students no longer see it."
+
+    def change(self, quiz: Quiz) -> None:
+        unpublish_quiz(quiz)
+
+
+class QuizRemoveQuestionView(QuizActionView):
+    success_message = "Question removed from the quiz. It stays in your bank."
+
+    def change(self, quiz: Quiz) -> None:
+        item = get_object_or_404(
+            QuizQuestion.objects.filter(quiz=quiz), pk=self.kwargs["item_pk"]
+        )
+        remove_question(quiz, item)

@@ -117,4 +117,40 @@ urlpatterns = [
         assessments.QuestionDeleteView.as_view(),
         name="question_delete",
     ),
+    path("quizzes/", assessments.TeacherQuizListPage.as_view(), name="quiz_list"),
+    path(
+        "quizzes/add/",
+        assessments.QuizCreatePage.as_view(),
+        name="quiz_create",
+    ),
+    path(
+        "quizzes/<int:pk>/",
+        assessments.TeacherQuizDetailPage.as_view(),
+        name="quiz_detail",
+    ),
+    path(
+        "quizzes/<int:pk>/edit/",
+        assessments.QuizEditPage.as_view(),
+        name="quiz_edit",
+    ),
+    path(
+        "quizzes/<int:pk>/questions/",
+        assessments.QuizAddQuestionsPage.as_view(),
+        name="quiz_add_questions",
+    ),
+    path(
+        "quizzes/<int:pk>/questions/<int:item_pk>/remove/",
+        assessments.QuizRemoveQuestionView.as_view(),
+        name="quiz_remove_question",
+    ),
+    path(
+        "quizzes/<int:pk>/publish/",
+        assessments.QuizPublishView.as_view(),
+        name="quiz_publish",
+    ),
+    path(
+        "quizzes/<int:pk>/unpublish/",
+        assessments.QuizUnpublishView.as_view(),
+        name="quiz_unpublish",
+    ),
 ]

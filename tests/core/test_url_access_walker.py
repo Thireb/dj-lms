@@ -20,7 +20,14 @@ from apps.academics.services import (
     set_teacher_batch_subjects,
 )
 from apps.accounts.models import User
-from apps.assessments.models import Assignment, Question, QuestionKind, Submission
+from apps.assessments.models import (
+    Assignment,
+    Question,
+    QuestionKind,
+    Quiz,
+    QuizQuestion,
+    Submission,
+)
 from apps.core.roles import Role
 from apps.core.tenancy import tenant_context
 from apps.lectures.models import Lecture, LectureStatus, RecurringSchedule
@@ -263,6 +270,34 @@ def _question(institute) -> int:
     return question.pk
 
 
+def _quiz(institute) -> int:
+    """A draft quiz of the walker teacher, opening tomorrow."""
+    question = Question.unscoped.get(pk=_question(institute))  # unscoped: setup
+    lecture = Lecture.unscoped.get(pk=_lecture(institute))  # unscoped: setup
+    with tenant_context(institute):
+        quiz = Quiz.objects.create(
+            institute=institute,
+            title="Walker",
+            teacher=question.teacher,
+            batch=lecture.batch,
+            subject=question.subject,
+            opens_at=timezone.now() + timedelta(days=1),
+            duration_minutes=30,
+        )
+    return quiz.pk
+
+
+def _quiz_item(institute) -> dict[str, int]:
+    """The remove page has two pks: the quiz and one of its questions."""
+    quiz = Quiz.unscoped.get(pk=_quiz(institute))  # unscoped: test setup
+    question = Question.unscoped.get(pk=_question(institute))  # unscoped: setup
+    with tenant_context(institute):
+        item = QuizQuestion.objects.create(
+            institute=institute, quiz=quiz, question=question, position=1
+        )
+    return {"pk": quiz.pk, "item_pk": item.pk}
+
+
 ROUTE_OBJECTS = {
     **{
         f"admin:{prefix}_{action}": _name_row(model)
@@ -293,6 +328,11 @@ ROUTE_OBJECTS = {
     "student:assignment_detail": _assignment,
     "teacher:question_edit": _question,
     "teacher:question_delete": _question,
+    **{
+        f"teacher:quiz_{action}": _quiz
+        for action in ("detail", "edit", "add_questions", "publish", "unpublish")
+    },
+    "teacher:quiz_remove_question": _quiz_item,
     **{
         f"{portal}:lecture_schedule_{action}": _schedule
         for portal in ("admin", "teacher")

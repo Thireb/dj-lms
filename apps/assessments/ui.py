@@ -1,5 +1,5 @@
 """Assignment badges, tables and cards (roadmap 5.1, SPEC 2 and 3), and
-the question bank table (roadmap 5.2)."""
+the question bank table (roadmap 5.2) and the quiz tables (roadmap 5.3)."""
 
 from __future__ import annotations
 
@@ -15,6 +15,10 @@ from apps.assessments.models import (
     Assignment,
     Question,
     QuestionKind,
+    Quiz,
+    QuizKind,
+    QuizQuestion,
+    QuizStatus,
     SubmissionStatus,
 )
 from apps.assessments.services import (
@@ -22,11 +26,13 @@ from apps.assessments.services import (
     StudentAssignment,
     SubmissionRow,
     correct_option,
+    has_opened,
     is_open,
     marks_text,
+    quiz_status,
 )
 from apps.lectures.times import local_date, local_time
-from apps.ui.components.actions import ConfirmDialog, IconButton
+from apps.ui.components.actions import ConfirmDialog, IconButton, PostButton
 from apps.ui.components.block_stack import ButtonRow
 from apps.ui.components.data import (
     Badge,
@@ -292,3 +298,127 @@ class QuestionTable(DataTable):
                 delete_question_dialog(question),
             ]
         )
+
+
+# Quizzes and exams (roadmap 5.3)
+
+# SPEC 2: grey, blue, green, grey.
+QUIZ_TONES = {
+    QuizStatus.DRAFT: "neutral",
+    QuizStatus.SCHEDULED: "info",
+    QuizStatus.LIVE: "success",
+    QuizStatus.CLOSED: "neutral",
+}
+
+
+def quiz_status_badge(status: str) -> Badge:
+    return Badge(QuizStatus(status).label, tone=QUIZ_TONES[status])
+
+
+def quiz_url(action: str, quiz: Quiz, **kwargs: Any) -> str:
+    return reverse(f"teacher:quiz_{action}", kwargs={"pk": quiz.pk, **kwargs})
+
+
+def minutes_text(minutes: int) -> str:
+    return f"{minutes} min"
+
+
+def questions_text(count: int, marks: int | None) -> str:
+    """Example: 5 questions, 12 marks."""
+    noun = "question" if count == 1 else "questions"
+    return f"{count} {noun}, {marks or 0} marks"
+
+
+class TeacherQuizTable(DataTable):
+    """Teacher "Quizzes and exams" (SPEC 3). Attempts come with the
+    student attempt (5.3, part 2); until then the column shows the
+    questions."""
+
+    empty_title = "No quizzes match these filters."
+
+    def __init__(self, rows: list[Quiz], *, now: datetime | None = None, **props):
+        self.now = now or timezone.now()
+        super().__init__(rows=rows, **props)
+
+    @property
+    def columns(self) -> list[Column]:  # type: ignore[override]
+        return [
+            Column("title", "Title"),
+            Column("kind", "Type", lambda quiz: quiz.get_kind_display()),
+            Column("batch", "Batch", lambda quiz: quiz.batch.name),
+            Column("opens", "Opens", lambda quiz: when(quiz.opens_at)),
+            Column("duration", "Duration", lambda q: minutes_text(q.duration_minutes)),
+            Column(
+                "questions",
+                "Questions",
+                lambda quiz: questions_text(quiz.question_count, quiz.total_marks),
+            ),
+            Column(
+                "status",
+                "Status",
+                lambda quiz: quiz_status_badge(quiz_status(quiz, self.now)),
+            ),
+            Column("actions", "", self.actions),
+        ]
+
+    def actions(self, quiz: Quiz) -> ButtonRow:
+        items: list[Any] = [
+            IconButton("eye", f"Open {quiz.title}", url=quiz_url("detail", quiz))
+        ]
+        if not has_opened(quiz, self.now):
+            url = quiz_url("edit", quiz)
+            items.append(IconButton("square-pen", f"Edit {quiz.title}", url=url))
+        return ButtonRow(items=items)
+
+
+class QuizItemTable(DataTable):
+    """The questions of one quiz, in order, on the teacher's quiz page."""
+
+    empty_title = "No questions yet. Add some from your bank."
+
+    def __init__(self, rows: list[QuizQuestion], *, editable: bool, **props):
+        self.editable = editable
+        super().__init__(rows=rows, **props)
+
+    @property
+    def columns(self) -> list[Column]:  # type: ignore[override]
+        columns = [
+            Column("number", "No.", lambda item: str(item.position)),
+            Column(
+                "question",
+                "Question",
+                lambda item: Truncator(item.question.text).chars(QUESTION_PREVIEW),
+            ),
+            Column("kind", "Type", lambda item: item.question.get_kind_display()),
+            Column("marks", "Marks", lambda item: str(item.question.marks)),
+            Column("answer", "Answer", lambda item: question_answer(item.question)),
+        ]
+        if self.editable:
+            columns.append(Column("actions", "", self.remove_button))
+        return columns
+
+    def remove_button(self, item: QuizQuestion) -> PostButton:
+        url = quiz_url("remove_question", item.quiz, item_pk=item.pk)
+        return PostButton("Remove", url, variant="secondary")
+
+
+def quiz_detail_rows(quiz: Quiz, *, total: int, now: datetime) -> list[tuple]:
+    exam = quiz.kind == QuizKind.EXAM
+    rows: list[tuple[str, Any]] = [
+        ("Status", quiz_status_badge(quiz_status(quiz, now))),
+        ("Type", quiz.get_kind_display()),
+        ("Batch", quiz.batch.name),
+        ("Subject", quiz.subject.name),
+        ("Opens", when(quiz.opens_at)),
+        ("Duration", minutes_text(quiz.duration_minutes)),
+        ("Closes", when(quiz.closes_at)),
+        ("Total marks", str(total)),
+        ("Pass marks", "" if quiz.pass_marks is None else str(quiz.pass_marks)),
+        ("Shuffle questions", "Yes" if quiz.shuffle_questions else "No"),
+    ]
+    if exam:
+        rows += [
+            ("Full screen", "Required" if quiz.require_full_screen else "No"),
+            ("Tab leaving", "Flagged" if quiz.flag_tab_leaving else "No"),
+        ]
+    return rows

@@ -1,5 +1,5 @@
-"""Assignments (roadmap 5.1, SPEC 4.16 and 6.8) and the question bank
-(roadmap 5.2).
+"""Assignments (roadmap 5.1, SPEC 4.16 and 6.8), the question bank
+(roadmap 5.2) and quizzes and exams (roadmap 5.3).
 
 A teacher publishes an assignment to one batch and subject. Each student
 enrolled in that batch and subject sends one text answer before the due
@@ -11,6 +11,7 @@ it. A row without marks is "submitted"; a row with marks is "graded".
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta
 from typing import Any
 
 from django.conf import settings
@@ -27,6 +28,10 @@ MAX_TOTAL_MARKS = 1000
 MAX_QUESTION_MARKS = 100
 MIN_OPTIONS = 2
 MAX_OPTIONS = 6
+MIN_QUIZ_MINUTES = 5
+MAX_QUIZ_MINUTES = 300
+# SPEC 6.8: a quiz closes 10 minutes after opens + duration.
+QUIZ_GRACE_MINUTES = 10
 
 # A student or guardian sees an assignment only through an enrolment in its
 # batch and subject. Both conditions sit in one filter() call, so they must
@@ -316,6 +321,157 @@ class QuestionOption(SameInstituteMixin, TenantModel):
 
     def __str__(self) -> str:
         return self.text
+
+    def clean(self) -> None:
+        super().clean()
+        self.check_institutes()
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        self.full_clean(validate_unique=False, validate_constraints=False)
+        super().save(*args, **kwargs)
+
+
+# Quizzes and exams (roadmap 5.3, SPEC 4.16 and 6.8)
+
+
+class QuizKind(models.TextChoices):
+    QUIZ = "quiz", "Quiz"
+    EXAM = "exam", "Exam"
+
+
+class QuizStatus(models.TextChoices):
+    """SPEC 2. Not stored: it comes from ``is_published`` and the time."""
+
+    DRAFT = "draft", "Draft"
+    SCHEDULED = "scheduled", "Scheduled"
+    LIVE = "live", "Live"
+    CLOSED = "closed", "Closed"
+
+
+class QuizQuerySet(TenantQuerySet):
+    """Admins see the institute, a teacher their own quizzes, a student or
+    guardian the published quizzes of their (child's) batch and subject."""
+
+    def for_user(self, user: Any) -> QuizQuerySet:
+        scoped = super().for_user(user)
+        role = user_role(user)
+        user_id = getattr(user, "pk", None)
+        if role in INSTITUTE_WIDE_ROLES:
+            return scoped
+        if role == Role.TEACHER:
+            return scoped.filter(teacher__user_id=user_id)
+        lookup = STUDENT_LOOKUPS.get(role or "")
+        if lookup is None:
+            return scoped.none()
+        return scoped.filter(
+            is_published=True,
+            **{lookup: user_id, f"{_ENROLMENT}batch_id": F("batch_id")},
+        ).distinct()
+
+
+class Quiz(SameInstituteMixin, TenantModel):
+    """A timed paper for one batch and subject. Its questions come from the
+    teacher's bank (``QuizQuestion``)."""
+
+    title = models.CharField(max_length=200)
+    kind = models.CharField(
+        max_length=8, choices=QuizKind.choices, default=QuizKind.QUIZ
+    )
+    teacher = models.ForeignKey(
+        "people.TeacherProfile", on_delete=models.PROTECT, related_name="quizzes"
+    )
+    batch = models.ForeignKey(
+        "academics.Batch", on_delete=models.PROTECT, related_name="quizzes"
+    )
+    subject = models.ForeignKey(
+        "academics.Subject", on_delete=models.PROTECT, related_name="quizzes"
+    )
+    opens_at = models.DateTimeField()
+    duration_minutes = models.PositiveSmallIntegerField(
+        validators=[
+            MinValueValidator(MIN_QUIZ_MINUTES),
+            MaxValueValidator(MAX_QUIZ_MINUTES),
+        ]
+    )
+    pass_marks = models.PositiveSmallIntegerField(null=True, blank=True)
+    shuffle_questions = models.BooleanField(default=False)
+    require_full_screen = models.BooleanField(default=False)
+    flag_tab_leaving = models.BooleanField(default=False)
+    is_published = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    objects = TenantManager.from_queryset(QuizQuerySet)()
+    unscoped = UnscopedTenantManager.from_queryset(QuizQuerySet)()
+
+    same_institute = ("teacher", "batch", "subject")
+
+    class Meta:
+        ordering = ["-opens_at", "-pk"]
+        verbose_name_plural = "quizzes"
+
+    def __str__(self) -> str:
+        return self.title
+
+    @property
+    def closes_at(self) -> datetime:
+        """SPEC 6.8: opens + duration + 10 minutes."""
+        return self.opens_at + timedelta(
+            minutes=self.duration_minutes + QUIZ_GRACE_MINUTES
+        )
+
+    def clean(self) -> None:
+        super().clean()
+        self.check_institutes()
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        self.full_clean(validate_unique=False, validate_constraints=False)
+        super().save(*args, **kwargs)
+
+
+QUIZ_QUESTION_LOOKUPS = {Role.TEACHER: "quiz__teacher__user_id"}
+
+
+class QuizQuestionQuerySet(TenantQuerySet):
+    """Admins see the institute, a teacher their own quizzes' questions.
+    Students get the questions of an attempt from the attempt (5.3)."""
+
+    def for_user(self, user: Any) -> QuizQuestionQuerySet:
+        scoped = super().for_user(user)
+        role = user_role(user)
+        if role in INSTITUTE_WIDE_ROLES:
+            return scoped
+        lookup = QUIZ_QUESTION_LOOKUPS.get(role or "")
+        if lookup is None:
+            return scoped.none()
+        return scoped.filter(**{lookup: getattr(user, "pk", None)})
+
+
+class QuizQuestion(SameInstituteMixin, TenantModel):
+    """A bank question in a quiz. ``PROTECT``: a question in a quiz stays in
+    the bank (backlog AS6)."""
+
+    quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name="items")
+    question = models.ForeignKey(
+        Question, on_delete=models.PROTECT, related_name="quiz_items"
+    )
+    position = models.PositiveSmallIntegerField()
+
+    objects = TenantManager.from_queryset(QuizQuestionQuerySet)()
+    unscoped = UnscopedTenantManager.from_queryset(QuizQuestionQuerySet)()
+
+    same_institute = ("quiz", "question")
+
+    class Meta:
+        ordering = ["quiz_id", "position", "pk"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["quiz", "question"], name="quiz_question_unique"
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.quiz} - {self.question}"
 
     def clean(self) -> None:
         super().clean()
