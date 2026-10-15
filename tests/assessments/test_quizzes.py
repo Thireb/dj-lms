@@ -313,6 +313,7 @@ def test_question_in_a_quiz_cannot_be_deleted(school) -> None:
 @pytest.mark.django_db
 def test_question_of_an_opened_quiz_cannot_change(school) -> None:
     quiz, (first, _) = ready_quiz(school)
+    _in(quiz, publish_quiz)  # published, but not open yet: still editable
     assert add_question(school, first, text="Edited before").text == "Edited before"
     opened(quiz)
     with pytest.raises(ValidationError) as error:
