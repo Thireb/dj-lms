@@ -85,3 +85,14 @@ def test_detail_list_renders_pairs_components_and_a_dash() -> None:
     assert "badge" in html and ">Live<" in html
     assert '<span class="text-muted">-</span>' in html
     assert "<script>x" not in html
+
+
+def test_text_block_keeps_lines_and_escapes() -> None:
+    from apps.ui.components.data import TextBlock
+
+    html = str(TextBlock("Line one.\n<b>Line two</b>"))
+    assert "Line one.\n&lt;b&gt;Line two&lt;/b&gt;" in html
+    assert "whitespace-pre-line" in html
+    assert "break-words" in html
+    assert str(TextBlock("", empty_text="No feedback.")).count("No feedback.") == 1
+    assert str(TextBlock("")).strip() == ""

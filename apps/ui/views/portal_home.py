@@ -11,6 +11,7 @@ from typing import Any
 
 from django.utils import timezone
 
+from apps.assessments.services import answers_to_grade
 from apps.attendance.services import lectures_to_mark, student_summaries
 from apps.attendance.ui import attendance_value, classes_note
 from apps.core.roles import Role
@@ -121,6 +122,12 @@ class TeacherPortalHomePage(PortalHomePage):
                 "Attendance to take",
                 note="Finished lectures with no marks",
                 icon="clipboard-check",
+            ),
+            StatCard(
+                answers_to_grade(self.request.user),
+                "Answers to grade",
+                note="Assignment answers with no marks",
+                icon="list-checks",
             ),
             StatCard(data.student_count, "My students", icon="users"),
             StatCard(data.batch_count, "Batches", icon="layers"),

@@ -268,6 +268,7 @@ Every item here is a class. Names are fixed.
 | `PersonList` | data | short list of `PersonCell` rows with a chip on the right (dashboard "Recently enrolled") | `rows` (person, trailing), `title`, `empty_text` |
 | `ChartCard` | data | Chart.js card | `title`, `chart_id`, `data_url` |
 | `DetailList` | data | label and value pairs for a detail page (`<dl>`); a value may be a component; an empty value shows a dash | `rows` (label, value) |
+| `TextBlock` | data | long text a person wrote (assignment instructions, an answer, feedback): line breaks stay, long words wrap, the text is escaped; `empty_text` shows when there is no text | `text`, `empty_text` |
 | `EmptyState` | data | icon tile, message and one action; `framed=False` drops the dashed box inside a card | `title`, `text`, `action`, `icon`, `framed` |
 | `IconButton` | actions | icon-only link (with `url`) or button; `label` is the `aria-label` and tooltip; `new_tab=True` adds `target="_blank" rel="noopener noreferrer"` (links to other sites, such as meeting links) | `icon`, `label`, `url`, `new_tab` |
 | `Button` | actions | `primary`, `secondary`, `danger`, `ghost`, `light`, `glass` (the last two on the band); Lucide icon before the label; `disabled=True` is a state that cannot be clicked (never a link), `title` explains it; `new_tab=True` adds `target="_blank" rel="noopener noreferrer"` (meeting links); `submit=True` (no `url`) submits the form it is in | `label`, `variant`, `url`, `icon`, `disabled`, `title`, `new_tab`, `submit` |

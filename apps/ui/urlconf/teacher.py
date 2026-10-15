@@ -1,5 +1,6 @@
 from django.urls import path
 
+from apps.assessments import views as assessments
 from apps.attendance import views as attendance
 from apps.lectures import views as lectures
 from apps.ui.views import portal_home
@@ -70,5 +71,30 @@ urlpatterns = [
         "lectures/schedules/<int:pk>/stop/",
         lectures.TeacherScheduleStopView.as_view(),
         name="lecture_schedule_stop",
+    ),
+    path(
+        "assignments/",
+        assessments.TeacherAssignmentListPage.as_view(),
+        name="assignment_list",
+    ),
+    path(
+        "assignments/add/",
+        assessments.AssignmentCreatePage.as_view(),
+        name="assignment_create",
+    ),
+    path(
+        "assignments/<int:pk>/",
+        assessments.TeacherAssignmentDetailPage.as_view(),
+        name="assignment_detail",
+    ),
+    path(
+        "assignments/<int:pk>/edit/",
+        assessments.AssignmentEditPage.as_view(),
+        name="assignment_edit",
+    ),
+    path(
+        "assignments/<int:pk>/answers/<int:submission_pk>/",
+        assessments.GradePage.as_view(),
+        name="assignment_grade",
     ),
 ]

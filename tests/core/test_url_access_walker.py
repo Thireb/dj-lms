@@ -15,8 +15,12 @@ from typing import Any
 
 import pytest
 from apps.academics.models import Batch, ClassLabel, Subject
-from apps.academics.services import set_teacher_batch_subjects
+from apps.academics.services import (
+    set_student_batch_subjects,
+    set_teacher_batch_subjects,
+)
 from apps.accounts.models import User
+from apps.assessments.models import Assignment, Submission
 from apps.core.roles import Role
 from apps.core.tenancy import tenant_context
 from apps.lectures.models import Lecture, LectureStatus, RecurringSchedule
@@ -202,6 +206,46 @@ def _schedule(institute) -> int:
     return schedule.pk
 
 
+def _assignment(institute) -> int:
+    """An open assignment of the walker teacher. The walker student (when
+    the walk made one) gets a profile in its batch and subject."""
+    # unscoped: test setup outside a tenant context.
+    lecture = Lecture.unscoped.get(pk=_lecture(institute))
+    subject = Subject.unscoped.get(pk=_name_row(Subject)(institute))
+    walker = User.objects.filter(email=f"{Role.STUDENT}-walker@example.com").first()
+    with tenant_context(institute):
+        assignment = Assignment.objects.create(
+            institute=institute,
+            title="Walker",
+            instructions="Walk.",
+            teacher=lecture.teacher,
+            batch=lecture.batch,
+            subject=subject,
+            total_marks=10,
+            due_at=timezone.now() + timedelta(days=1),
+        )
+        if walker is not None and not StudentProfile.objects.filter(user=walker):
+            student = create_student_profile(walker, guardian_phone="0300-0000000")
+            set_student_batch_subjects(student, {lecture.batch: [subject]})
+    return assignment.pk
+
+
+def _answer(institute) -> dict[str, int]:
+    """The grade page has two pks: the assignment and one answer to it."""
+    # unscoped: test setup outside a tenant context.
+    assignment = Assignment.unscoped.get(pk=_assignment(institute))
+    student = StudentProfile.unscoped.get(pk=_student(institute))
+    with tenant_context(institute):
+        answer = Submission.objects.create(
+            institute=institute,
+            assignment=assignment,
+            student=student,
+            answer="Walker answer.",
+            submitted_at=timezone.now(),
+        )
+    return {"pk": assignment.pk, "submission_pk": answer.pk}
+
+
 ROUTE_OBJECTS = {
     **{
         f"admin:{prefix}_{action}": _name_row(model)
@@ -226,6 +270,10 @@ ROUTE_OBJECTS = {
     "teacher:lecture_end": _lecture,
     "student:lecture_join": _lecture,
     "teacher:lecture_attendance": _finished_lecture,
+    "teacher:assignment_detail": _assignment,
+    "teacher:assignment_edit": _assignment,
+    "teacher:assignment_grade": _answer,
+    "student:assignment_detail": _assignment,
     **{
         f"{portal}:lecture_schedule_{action}": _schedule
         for portal in ("admin", "teacher")
@@ -248,6 +296,8 @@ def test_admin_portal_views_allow_admin_roles_only(route: Route) -> None:
 def _url(route: Route, institute) -> str:
     build = ROUTE_OBJECTS.get(route.name)
     pk = build(institute) if build is not None else institute.pk
+    if isinstance(pk, dict):  # a route with more than one pk
+        return reverse(route.name, kwargs=pk)
     kwargs = {name: pk for name in route.kwarg_names}
     return reverse(route.name, kwargs=kwargs)
 

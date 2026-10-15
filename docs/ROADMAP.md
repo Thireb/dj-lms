@@ -87,7 +87,7 @@ The product owner did not accept the current look (navigation, tables, forms, si
 
 ## Phase 5: Assessments
 
-- [ ] 5.1 Assignments: publish, submit, grade.
+- [x] 5.1 Assignments: publish, submit, grade. Built: the `assessments` app (`Assignment`, `Submission`), teacher "Assignments" (list, Add, Edit, the answers of every expected student, the grade page with marks and feedback), student "Assignments" (status and subject filters) and the assignment page with the answer form, the teacher dashboard card "Answers to grade", and demo assignments. Text answers only (backlog AS1); the guardian view comes with 5.4 (AS2).
 - [ ] 5.2 Question bank.
 - [ ] 5.3 Quizzes and exams: timed attempt, auto-grade.
 - [ ] 5.4 Scores on student and guardian portals.
