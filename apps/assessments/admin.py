@@ -1,6 +1,6 @@
 from config.developer_admin_site import developer_admin_site
 
-from apps.assessments.models import Assignment, Question, Submission
+from apps.assessments.models import Assignment, Question, Quiz, Submission
 from apps.core.admin import TenantAdmin
 
 
@@ -42,6 +42,20 @@ class QuestionAdmin(TenantAdmin):
         return False
 
 
+class QuizAdmin(TenantAdmin):
+    """Read only. Quizzes are saved by assessments.services."""
+
+    list_display = ("title", "kind", "teacher", "batch", "opens_at", "institute")
+    list_filter = ("kind", "is_published")
+
+    def has_add_permission(self, request):  # noqa: ANN001
+        return False
+
+    def has_change_permission(self, request, obj=None):  # noqa: ANN001
+        return False
+
+
 developer_admin_site.register(Assignment, AssignmentAdmin)
+developer_admin_site.register(Quiz, QuizAdmin)
 developer_admin_site.register(Question, QuestionAdmin)
 developer_admin_site.register(Submission, SubmissionAdmin)

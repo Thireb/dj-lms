@@ -257,7 +257,7 @@ def test_seed_demo_marks_two_lectures_once(demo_env) -> None:
 
 
 @pytest.mark.django_db
-def test_seed_demo_adds_assignments_and_questions_once(demo_env) -> None:
+def test_seed_demo_adds_assessments_once(demo_env) -> None:
     from apps.assessments.models import Assignment, Submission
     from apps.assessments.services import student_assignments
     from apps.core.tenancy import tenant_context
@@ -282,6 +282,15 @@ def test_seed_demo_adds_assignments_and_questions_once(demo_env) -> None:
     assert questions.count() == 6
     assert questions.filter(kind="short").count() == 2
     assert {q.teacher.user.email for q in questions} == {"demo-teacher@example.com"}
+    from apps.assessments.models import Quiz
+    from apps.assessments.services import quiz_status
+
+    # unscoped: test assertion outside a tenant context.
+    quizzes = Quiz.unscoped.filter(institute=institute)
+    assert sorted(quiz_status(quiz) for quiz in quizzes) == ["live", "scheduled"]
+    with tenant_context(institute):
+        assert Quiz.objects.for_user(student.user).count() == 2
     call_command("seed_demo", "--reset")
+    assert not quizzes.all().exists()
     assert not assignments.exists() and not answers.exists()
     assert not questions.all().exists()  # all(): a new query, not the cache

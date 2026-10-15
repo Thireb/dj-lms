@@ -1,5 +1,6 @@
 """Assignment form (SPEC 4.16), the student's answer form and the
-teacher's grade form (roadmap 5.1), and the question form (roadmap 5.2)."""
+teacher's grade form (roadmap 5.1), the question form (roadmap 5.2) and
+the quiz forms (roadmap 5.3)."""
 
 from __future__ import annotations
 
@@ -10,20 +11,31 @@ from typing import Any
 from crispy_forms.layout import Layout
 from django import forms
 from django.db.models import Q
+from django.utils import timezone
+from django.utils.text import Truncator
 
 from apps.academics.models import Batch, Subject, TeacherBatchSubject
 from apps.assessments.models import (
     MAX_OPTIONS,
     MAX_QUESTION_MARKS,
+    MAX_QUIZ_MINUTES,
     MAX_TOTAL_MARKS,
+    MIN_QUIZ_MINUTES,
     Assignment,
     Question,
     QuestionKind,
+    Quiz,
+    QuizKind,
 )
 from apps.lectures.times import combine_local, missing_time_message, wall_time_missing
 from apps.people.models import TeacherProfile
 from apps.ui.forms.base import BaseForm, FormActions, Section, style_widgets
-from apps.ui.forms.widgets import ChipRadios, DatePicker, TimePicker
+from apps.ui.forms.widgets import (
+    ChipRadios,
+    DatePicker,
+    GroupedCheckboxes,
+    TimePicker,
+)
 
 DEFAULT_DUE_TIME = time(23, 59)
 
@@ -293,3 +305,153 @@ class QuestionForm(BaseForm):
             if option.is_correct:
                 initial["correct"] = str(option.position)
         return initial
+
+
+DEFAULT_QUIZ_MINUTES = 30
+
+
+class QuizForm(BaseForm):
+    """SPEC 4.16 quiz or exam: Title, Type, Batch, Subject, Opens at,
+    Duration, Pass marks, Shuffle questions, Require full screen (exam),
+    Flag tab leaving (exam). Total marks is the sum of the questions."""
+
+    title = forms.CharField(label="Title", max_length=200)
+    kind = forms.ChoiceField(
+        label="Type",
+        choices=QuizKind.choices,
+        initial=QuizKind.QUIZ,
+        widget=ChipRadios(group_label="Quiz or exam"),
+    )
+    opens_date = forms.DateField(label="Opens on", widget=DatePicker())
+    opens_time = forms.TimeField(label="Opens at", widget=TimePicker())
+    duration_minutes = forms.IntegerField(
+        label="Duration (minutes)",
+        min_value=MIN_QUIZ_MINUTES,
+        max_value=MAX_QUIZ_MINUTES,
+        initial=DEFAULT_QUIZ_MINUTES,
+    )
+    pass_marks = forms.IntegerField(
+        label="Pass marks",
+        required=False,
+        min_value=0,
+        help_text="Optional. No more than the total marks of the questions.",
+    )
+    shuffle_questions = forms.BooleanField(label="Shuffle questions", required=False)
+    require_full_screen = forms.BooleanField(
+        label="Require full screen", required=False
+    )
+    flag_tab_leaving = forms.BooleanField(label="Flag tab leaving", required=False)
+
+    def __init__(
+        self,
+        *args: Any,
+        user: Any,
+        teacher: TeacherProfile,
+        cancel_url: str,
+        save_label: str,
+        quiz: Quiz | None = None,
+        **kwargs: Any,
+    ):
+        self.cancel_url = cancel_url
+        self.save_label = save_label
+        super().__init__(*args, **kwargs)
+        links = (
+            TeacherBatchSubject.objects.for_user(user)
+            .filter(teacher=teacher)
+            .select_related("batch", "subject")
+            .order_by("batch__name", "subject__name")
+        )
+        kept = (quiz.batch_id, quiz.subject_id) if quiz else None
+        self.fields["batch_subject"] = BatchSubjectField(
+            label="Batch and subject",
+            links=list(links),
+            kept=kept,
+            help_text="Students of this batch who take this subject get it.",
+        )
+        self.fields["batch_subject"].widget.attrs["class"] = "field-control"
+        self.helper.layout = self.get_layout()
+
+    def get_layout(self) -> Layout:
+        return Layout(
+            Section("Quiz", "title", "kind", "batch_subject"),
+            Section(
+                "Time",
+                "opens_date",
+                "opens_time",
+                "duration_minutes",
+                description="Times are in your time zone. Students can start "
+                "while it is live: from Opens until 10 minutes after the "
+                "duration ends.",
+            ),
+            Section("Marking", "pass_marks", "shuffle_questions"),
+            Section(
+                "Exam mode",
+                "require_full_screen",
+                "flag_tab_leaving",
+                description="For an exam only. Leaving the tab or full screen "
+                "is shown to you; it does not fail the student.",
+            ),
+            FormActions(self.save_label, self.cancel_url),
+        )
+
+    def clean(self) -> dict[str, Any]:
+        cleaned = super().clean()
+        day, at = cleaned.get("opens_date"), cleaned.get("opens_time")
+        if day is not None and at is not None:
+            local = combine_local(day, at)
+            if wall_time_missing(local):
+                self.add_error("opens_time", missing_time_message(local))
+            else:
+                cleaned["opens_at"] = local
+        return cleaned
+
+    def selection(self) -> tuple[Batch, Subject]:
+        field = self.fields["batch_subject"]
+        return field.selection(self.cleaned_data["batch_subject"])
+
+    @staticmethod
+    def initial_for(quiz: Quiz) -> dict[str, Any]:
+        local = timezone.localtime(quiz.opens_at)
+        return {
+            "title": quiz.title,
+            "kind": quiz.kind,
+            "batch_subject": f"{quiz.batch_id}:{quiz.subject_id}",
+            "opens_date": local.date(),
+            "opens_time": local.time().replace(second=0, microsecond=0),
+            "duration_minutes": quiz.duration_minutes,
+            "pass_marks": quiz.pass_marks,
+            "shuffle_questions": quiz.shuffle_questions,
+            "require_full_screen": quiz.require_full_screen,
+            "flag_tab_leaving": quiz.flag_tab_leaving,
+        }
+
+
+class AddQuestionsForm(BaseForm):
+    """Pick bank questions for a quiz, grouped by type."""
+
+    save_label = "Add to quiz"
+
+    def __init__(self, *args: Any, choices: list[Question], cancel_url: str, **kw):
+        self.cancel_url = cancel_url
+        super().__init__(*args, **kw)
+        self.questions = {str(row.pk): row for row in choices}
+        groups: dict[str, list[tuple[str, str]]] = {}
+        for row in choices:
+            label = f"{Truncator(row.text).chars(80)} ({row.marks} marks)"
+            groups.setdefault(row.get_kind_display(), []).append((str(row.pk), label))
+        self.fields["questions"] = forms.MultipleChoiceField(
+            label="Questions from your bank",
+            choices=list(groups.items()),
+            widget=GroupedCheckboxes(empty_text="No more questions of this subject."),
+            error_messages={"required": "Choose at least one question."},
+        )
+        self.helper.layout = self.get_layout()
+
+    def get_layout(self) -> Layout:
+        return Layout(
+            Section("", "questions"),
+            FormActions(self.save_label, self.cancel_url),
+        )
+
+    def chosen(self) -> list[Question]:
+        return [self.questions[pk] for pk in self.cleaned_data["questions"]]

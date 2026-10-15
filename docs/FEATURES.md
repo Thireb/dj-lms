@@ -92,7 +92,7 @@ Setup order the reference teaches: Campus, Classes, Batches, Subjects, Fee Plans
 - [ ] **Lesson plans** (P): teacher writes; students see them after admin approval if the institute requires approval.
 - [ ] **Daily reports** (P): teacher submits a note about a student or class; admin approves under "Reports Received"; guardian reads it.
 - [x] **Assignments** (B): longer work; filters pending, submitted, graded, missed; teacher grades with feedback. Built in 5.1: the teacher publishes to one batch and subject, the student sends a text answer until the due time, the teacher gives marks and feedback. The file (SPEC 4.16) waits for file storage (backlog AS1); guardians see scores with 5.4.
-- [ ] **Quizzes and exams** (B): saved question bank (built in 5.2: each teacher's own bank, MCQ and short answer); timed paper; "Live now" status lets students start; MCQ auto-marked; written answers marked by the teacher; guardian sees scores.
+- [ ] **Quizzes and exams** (B): saved question bank (built in 5.2: each teacher's own bank, MCQ and short answer); timed paper (5.3 part 1 built the teacher set-up: draft, publish, questions from the bank); "Live now" status lets students start; MCQ auto-marked; written answers marked by the teacher; guardian sees scores.
 - [ ] Exam mode: leaving the page can be flagged; some exams require full screen.
 - [ ] **Course documents** (P): upload notes and slides per course/batch; admin can lock downloads (preview only). Uses file uploads in our version (not Google Drive).
 - [ ] Admin approval queues: Homework Approval, Lesson Plan Approval, Reports Received, Quizzes & Exams overview.

@@ -1,6 +1,7 @@
 """Demo assignments and questions for seed_demo (SPEC 10): three
 assignments of the demo teacher, in the batch and subject the demo student
-also takes, and six questions in the demo teacher's bank.
+also takes, six questions in the demo teacher's bank, and two quizzes
+from them: one live now and one opening tomorrow (SPEC 10).
 
 - one open for a week, which the demo student has not answered yet;
 - one due tomorrow, answered by the demo student and waiting for marks;
@@ -18,12 +19,23 @@ from decimal import Decimal
 
 from django.utils import timezone
 
-from apps.assessments.models import Assignment, Question, QuestionKind, Submission
+from apps.assessments.models import (
+    Assignment,
+    Question,
+    QuestionKind,
+    Quiz,
+    QuizKind,
+    Submission,
+)
 from apps.assessments.services import (
     AssignmentDetails,
     QuestionDetails,
+    QuizDetails,
+    add_questions,
     create_assignment,
+    create_quiz,
     grade_submission,
+    publish_quiz,
     save_question,
     submission_rows,
     submit_answer,
@@ -64,7 +76,8 @@ def seed_assignments(institute: Institute) -> None:
             )
             return create_assignment(institute, details)
 
-        _seed_questions(institute, teacher, link.subject)
+        questions = _seed_questions(institute, teacher, link.subject)
+        _seed_quizzes(institute, teacher, link, questions, now)
         add(f"{name} project", 7, 20)
         tomorrow = add(f"{name} practice sheet", 1, 10)
         closed = add(f"{name} chapter questions", 1, 10)
@@ -110,7 +123,8 @@ QUESTIONS = (
 )
 
 
-def _seed_questions(institute: Institute, teacher, subject) -> None:
+def _seed_questions(institute: Institute, teacher, subject) -> list[Question]:
+    saved = []
     for kind, text, marks, options, correct in QUESTIONS:
         details = QuestionDetails(
             teacher=teacher,
@@ -121,12 +135,40 @@ def _seed_questions(institute: Institute, teacher, subject) -> None:
             options=options,
             correct=correct,
         )
-        save_question(institute, details)
+        saved.append(save_question(institute, details))
+    return saved
+
+
+def _seed_quizzes(institute: Institute, teacher, link, questions, now) -> None:
+    """Both published; the live one is moved back to have opened 5 minutes
+    ago (the services refuse a past opening)."""
+    for title, kind, days, chosen in (
+        (f"{link.subject.name} weekly quiz", QuizKind.QUIZ, 1, questions[:3]),
+        (f"{link.subject.name} term exam", QuizKind.EXAM, 2, questions),
+    ):
+        quiz = create_quiz(
+            institute,
+            QuizDetails(
+                title=title,
+                kind=kind,
+                teacher=teacher,
+                batch=link.batch,
+                subject=link.subject,
+                opens_at=now + timedelta(days=days),
+                duration_minutes=30 if kind == QuizKind.QUIZ else 60,
+                require_full_screen=kind == QuizKind.EXAM,
+                flag_tab_leaving=kind == QuizKind.EXAM,
+            ),
+        )
+        add_questions(quiz, chosen)
+        publish_quiz(quiz)
+        if kind == QuizKind.QUIZ:
+            Quiz.objects.filter(pk=quiz.pk).update(opens_at=now - timedelta(minutes=5))
 
 
 def reset_assignments(institute: Institute) -> int:
-    """Delete the institute's answers, assignments and questions (before its
-    people).
+    """Delete the institute's answers, assignments, quizzes and questions
+    (before its people).
 
     Uses ``unscoped`` on purpose: a management command, one institute.
     """
@@ -134,7 +176,10 @@ def reset_assignments(institute: Institute) -> int:
     answers, _ = Submission.unscoped.filter(institute=institute).delete()
     # unscoped: seed_demo --reset, limited to the demo institute.
     assignments, _ = Assignment.unscoped.filter(institute=institute).delete()
+    # unscoped: seed_demo --reset, limited to the demo institute (their
+    # questions in the quiz go with them).
+    quizzes, _ = Quiz.unscoped.filter(institute=institute).delete()
     # unscoped: seed_demo --reset, limited to the demo institute (the
     # options go with their questions).
     questions, _ = Question.unscoped.filter(institute=institute).delete()
-    return answers + assignments + questions
+    return answers + assignments + quizzes + questions

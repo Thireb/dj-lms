@@ -1,5 +1,6 @@
 """Publish, submit and grade assignments (roadmap 5.1, SPEC 4.16 and 6.8),
-and keep the teacher's question bank (roadmap 5.2).
+keep the teacher's question bank (roadmap 5.2) and set up quizzes and exams
+(roadmap 5.3).
 
 A student is expected to answer an assignment when an enrolment of theirs
 has the assignment's batch and subject and was made before the due time.
@@ -21,7 +22,7 @@ from typing import Any
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Count, Q, Sum
 from django.utils import timezone
 
 from apps.academics.models import (
@@ -37,6 +38,10 @@ from apps.assessments.models import (
     Question,
     QuestionKind,
     QuestionOption,
+    Quiz,
+    QuizKind,
+    QuizQuestion,
+    QuizStatus,
     Submission,
     SubmissionStatus,
 )
@@ -460,6 +465,8 @@ def save_question(
     if question is not None and details.teacher.pk != question.teacher_id:
         raise ValidationError({"teacher": "The teacher cannot change."})
     _check_question(institute, details, question)
+    if question is not None and question_in_opened_quiz(question):
+        raise ValidationError(FIXED_MESSAGE)
     with transaction.atomic():
         row = question or Question(institute=institute, teacher=details.teacher)
         row.subject = details.subject
@@ -480,7 +487,19 @@ def save_question(
     return row
 
 
+IN_QUIZ_MESSAGE = (
+    "This question is in a quiz. Remove it from the quiz first, or keep it."
+)
+FIXED_MESSAGE = (
+    "This question is in a quiz that has opened, so it cannot change. "
+    "Add a new question instead."
+)
+
+
 def delete_question(question: Question) -> None:
+    """A question in a quiz stays in the bank (backlog AS6)."""
+    if QuizQuestion.objects.filter(question=question).exists():
+        raise ValidationError(IN_QUIZ_MESSAGE)
     question.delete()
 
 
@@ -510,3 +529,249 @@ def list_questions(
 def correct_option(question: Question) -> QuestionOption | None:
     """The correct option of an MCQ question (uses the prefetched options)."""
     return next((row for row in question.options.all() if row.is_correct), None)
+
+
+# Quizzes and exams: set-up (roadmap 5.3, SPEC 4.16 and 6.8)
+#
+# The teacher makes a quiz for one of their batches and subjects and adds
+# questions of that subject from their bank. A draft is not seen by
+# students. Publishing makes it "Scheduled"; it is "Live" from Opens until
+# Opens + duration + 10 minutes, then "Closed". A quiz that has opened
+# cannot change, and its questions cannot change or leave the bank.
+
+OPENED_MESSAGE = "This quiz has opened, so it cannot change."
+
+
+@dataclass(frozen=True)
+class QuizDetails:
+    title: str
+    kind: str
+    teacher: TeacherProfile
+    batch: Batch
+    subject: Subject
+    opens_at: datetime
+    duration_minutes: int
+    pass_marks: int | None = None
+    shuffle_questions: bool = False
+    require_full_screen: bool = False
+    flag_tab_leaving: bool = False
+
+
+def quiz_status(quiz: Quiz, now: datetime | None = None) -> str:
+    now = now or timezone.now()
+    if not quiz.is_published:
+        return QuizStatus.DRAFT
+    if now < quiz.opens_at:
+        return QuizStatus.SCHEDULED
+    if now < quiz.closes_at:
+        return QuizStatus.LIVE
+    return QuizStatus.CLOSED
+
+
+def has_opened(quiz: Quiz, now: datetime | None = None) -> bool:
+    """A published quiz past its Opens time: its paper is fixed."""
+    return quiz.is_published and (now or timezone.now()) >= quiz.opens_at
+
+
+def quiz_total(quiz: Quiz) -> int:
+    """Total marks: the sum of its questions' marks."""
+    return sum(item.question.marks for item in quiz_items(quiz))
+
+
+def quiz_items(quiz: Quiz) -> list[QuizQuestion]:
+    return list(
+        QuizQuestion.objects.filter(quiz=quiz)
+        .select_related("question")
+        .prefetch_related("question__options")
+    )
+
+
+def _check_quiz(
+    institute: Institute, details: QuizDetails, old: Quiz | None, now: datetime
+) -> None:
+    errors: dict[str, list[str]] = defaultdict(list)
+    for name in ("teacher", "batch", "subject"):
+        if getattr(details, name).institute_id != institute.pk:
+            errors[name].append("Must belong to this institute.")
+    if errors:
+        raise ValidationError(dict(errors))
+    pair = (details.batch.pk, details.subject.pk)
+    if old is None or (old.batch_id, old.subject_id) != pair:
+        linked = TeacherBatchSubject.objects.filter(
+            teacher=details.teacher, batch=details.batch, subject=details.subject
+        ).exists()
+        if not linked:
+            errors["subject"].append("The teacher does not teach this subject.")
+        elif not (details.batch.is_active and details.subject.is_active):
+            errors["subject"].append("This batch or subject is inactive.")
+    if old is not None and old.subject_id != details.subject.pk:
+        if QuizQuestion.objects.filter(quiz=old).exists():
+            errors["subject"].append(
+                "Remove the questions first: they belong to the old subject."
+            )
+    if (old is None or details.opens_at != old.opens_at) and details.opens_at <= now:
+        errors["opens_at"].append("Choose an opening time in the future.")
+    if old is not None and details.pass_marks is not None:
+        total = quiz_total(old)
+        if total and details.pass_marks > total:
+            errors["pass_marks"].append(
+                f"Pass marks are more than the total ({total})."
+            )
+    if errors:
+        raise ValidationError(dict(errors))
+
+
+def _apply_quiz(quiz: Quiz, details: QuizDetails) -> Quiz:
+    for name in (
+        "title",
+        "kind",
+        "teacher",
+        "batch",
+        "subject",
+        "opens_at",
+        "duration_minutes",
+        "pass_marks",
+        "shuffle_questions",
+    ):
+        setattr(quiz, name, getattr(details, name))
+    exam = details.kind == QuizKind.EXAM  # SPEC 4.16: exam settings only
+    quiz.require_full_screen = exam and details.require_full_screen
+    quiz.flag_tab_leaving = exam and details.flag_tab_leaving
+    quiz.save()
+    return quiz
+
+
+def create_quiz(
+    institute: Institute, details: QuizDetails, *, now: datetime | None = None
+) -> Quiz:
+    """A new quiz is a draft."""
+    _check_quiz(institute, details, None, now or timezone.now())
+    return _apply_quiz(Quiz(institute=institute), details)
+
+
+def _locked_quiz(quiz: Quiz, now: datetime | None) -> Quiz:
+    """Lock the quiz row; refuse once it has opened."""
+    locked = Quiz.objects.select_for_update().get(pk=quiz.pk)
+    if has_opened(locked, now):
+        raise ValidationError(OPENED_MESSAGE)
+    return locked
+
+
+def update_quiz(
+    quiz: Quiz, details: QuizDetails, *, now: datetime | None = None
+) -> Quiz:
+    """The teacher stays the same."""
+    with transaction.atomic():
+        locked = _locked_quiz(quiz, now)
+        if details.teacher.pk != locked.teacher_id:
+            raise ValidationError({"teacher": "The teacher cannot change."})
+        _check_quiz(locked.institute, details, locked, now or timezone.now())
+        return _apply_quiz(locked, details)
+
+
+def bank_choices(quiz: Quiz) -> Any:
+    """The teacher's questions of the quiz's subject that are not in it."""
+    return (
+        Question.objects.filter(teacher_id=quiz.teacher_id, subject_id=quiz.subject_id)
+        .exclude(quiz_items__quiz=quiz)
+        .prefetch_related("options")
+        .order_by("-updated_at", "-pk")
+    )
+
+
+def add_questions(
+    quiz: Quiz, questions: list[Question], *, now: datetime | None = None
+) -> int:
+    """Add bank questions at the end; returns how many were added."""
+    with transaction.atomic():
+        locked = _locked_quiz(quiz, now)
+        for question in questions:
+            if (
+                question.teacher_id != locked.teacher_id
+                or question.subject_id != locked.subject_id
+            ):
+                raise ValidationError(
+                    "Choose questions of this subject from your bank."
+                )
+        items = QuizQuestion.objects.filter(quiz=locked)
+        taken = set(items.values_list("question_id", flat=True))
+        position = max(items.values_list("position", flat=True), default=0)
+        added = 0
+        for question in questions:
+            if question.pk in taken:
+                continue
+            position += 1
+            QuizQuestion.objects.create(
+                institute=locked.institute,
+                quiz=locked,
+                question=question,
+                position=position,
+            )
+            taken.add(question.pk)
+            added += 1
+        return added
+
+
+def remove_question(
+    quiz: Quiz, item: QuizQuestion, *, now: datetime | None = None
+) -> None:
+    with transaction.atomic():
+        locked = _locked_quiz(quiz, now)
+        if item.quiz_id != locked.pk:
+            raise ValidationError("This question is not in this quiz.")
+        item.delete()
+
+
+def publish_quiz(quiz: Quiz, *, now: datetime | None = None) -> Quiz:
+    """Students see a published quiz; it opens at its time (SPEC 6.8)."""
+    now = now or timezone.now()
+    with transaction.atomic():
+        locked = _locked_quiz(quiz, now)
+        total = quiz_total(locked)
+        if not total:
+            raise ValidationError("Add at least one question first.")
+        if locked.opens_at <= now:
+            raise ValidationError("The opening time has passed. Choose a new one.")
+        if locked.pass_marks is not None and locked.pass_marks > total:
+            raise ValidationError(f"Pass marks are more than the total ({total}).")
+        locked.is_published = True
+        locked.save()
+        return locked
+
+
+def unpublish_quiz(quiz: Quiz, *, now: datetime | None = None) -> Quiz:
+    """Back to a draft, before it opens."""
+    with transaction.atomic():
+        locked = _locked_quiz(quiz, now)
+        locked.is_published = False
+        locked.save()
+        return locked
+
+
+def list_quizzes(user: Any, *, kind: str = "", status: str = "") -> list[Quiz]:
+    """The viewer's quizzes, the latest opening first, each with
+    ``question_count`` and ``total_marks``."""
+    rows = (
+        Quiz.objects.for_user(user)
+        .select_related("batch", "subject", "teacher__user")
+        .annotate(
+            question_count=Count("items"),
+            total_marks=Sum("items__question__marks"),
+        )
+    )
+    if kind:
+        rows = rows.filter(kind=kind)
+    quizzes = list(rows)
+    if status:
+        now = timezone.now()
+        quizzes = [quiz for quiz in quizzes if quiz_status(quiz, now) == status]
+    return quizzes
+
+
+def question_in_opened_quiz(question: Question, now: datetime | None = None) -> bool:
+    """A question of a quiz that has opened is fixed (backlog AS6)."""
+    return QuizQuestion.objects.filter(
+        question=question,
+        quiz__is_published=True,
+        quiz__opens_at__lte=now or timezone.now(),
+    ).exists()

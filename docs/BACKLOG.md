@@ -301,7 +301,8 @@ Left out of 5.1 on purpose, or found while building.
 | AS2 | The guardian sees no assignments yet. The guardian menu (FEATURES 13) has no "Assignments" item; scores come with roadmap 5.4. `Assignment.objects.for_user` and `Submission.objects.for_user` already cover guardians (tested). | Low | [ ] |
 | AS3 | A teacher cannot delete an assignment made by mistake; they can edit it until the first answer. Add Delete (confirm dialog) when the admin overview comes (FEATURES 7, approval queues). | Low | [ ] |
 | AS5 | axe (best-practice rules) on the 5.1 pages, and the same on the existing lecture pages: `empty-table-header` (the `DataTable` actions column has an empty header; give it a screen-reader label such as "Actions") and `heading-order` (form `Section` titles skip a heading level after the page title). Shared components, so one fix covers every page. | Low | [ ] |
-| AS6 | 5.2 lets a teacher delete any question in their bank. When quizzes use questions (5.3), a question in a quiz must stay (protect it, or copy the question into the quiz), so old attempts keep their questions and marks. | Medium | [ ] |
+| AS6 | 5.2 lets a teacher delete any question in their bank. When quizzes use questions (5.3), a question in a quiz must stay (protect it, or copy the question into the quiz), so old attempts keep their questions and marks. Fixed in 5.3 part 1: `QuizQuestion.question` is `PROTECT`; Delete says to remove it from the quiz first; a question of a quiz that has opened cannot change. | Medium | [x] |
+| AS7 | The teacher quiz list shows Questions (count and marks) where SPEC 3 has Attempts; the admin "Quizzes and exams" overview (SPEC 3) has no page yet. Both need attempts: build them in 5.3 part 2. | Low | [ ] |
 | AS4 | Notifications for "assignment published", "submission received" and "graded" (SPEC 7) wait for the notification service (roadmap 6.1 and 6.2). | Low | [ ] |
 
 ## Later (deployment hardening, Phase 12)
