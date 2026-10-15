@@ -169,9 +169,13 @@ def test_expected_students(school) -> None:
     left = student(school.morning.institute, "s5-a@example.com")
     link_student(late, {school.morning: [school.math]})
     link_student(left, {school.morning: [school.math]})
+    gone = student(school.morning.institute, "s6-a@example.com")
+    link_student(gone, {school.morning: [school.math]})
     answer(assignment, left)
     # unscoped: test set-up outside a tenant context.
-    StudentProfile.unscoped.filter(pk=left.pk).update(status=ProfileStatus.INACTIVE)
+    StudentProfile.unscoped.filter(pk__in=[left.pk, gone.pk]).update(
+        status=ProfileStatus.INACTIVE
+    )
     StudentBatchSubject.unscoped.filter(student=late).update(
         created_at=assignment.due_at + timedelta(minutes=1)
     )
@@ -248,7 +252,16 @@ def test_counts_with_real_numbers(school) -> None:
     third = student(school.morning.institute, "s5-a@example.com")
     link_student(second, {school.morning: [school.math]})
     link_student(third, {school.morning: [school.physics]})  # not Math
+    late = student(school.morning.institute, "s6-a@example.com")
+    gone = student(school.morning.institute, "s7-a@example.com")
+    link_student(late, {school.morning: [school.math]})
+    link_student(gone, {school.morning: [school.math]})
     assignment = add_assignment(school)
+    # unscoped: test set-up outside a tenant context.
+    StudentBatchSubject.unscoped.filter(student=late).update(
+        created_at=assignment.due_at + timedelta(minutes=1)
+    )
+    StudentProfile.unscoped.filter(pk=gone.pk).update(status=ProfileStatus.INACTIVE)
     empty = add_assignment(school, title="Nobody answered")
     grade(answer(assignment, school.student_1), "8")
     answer(assignment, second)
@@ -300,3 +313,19 @@ def test_student_does_not_get_assignments_due_before_enrolment(school) -> None:
         assert [row.assignment for row in student_assignments(school.student_1)] == [
             assignment
         ]
+
+
+@pytest.mark.django_db
+def test_student_gets_only_the_subjects_they_take(school) -> None:
+    """student_2 takes Physics in Evening; an Evening Math assignment is not
+    theirs."""
+    link_teacher(school.teacher_2, {school.evening: [school.physics, school.math]})
+    add_assignment(
+        school, teacher=school.teacher_2, batch=school.evening, subject=school.math
+    )
+    physics = add_assignment(
+        school, teacher=school.teacher_2, batch=school.evening, subject=school.physics
+    )
+    with tenant_context(school.evening.institute):
+        rows = student_assignments(school.student_2)
+    assert [row.assignment for row in rows] == [physics]
