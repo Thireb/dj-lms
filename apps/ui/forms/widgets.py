@@ -84,3 +84,20 @@ class ChipRadios(forms.RadioSelect):
         context = super().get_context(name, value, attrs)
         context["widget"]["group_label"] = self.group_label
         return context
+
+
+class OptionRadios(forms.RadioSelect):
+    """One choice as full-width rows that wrap long text (for example the
+    options of an MCQ question). ``group_label`` names the group for screen
+    readers."""
+
+    template_name = "ui/forms/widgets/option_radios.html"
+
+    def __init__(self, attrs=None, group_label: str = ""):
+        super().__init__(attrs=attrs)
+        self.group_label = group_label
+
+    def get_context(self, name, value, attrs):
+        context = super().get_context(name, value, attrs)
+        context["widget"]["group_label"] = self.group_label
+        return context

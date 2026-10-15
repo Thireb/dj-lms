@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+from datetime import timedelta
 from types import SimpleNamespace
 
 from django.conf import settings
 from django.core.paginator import Paginator
 from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import render
+from django.utils import timezone
 
 from apps.core.menus import ADMIN_MENU_KEYS
 from apps.core.roles import Role
@@ -40,6 +42,7 @@ from apps.ui.components.layout import (
 from apps.ui.components.lectures import CountdownCard, LectureRow
 from apps.ui.components.nav import FilterBar, NotificationBell, Pagination
 from apps.ui.components.pdf import PdfHeader
+from apps.ui.components.quizzes import AttemptTimer
 
 
 def _demo_institute() -> SimpleNamespace:
@@ -175,6 +178,9 @@ def dev_components(request: HttpRequest) -> HttpResponse:
             "No lectures yet",
             text="Create your first lecture.",
             action=Button("Create lecture", url="#"),
+        ),
+        "attempt_timer": AttemptTimer(
+            timezone.now() + timedelta(minutes=25), "dev-form", label="25 minutes"
         ),
         "text_block": TextBlock("Answer all questions.\nShow your working."),
         "button": Button("Save changes", icon="check"),

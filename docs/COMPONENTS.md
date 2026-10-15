@@ -25,10 +25,11 @@ apps/ui/
     layout.py      # TopNavShell, SidebarShell, Sidebar, TopNav, HeroBanner, PageHeader,
                    # SectionCard, Tabs, Modal, PublicFormShell
     forms.py       # CrispyForm, PublicPostForm, PortalPostForm
+    quizzes.py     # AttemptTimer
     block_stack.py # BlockStack, ButtonRow
     data.py        # StatCard, DataTable, Column, Badge, StatusBadge, Avatar,
                    # PersonCell, PersonList, KpiSummary, ProgressBar,
-                   # ProgressRing, ChartCard, EmptyState
+                   # ProgressRing, ChartCard, EmptyState, TextBlock
     actions.py     # Button, IconButton, QuickAction, ConfirmDialog, CopyField, Toast
     lectures.py    # CountdownCard, LectureRow, Calendar
     nav.py         # NotificationBell, ChildSwitcher, FilterBar, Pagination
@@ -251,7 +252,7 @@ Every item here is a class. Names are fixed.
 | `PublicFormShell` | layout | public page: `split` (form left, band right; short band on phones) or `notice` (whole page is the band, centred message with an icon) | `page_title`, `header`, `content`, `variant`, `icon` |
 | `CrispyForm` | forms | crispy form body (`form_tag=False` inside a parent form) | `form` |
 | `PublicPostForm` | forms | `<form method="post">` + CSRF wrapper for public pages | `action`, `body` |
-| `PortalPostForm` | forms | Portal `FormPage` POST wrapper (CSRF, multipart, crispy body). `framed` puts the sections in one card with dividers and a footer bar for the buttons; the bulk upload sets `framed=False` because its form sits in a `SectionCard` | `action`, `body`, `framed` |
+| `PortalPostForm` | forms | Portal `FormPage` POST wrapper (CSRF, multipart, crispy body). `framed` puts the sections in one card with dividers and a footer bar for the buttons; the bulk upload sets `framed=False` because its form sits in a `SectionCard`; `form_id` gives the form an id (the quiz timer submits it) | `action`, `body`, `framed`, `form_id` |
 | `ProfileMenu` | layout | Admin top-bar profile dropdown (C11 items, admin_only hiding) | `items` |
 | `BlockStack` | block_stack | vertical stack of text or nested components | `blocks` |
 | `ButtonRow` | block_stack | actions side by side; wraps on phones, right-aligned from md (table action cells) | `items` |
@@ -280,6 +281,7 @@ Every item here is a class. Names are fixed.
 | `CountdownCard` | lectures | "Up next": title, when and detail lines, "Starts in 1:02:03" (then "Started") and one action; `starts_at` is validated to a UTC ISO string in `data-scheduled-at`, read by `countdownCard` in `static/js/app.js`; with `refresh_url` the card reloads itself every 30 seconds (HTMX) | `title`, `starts_at`, `when`, `detail`, `action`, `refresh_url` |
 | `LectureRow` | lectures | one lecture in a short list (guardian "Upcoming classes", the schedule preview); `when` and `detail` show only when set | `title`, `when`, `detail`, `trailing` |
 | `Calendar` | lectures | week (seven day cards, side by side from lg) or month (a grid of weeks from md; on phones a list of the month's days that have entries), with previous, Today and next links; each day is a `CalendarDay` (`day`, `items`, `is_today`, `in_month`) and each entry a `CalendarItem` (`time`, `title`, `detail`, `status`, `tone`: `info`, `success`, `warning`, `neutral` or `danger`, `url`); an unsafe item `url` renders as plain text | `days`, `view` (`week`, `month`), `label`, `previous_url`, `today_url`, `next_url`, `empty_text`, `empty_day_text` |
+| `AttemptTimer` | quizzes | the time left in a quiz attempt, kept at the top of the screen (sticky); the last minute turns red and is announced once to screen readers; at zero `attemptTimer` in `static/js/app.js` submits the form `form_id` once with `auto_submit=1`; `deadline` is validated to a UTC ISO string in `data-deadline` | `deadline`, `form_id`, `label` (text without JavaScript) |
 | `NotificationBell` | nav | bell + unread count | `user` |
 | `ChildSwitcher` | nav | guardian top bar: a POST form with a "Child" select that sends on change ("Show" button without JavaScript); `options` (value, label), `chosen`, `url`, `next_url`. Pages get it from `GuardianChildMixin.get_child_switcher()` | `options`, `chosen`, `url`, `next_url` |
 | `FilterBar` | nav | search field with an icon + selects and "Apply filters"; "Clear" shows when a filter has a value. Each filter (dict or object) has `name`, `label`, optional `value`, `placeholder`; a filter with `options` (list of value, label) renders a select; a filter with `hidden=True` is a hidden input that keeps a value (such as the chosen tab) and does not count for "Clear"; a select with `kept=True` (a guardian's chosen child) does not count for "Clear", and "Clear" keeps its value; `input_type="date"` renders a date field | `filters` |
@@ -288,9 +290,9 @@ Every item here is a class. Names are fixed.
 
 | `Icon` | icon | one Lucide icon from the self-hosted sprite (`{% icon "name" %}` in templates); unknown names render nothing; always `aria-hidden` | `name`, `css_class` |
 
-Form layout objects: `Section(legend, *fields, description="", columns=1)` (title and a one-line explanation on the left, fields on the right from md; `columns=2` puts the fields in two columns; with no legend the fields take the full width), `Row`, `FormActions` (`stacked=True`: cancel becomes a text link and the submit button is full width, for public pages).
+Form layout objects: `Section(legend, *fields, description="", columns=1)` (title and a one-line explanation on the left, fields on the right from md; `columns=2` puts the fields in two columns; with no legend the fields take the full width), `Row`, `FormActions` (`stacked=True`: cancel becomes a text link and the submit button is full width, for public pages; `save_name` names the main button and `second=(label, name)` adds one more submit button, so a page can tell "Save" from "Submit", sent as `name=1`).
 
-Form widgets (not components): `PasswordInput` (show/hide toggle; static `type="password"` for no-JS and tests). `GroupedCheckboxes` (one fieldset per choice group, for example subjects under each batch; `empty_text` when there are no choices). `ChipRadios` (one choice as a row of chips in a `radiogroup`; `group_label` names it for screen readers; below sm the chips are 4 equal columns without the check icon, so four marks fit at 360px; used for attendance marks).
+Form widgets (not components): `PasswordInput` (show/hide toggle; static `type="password"` for no-JS and tests). `GroupedCheckboxes` (one fieldset per choice group, for example subjects under each batch; `empty_text` when there are no choices). `OptionRadios` (one choice as full-width rows that wrap long text, in a `radiogroup` with `group_label`; MCQ options in a quiz attempt). `ChipRadios` (one choice as a row of chips in a `radiogroup`; `group_label` names it for screen readers; below sm the chips are 4 equal columns without the check icon, so four marks fit at 360px; used for attendance marks).
 
 Built ahead of the pages that need them, and shown only on `/dev/components/` so far: `Modal`, `Tabs`, `ChartCard`, `PdfHeader`, `HtmxModalForm`. Keep them tested; the lecture, chart and PDF phases use them (audit L12).
 

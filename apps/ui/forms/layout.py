@@ -66,9 +66,16 @@ class FormActions(LayoutObject):
         cancel_label="Cancel",
         css_class=None,
         stacked=False,
+        save_name="",
+        second=None,
     ):
+        """``save_name`` names the main button (sent as ``name=1`` when it is
+        pressed). ``second`` is (label, name): one more submit button, so a
+        page can tell "Save" from "Submit"."""
         from apps.ui.safe_url import safe_url
 
+        self.save_name = save_name
+        self.second = second
         self.save_label = save_label
         self.cancel_url = safe_url(cancel_url) if cancel_url is not None else None
         self.cancel_label = cancel_label
@@ -84,5 +91,7 @@ class FormActions(LayoutObject):
                 "cancel_label": self.cancel_label,
                 "css_class": self.css_class,
                 "stacked": self.stacked,
+                "save_name": self.save_name,
+                "second": self.second,
             },
         )

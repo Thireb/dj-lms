@@ -5,7 +5,8 @@
   {% if cancel_url %}
     <a href="{{ cancel_url }}" class="btn btn-secondary">{{ cancel_label }}</a>
   {% endif %}
-  <button type="submit" class="btn btn-primary">
+  {% if second %}<button type="submit" name="{{ second.1 }}" value="1" class="btn btn-secondary">{{ second.0 }}</button>{% endif %}
+  <button type="submit"{% if save_name %} name="{{ save_name }}" value="1"{% endif %} class="btn btn-primary">
     {{ save_label }}
   </button>
 </div>{% endif %}

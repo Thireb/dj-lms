@@ -27,4 +27,20 @@ urlpatterns = [
         assessments.StudentAssignmentPage.as_view(),
         name="assignment_detail",
     ),
+    path("quizzes/", assessments.StudentQuizListPage.as_view(), name="quiz_list"),
+    path(
+        "quizzes/<int:pk>/",
+        assessments.StudentQuizPage.as_view(),
+        name="quiz_detail",
+    ),
+    path(
+        "quizzes/<int:pk>/start/",
+        assessments.StudentQuizStartView.as_view(),
+        name="quiz_start",
+    ),
+    path(
+        "quizzes/<int:pk>/attempt/",
+        assessments.StudentAttemptPage.as_view(),
+        name="quiz_attempt",
+    ),
 ]
