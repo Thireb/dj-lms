@@ -1,11 +1,11 @@
-"""AttemptTimer, the OptionRadios widget and the FormActions second button
+"""AttemptTimer, ExamGuard, the OptionRadios widget and the FormActions second button
 (roadmap 5.3)."""
 
 from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from apps.ui.components.quizzes import AttemptTimer
+from apps.ui.components.quizzes import AttemptTimer, ExamGuard
 from apps.ui.forms.layout import FormActions
 from apps.ui.forms.widgets import OptionRadios
 from django import forms
@@ -50,3 +50,37 @@ def test_form_actions_second_button() -> None:
     assert 'name="submit" value="1"' in html
     plain = FormActions("Save changes").render(None, {})
     assert "name=" not in plain
+
+
+def test_exam_guard_full_screen_and_leaving() -> None:
+    html = str(
+        ExamGuard(
+            "/student/quizzes/1/event/",
+            "attempt-form",
+            full_screen=True,
+            flag_leaving=True,
+        )
+    )
+    assert 'x-data="examGuard"' in html
+    assert 'data-url="/student/quizzes/1/event/"' in html
+    assert 'data-form="attempt-form"' in html
+    assert 'data-full-screen="1"' in html and 'data-flag-leaving="1"' in html
+    assert "Leaving this page or full screen is recorded" in html
+    assert "Enter full screen" in html
+    assert "It does not change your score." in html
+
+
+def test_exam_guard_leaving_only_has_no_button() -> None:
+    html = str(ExamGuard("/e/", "f", flag_leaving=True))
+    assert 'data-full-screen="0"' in html and 'data-flag-leaving="1"' in html
+    assert "Leaving this page is recorded" in html
+    assert "Enter full screen" not in html
+
+
+def test_exam_guard_drops_an_unsafe_url_and_escapes() -> None:
+    html = str(
+        ExamGuard("javascript:alert(1)", '"><script>x</script>', full_screen=True)
+    )
+    assert 'data-url=""' in html
+    assert "<script>x" not in html
+    assert "Leaving full screen is recorded" in html

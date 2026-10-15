@@ -33,6 +33,7 @@ from apps.assessments.forms import (
 )
 from apps.assessments.models import (
     Assignment,
+    AttemptEventKind,
     AttemptStatus,
     Question,
     QuestionKind,
@@ -53,6 +54,7 @@ from apps.assessments.services import (
     add_questions,
     assignment_counts,
     attempt_answers,
+    attempt_events,
     attempt_items,
     attempt_review,
     bank_choices,
@@ -60,12 +62,15 @@ from apps.assessments.services import (
     create_assignment,
     create_quiz,
     delete_question,
+    event_counts,
+    flagged_kinds,
     grade_submission,
     has_opened,
     is_expected,
     is_open,
     list_questions,
     list_quizzes,
+    log_attempt_event,
     mark_attempt,
     marks_text,
     publish_quiz,
@@ -100,6 +105,8 @@ from apps.assessments.ui import (
     TeacherQuizTable,
     assignment_detail_rows,
     attempt_badge,
+    exam_flag_list,
+    exam_mode_text,
     form_card,
     minutes_text,
     quiz_detail_rows,
@@ -119,7 +126,7 @@ from apps.ui.components.data import DetailList, EmptyState, TextBlock
 from apps.ui.components.forms import CrispyForm, PortalPostForm
 from apps.ui.components.layout import SectionCard
 from apps.ui.components.nav import FilterBar, Pagination
-from apps.ui.components.quizzes import AttemptTimer
+from apps.ui.components.quizzes import AttemptTimer, ExamGuard
 from apps.ui.views.pages import DetailPage, FormPage, ListPage, PortalPageView
 
 PAGE_SIZE = 25
@@ -1105,6 +1112,7 @@ class TeacherQuizDetailPage(QuizMixin, DetailPage):
             quiz=self.quiz,
             total=self.total(),
             status=quiz_status(self.quiz, self.now),
+            flags=event_counts(self.quiz) if flagged_kinds(self.quiz) else None,
         )
         return SectionCard(title="Results", icon="users", body=table)
 
@@ -1207,7 +1215,16 @@ class TeacherAttemptPage(QuizMixin, DetailPage):
         ]
         if attempt.auto_submitted:
             rows.append(("Note", "Sent when the time ended."))
-        return [SectionCard(title="Details", icon="list", body=DetailList(rows))]
+        cards = [SectionCard(title="Details", icon="list", body=DetailList(rows))]
+        if flagged_kinds(self.quiz):
+            cards.append(
+                SectionCard(
+                    title="Exam flags",
+                    icon="triangle-alert",
+                    body=exam_flag_list(attempt_events(attempt)),
+                )
+            )
+        return cards
 
 
 class QuizAddQuestionsPage(QuizMixin, FormPage):
@@ -1376,6 +1393,9 @@ class StudentQuizPage(StudentQuizMixin, DetailPage):
                 "closes if that is sooner. Your answers are sent when the "
                 "time ends. You have one attempt."
             )
+            kinds = flagged_kinds(self.quiz)
+            if kinds:
+                text += " " + exam_mode_text(kinds)
             return [SectionCard(title="Before you start", icon="info", body=text)]
         rows: list[tuple[str, Any]] = [
             ("Status", attempt_badge(attempt)),
@@ -1419,6 +1439,22 @@ class StudentQuizStartView(StudentQuizMixin, PortalPageView):
         return HttpResponseRedirect(self.quiz_url("attempt", quiz))
 
 
+class StudentQuizEventView(StudentQuizMixin, PortalPageView):
+    """POST only, from ``examGuard``: record an exam flag of the student's
+    attempt. Always 204: a flag that is not recorded needs no answer."""
+
+    http_method_names = ["post"]
+
+    def post(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        if self.student is None:
+            return forbidden_response(request)
+        quiz = self.get_quiz()
+        attempt = QuizAttempt.objects.filter(quiz=quiz, student=self.student).first()
+        if attempt is not None:
+            log_attempt_event(attempt, str(request.POST.get("kind", "")))
+        return HttpResponse(status=204)
+
+
 class StudentAttemptPage(StudentQuizMixin, FormPage):
     """The paper: the timer and every question. Save keeps the attempt
     open; Submit, or the timer at zero, ends it."""
@@ -1454,8 +1490,20 @@ class StudentAttemptPage(StudentQuizMixin, FormPage):
         return {"items": self.items, "answers": attempt_answers(self.attempt)}
 
     def get_form_wrapper(self, form: Any) -> Any:
+        kinds = flagged_kinds(self.quiz)
+        guard = []
+        if kinds:
+            guard.append(
+                ExamGuard(
+                    self.quiz_url("event", self.quiz),
+                    ATTEMPT_FORM_ID,
+                    full_screen=AttemptEventKind.LEFT_FULL_SCREEN in kinds,
+                    flag_leaving=AttemptEventKind.LEFT_PAGE in kinds,
+                )
+            )
         return BlockStack(
             blocks=[
+                *guard,
                 AttemptTimer(
                     self.attempt.deadline,
                     ATTEMPT_FORM_ID,

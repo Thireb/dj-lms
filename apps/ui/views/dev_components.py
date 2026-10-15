@@ -42,7 +42,7 @@ from apps.ui.components.layout import (
 from apps.ui.components.lectures import CountdownCard, LectureRow
 from apps.ui.components.nav import FilterBar, NotificationBell, Pagination
 from apps.ui.components.pdf import PdfHeader
-from apps.ui.components.quizzes import AttemptTimer
+from apps.ui.components.quizzes import AttemptTimer, ExamGuard
 
 
 def _demo_institute() -> SimpleNamespace:
@@ -181,6 +181,9 @@ def dev_components(request: HttpRequest) -> HttpResponse:
         ),
         "attempt_timer": AttemptTimer(
             timezone.now() + timedelta(minutes=25), "dev-form", label="25 minutes"
+        ),
+        "exam_guard": ExamGuard(
+            "/dev/components/", "dev-form", full_screen=True, flag_leaving=True
         ),
         "text_block": TextBlock("Answer all questions.\nShow your working."),
         "button": Button("Save changes", icon="check"),

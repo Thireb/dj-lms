@@ -94,6 +94,75 @@ document.addEventListener("alpine:init", () => {
       HTMLFormElement.prototype.submit.call(form);
     },
   }));
+
+  // Exam mode (ExamGuard): post a flag when the page is hidden or full
+  // screen ends. Navigation away (Submit, the timer) sends nothing.
+  Alpine.data("examGuard", () => ({
+    isFull: false,
+    _unloading: false,
+    _listeners: [],
+
+    init() {
+      const data = this.$el.dataset;
+      this.isFull = document.fullscreenElement !== null;
+      this.listen(window, "beforeunload", () => {
+        this._unloading = true;
+      });
+      if (data.flagLeaving === "1") {
+        this.listen(document, "visibilitychange", () => {
+          if (document.visibilityState === "hidden") {
+            this.flag("left_page");
+          }
+        });
+      }
+      if (data.fullScreen === "1") {
+        this.listen(document, "fullscreenchange", () => {
+          const wasFull = this.isFull;
+          this.isFull = document.fullscreenElement !== null;
+          if (wasFull && !this.isFull) {
+            this.flag("left_full_screen");
+          }
+        });
+      }
+    },
+
+    destroy() {
+      this._listeners.forEach(([target, name, handler]) =>
+        target.removeEventListener(name, handler),
+      );
+      this._listeners = [];
+    },
+
+    listen(target, name, handler) {
+      target.addEventListener(name, handler);
+      this._listeners.push([target, name, handler]);
+    },
+
+    enter() {
+      const root = document.documentElement;
+      if (root.requestFullscreen) {
+        root.requestFullscreen().catch(() => {});
+      }
+    },
+
+    flag(kind) {
+      const url = this.$el.dataset.url || "";
+      const form = document.getElementById(this.$el.dataset.form || "");
+      const token = form && form.querySelector("[name=csrfmiddlewaretoken]");
+      if (this._unloading || !url || !token) {
+        return;
+      }
+      const body = new FormData();
+      body.append("csrfmiddlewaretoken", token.value);
+      body.append("kind", kind);
+      fetch(url, {
+        method: "POST",
+        body,
+        credentials: "same-origin",
+        keepalive: true,
+      }).catch(() => {});
+    },
+  }));
 });
 
 /** 2d 3h, then 1:02:03, then 04:05. */

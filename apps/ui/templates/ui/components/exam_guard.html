@@ -1,0 +1,4 @@
+{% load ui_icons %}<div class="exam-guard flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-warning/30 bg-warning-50 px-4 py-3" x-data="examGuard" data-url="{{ event_url }}" data-form="{{ form_id }}" data-full-screen="{{ full_screen|yesno:'1,0' }}" data-flag-leaving="{{ flag_leaving|yesno:'1,0' }}">
+  <p class="flex min-w-0 items-start gap-2 text-sm text-text">{% icon "triangle-alert" "mt-0.5 h-4 w-4 flex-none text-warning" %}<span>Exam mode. {% if full_screen and flag_leaving %}Leaving this page or full screen is recorded{% elif full_screen %}Leaving full screen is recorded{% else %}Leaving this page is recorded{% endif %} and shown to your teacher. It does not change your score.</span></p>
+  {% if full_screen %}<button type="button" class="btn btn-secondary" x-show="!isFull" x-cloak @click="enter()">Enter full screen</button>{% endif %}
+</div>

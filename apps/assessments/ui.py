@@ -13,6 +13,8 @@ from django.utils.text import Truncator
 
 from apps.assessments.models import (
     Assignment,
+    AttemptEvent,
+    AttemptEventKind,
     AttemptStatus,
     Question,
     QuestionKind,
@@ -45,6 +47,7 @@ from apps.ui.components.data import (
     BadgeNote,
     Column,
     DataTable,
+    DetailList,
     PersonCell,
 )
 from apps.ui.components.forms import CrispyForm, PortalPostForm
@@ -530,11 +533,21 @@ class QuizResultTable(DataTable):
     empty_title = "No students take this batch and subject."
 
     def __init__(
-        self, rows: list[ResultRow], *, quiz: Quiz, total: int, status: str, **props
+        self,
+        rows: list[ResultRow],
+        *,
+        quiz: Quiz,
+        total: int,
+        status: str,
+        flags: dict[int, dict[str, int]] | None = None,
+        **props,
     ):
+        """``flags`` (exam mode) adds the Exam flags column: per attempt,
+        the count of each kind."""
         self.quiz = quiz
         self.total = total
         self.status = status
+        self.flags = flags
         super().__init__(rows=rows, **props)
 
     @property
@@ -550,8 +563,25 @@ class QuizResultTable(DataTable):
             Column("status", "Status", lambda row: result_badge(row, self.status)),
             Column("submitted", "Submitted", self.submitted),
             Column("score", "Score", lambda row: score_text(row.attempt, self.total)),
+            *(
+                [Column("flags", "Exam flags", self.flag_text)]
+                if self.flags is not None
+                else []
+            ),
             Column("actions", "", self.open_button),
         ]
+
+    def flag_text(self, row: ResultRow) -> str:
+        """Example: Left the page 2, Left full screen 1."""
+        if row.attempt is None:
+            return "-"
+        counts = self.flags.get(row.attempt.pk, {}) if self.flags else {}
+        parts = [
+            f"{AttemptEventKind(kind).label} {counts[kind]}"
+            for kind in AttemptEventKind.values
+            if counts.get(kind)
+        ]
+        return ", ".join(parts) or "None"
 
     def submitted(self, row: ResultRow) -> str:
         attempt = row.attempt
@@ -604,3 +634,31 @@ class AnswerTable(DataTable):
     def marks(self, row: AnswerRow) -> str:
         marks = row.answer.marks if row.answer else None
         return marks_text(marks, row.item.question.marks)
+
+
+# Exam mode (roadmap 5.3 part 2c)
+
+
+def exam_mode_text(kinds: set[str]) -> str:
+    """What exam mode records, for the student before Start."""
+    left = " or ".join(
+        "this page" if kind == AttemptEventKind.LEFT_PAGE else "full screen"
+        for kind in AttemptEventKind.values
+        if kind in kinds
+    )
+    return (
+        f"Exam mode: leaving {left} is recorded and shown to your teacher. "
+        "It does not change your score."
+    )
+
+
+def exam_flag_list(events: list[AttemptEvent]) -> DetailList:
+    """Each flag with its time, then a note that flags do not change the
+    score."""
+    rows: list[tuple[str, Any]] = [
+        (event.get_kind_display(), when(event.at)) for event in events
+    ]
+    if not rows:
+        rows.append(("Flags", "None"))
+    rows.append(("Note", "Flags do not change the score."))
+    return DetailList(rows)

@@ -39,6 +39,11 @@ urlpatterns = [
         name="quiz_start",
     ),
     path(
+        "quizzes/<int:pk>/event/",
+        assessments.StudentQuizEventView.as_view(),
+        name="quiz_event",
+    ),
+    path(
         "quizzes/<int:pk>/attempt/",
         assessments.StudentAttemptPage.as_view(),
         name="quiz_attempt",
