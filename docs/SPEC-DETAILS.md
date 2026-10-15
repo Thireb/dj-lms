@@ -221,6 +221,9 @@ Date*, Batch*, Subject, Student (optional, for one-student reports), Topic cover
 
 ### 4.16 Assignment / Quiz
 - Assignment: Title*, Instructions*, Batch*, Subject*, Total marks*, Due date*, File (optional).
+  - Built in 5.1 (assumed, check against the demo): Batch and Subject are one choice from the teacher's own active pairs. Due date has a Due time (default 11:59 PM, the teacher's zone); it must be in the future. Total marks 1 to 1000. The File waits for file storage (backlog AS1). The teacher can edit; the batch and subject stay the same after the first answer, and total marks cannot go below a given grade.
+  - Students who get it: an active student with an enrolment in that batch and subject made before the due time (the attendance roster rule, SPEC 6.3); a student who answered stays listed.
+  - Answer: a text answer (required), which the student can change until the due time or until it is graded. Grade: marks 0 to the total (steps of 0.5) and optional feedback; the teacher can change a grade.
 - Quiz or exam: Title*, Type* (Quiz / Exam), Batch*, Subject*, Opens at*, Duration (min)*, Total marks, Pass marks, Shuffle questions, Require full screen (exam), Flag tab leaving (exam). Questions: pick from bank or add new.
 - Question: Text*, Type* (MCQ / Short answer), Options (MCQ, 2 to 6) with one correct*, Marks*, Subject*, Explanation (optional).
 
@@ -318,6 +321,7 @@ Lectures counted = lectures with status `finished` in the month, taught by the t
 ### 6.8 Homework, assignments, quizzes
 - Homework due time passed: new submissions are `late` if late submission is allowed, otherwise blocked. Students without a submission at close are `pending` (shown "Missed" for assignments).
 - Teacher reviews homework with a short comment and "Reviewed". Assignments get marks and feedback.
+- Assignments take no late answers (assumed in 5.1: the line above allows late answers for homework only). After the due time a student with no answer has "Missed".
 - Quiz: status becomes `live` at Opens and `closed` after opens + duration + 10 minutes. Student attempt has a countdown timer. Auto-submit when the timer ends. MCQ marked instantly. Short answers wait for the teacher. One attempt only.
 - Exam mode: leaving the tab or exiting full screen is logged and shown to the teacher. It does not auto-fail.
 - Guardian sees scores only after the quiz is graded.

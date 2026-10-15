@@ -245,3 +245,13 @@ class EmptyState(Component):
         super().__init__(
             title=title, text=text, action=action, icon=icon, framed=framed, **props
         )
+
+
+class TextBlock(Component):
+    """Long text a person wrote (instructions, an answer, feedback): line
+    breaks stay, long words wrap, the text is escaped."""
+
+    template_name = "ui/components/text_block.html"
+
+    def __init__(self, text, empty_text="", **props):
+        super().__init__(text=text, empty_text=empty_text, **props)

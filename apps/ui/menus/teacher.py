@@ -72,7 +72,12 @@ class TeacherMenu:
             MenuGroup(
                 label="Assignments",
                 items=(
-                    MenuItem("Assignments", "teacher:assignment_list", "list-checks"),
+                    MenuItem(
+                        "Assignments",
+                        "teacher:assignment_list",
+                        "list-checks",
+                        menu_key="assignments",
+                    ),
                 ),
             ),
             MenuGroup(

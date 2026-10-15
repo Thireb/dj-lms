@@ -25,6 +25,7 @@ from apps.ui.components.data import (
     EmptyState,
     ProgressBar,
     StatCard,
+    TextBlock,
 )
 from apps.ui.components.icon import Icon
 from apps.ui.components.layout import (
@@ -175,6 +176,7 @@ def dev_components(request: HttpRequest) -> HttpResponse:
             text="Create your first lecture.",
             action=Button("Create lecture", url="#"),
         ),
+        "text_block": TextBlock("Answer all questions.\nShow your working."),
         "button": Button("Save changes", icon="check"),
         "quick_action": QuickAction("Mark attendance", "clipboard-check", "#"),
         "confirm_dialog": ConfirmDialog(

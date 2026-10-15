@@ -51,7 +51,12 @@ class StudentMenu:
                         "clipboard",
                         feature="lesson_plans",
                     ),
-                    MenuItem("Assignments", "student:assignment_list", "list-checks"),
+                    MenuItem(
+                        "Assignments",
+                        "student:assignment_list",
+                        "list-checks",
+                        menu_key="assignments",
+                    ),
                     MenuItem("Quizzes and exams", "student:quiz_list", "square-pen"),
                     MenuItem("Documents", "student:documents", "folder-open"),
                 ),

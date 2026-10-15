@@ -1,5 +1,5 @@
 """Demo data (dev only): Demo Institute on Premium, sign-ins, SPEC 10 people,
-demo lectures and their attendance."""
+demo lectures, their attendance and demo assignments."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError, CommandParser
 
 from apps.accounts.models import User
+from apps.assessments.demo import reset_assignments, seed_assignments
 from apps.attendance.demo import reset_attendance, seed_attendance
 from apps.core.features import PLAN_CODE_PREMIUM
 from apps.core.roles import Role
@@ -52,6 +53,7 @@ class Command(BaseCommand):
         seed_people(institute, password)
         seed_lectures(institute)
         seed_attendance(institute)
+        seed_assignments(institute)
         self.stdout.write(self.style.SUCCESS("Demo data ready."))
 
     def _demo_institute(self) -> Institute:
@@ -85,6 +87,7 @@ class Command(BaseCommand):
         deleted = 0
         institute = Institute.objects.filter(name=DEMO_INSTITUTE_NAME).first()
         if institute is not None:
+            deleted += reset_assignments(institute)
             deleted += reset_attendance(institute)
             deleted += reset_lectures(institute)
             deleted += reset_people(institute)

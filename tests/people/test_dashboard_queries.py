@@ -73,7 +73,8 @@ def test_admin_dashboard_query_budget(
     [
         # +4 (backlog AT2): "Attendance to take" (finished lectures, their
         # subjects, enrolments, marks); the same for any number of lectures.
-        ("teacher_1", "teacher:home", 15),
+        # +1 (roadmap 5.1): "Answers to grade" is one count.
+        ("teacher_1", "teacher:home", 16),
         # +4 (roadmap 4.3): the attendance % (enrolments, marks, lectures,
         # their subjects) and "Lectures today"; the same for any number of
         # children.

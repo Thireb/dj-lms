@@ -37,7 +37,7 @@ DEMO_MEET_URL = "https://meet.example.com/demo-class"
 MON_WED_FRI = [0, 2, 4]
 
 
-def _shared_link(teacher: TeacherProfile) -> TeacherBatchSubject | None:
+def shared_link(teacher: TeacherProfile) -> TeacherBatchSubject | None:
     """The teacher's batch and subject that the demo student also takes, so
     the student and guardian demo show lectures and Join (Phase 3 audit P3-3).
     Any of the teacher's pairs when they share none."""
@@ -65,7 +65,7 @@ def seed_lectures(institute: Institute) -> None:
             or RecurringSchedule.objects.filter(teacher=teacher).exists()
         ):
             return
-        link = _shared_link(teacher)
+        link = shared_link(teacher)
         if link is None:
             return
         zone = ZoneInfo(institute.timezone)
