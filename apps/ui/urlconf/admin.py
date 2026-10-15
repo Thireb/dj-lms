@@ -3,6 +3,7 @@
 from django.urls import path
 
 from apps.academics import views as academics
+from apps.assessments import views as assessments
 from apps.attendance import views as attendance
 from apps.institutes.views import CampusProfilePage, InstituteSettingsPage
 from apps.lectures import views as lectures
@@ -98,6 +99,12 @@ urlpatterns = [
         "students/upload/template/",
         people.StudentBulkTemplateView.as_view(),
         name="student_bulk_template",
+    ),
+    path("quizzes/", assessments.AdminQuizListPage.as_view(), name="quiz_list"),
+    path(
+        "quizzes/<int:pk>/",
+        assessments.AdminQuizPage.as_view(),
+        name="quiz_detail",
     ),
     path("lectures/", lectures.LectureListPage.as_view(), name="lecture_list"),
     path("lectures/add/", lectures.LectureCreatePage.as_view(), name="lecture_create"),

@@ -95,7 +95,7 @@ Setup order the reference teaches: Campus, Classes, Batches, Subjects, Fee Plans
 - [ ] **Quizzes and exams** (B): saved question bank (built in 5.2: each teacher's own bank, MCQ and short answer); timed paper (5.3 part 1 built the teacher set-up: draft, publish, questions from the bank; part 2a the student attempt: Start while live, countdown, auto-submit, MCQ marked at once; part 2b the teacher results and the marks for written answers); "Live now" status lets students start; MCQ auto-marked; written answers marked by the teacher; guardian sees scores.
 - [x] Exam mode: leaving the page can be flagged; some exams require full screen. Built in 5.3 part 2c: the paper asks for full screen and records leaving the page or full screen; the teacher sees the flags; they never change the score.
 - [ ] **Course documents** (P): upload notes and slides per course/batch; admin can lock downloads (preview only). Uses file uploads in our version (not Google Drive).
-- [ ] Admin approval queues: Homework Approval, Lesson Plan Approval, Reports Received, Quizzes & Exams overview.
+- [ ] Admin approval queues: Homework Approval, Lesson Plan Approval, Reports Received, Quizzes & Exams overview. Built in 5.3: the Quizzes & Exams overview (read only, with each quiz's results).
 - [ ] Whiteboard in class with export to PDF. Build last.
 
 ## 8. Fees (P)
