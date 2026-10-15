@@ -336,6 +336,26 @@ def _attempt(institute) -> int:
     return pk
 
 
+def _quiz_attempt(institute) -> dict[str, int]:
+    """The teacher's attempt page has two pks: the quiz and an attempt."""
+    pk = _live_quiz(institute)
+    # unscoped: test setup outside a tenant context.
+    student = StudentProfile.unscoped.get(pk=_student(institute))
+    now = timezone.now()
+    with tenant_context(institute):
+        attempt, _ = QuizAttempt.objects.get_or_create(
+            institute=institute,
+            quiz_id=pk,
+            student=student,
+            defaults={
+                "started_at": now,
+                "deadline": now + timedelta(minutes=30),
+                "question_order": [0],
+            },
+        )
+    return {"pk": pk, "attempt_pk": attempt.pk}
+
+
 ROUTE_OBJECTS = {
     **{
         f"admin:{prefix}_{action}": _name_row(model)
@@ -371,6 +391,7 @@ ROUTE_OBJECTS = {
         for action in ("detail", "edit", "add_questions", "publish", "unpublish")
     },
     "teacher:quiz_remove_question": _quiz_item,
+    "teacher:quiz_attempt": _quiz_attempt,
     "student:quiz_detail": _live_quiz,
     "student:quiz_start": _live_quiz,
     "student:quiz_attempt": _attempt,

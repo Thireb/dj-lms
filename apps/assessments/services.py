@@ -971,3 +971,143 @@ def student_quizzes(
         reverse=True,
     )
     return open_rows + closed
+
+
+# Quiz results and marking (roadmap 5.3 part 2b, SPEC 6.8)
+#
+# The teacher sees every student of the quiz's batch and subject with their
+# attempt, and marks the short answers of a submitted attempt. Marking all
+# of them makes the attempt graded, with the score of every answer. The
+# marks can change later.
+
+MARK_OPEN_MESSAGE = "The student is still answering. Mark the attempt after it ends."
+
+
+@dataclass(frozen=True)
+class ResultRow:
+    student: StudentProfile
+    attempt: QuizAttempt | None
+
+
+def quiz_results(quiz: Quiz, *, now: datetime | None = None) -> list[ResultRow]:
+    """The quiz's students by name, with their attempts. An attempt left
+    open past its deadline is submitted first (backlog AS9)."""
+    now = now or timezone.now()
+    attempts = {
+        row.student_id: close_expired(row, now=now)
+        for row in QuizAttempt.objects.filter(quiz=quiz)
+    }
+    enrolled = StudentBatchSubject.objects.filter(
+        batch_id=quiz.batch_id,
+        subject_id=quiz.subject_id,
+        student__status=ProfileStatus.ACTIVE,
+    ).values_list("student_id", flat=True)
+    students = (
+        StudentProfile.objects.filter(pk__in=set(enrolled) | set(attempts))
+        .select_related("user")
+        .order_by("user__first_name", "user__last_name", "pk")
+    )
+    return [ResultRow(student, attempts.get(student.pk)) for student in students]
+
+
+@dataclass(frozen=True)
+class QuizCount:
+    attempts: int
+    to_mark: int  # submitted, waiting for the teacher
+    total: int  # the quiz's students, and any other student with an attempt
+
+
+def quiz_counts(quizzes: list[Quiz]) -> dict[int, QuizCount]:
+    """Attempts / Total for a page of quizzes, in 2 queries."""
+    if not quizzes:
+        return {}
+    links = list(
+        StudentBatchSubject.objects.filter(
+            batch_id__in={quiz.batch_id for quiz in quizzes},
+            student__status=ProfileStatus.ACTIVE,
+        ).values_list("student_id", "batch_id", "subject_id")
+    )
+    attempts: dict[int, dict[int, str]] = defaultdict(dict)
+    rows = QuizAttempt.objects.filter(quiz__in=quizzes).values_list(
+        "quiz_id", "student_id", "status"
+    )
+    for quiz_id, student_id, status in rows:
+        attempts[quiz_id][student_id] = status
+    counts = {}
+    for quiz in quizzes:
+        own = attempts[quiz.pk]
+        expected = {
+            student_id
+            for student_id, batch_id, subject_id in links
+            if batch_id == quiz.batch_id and subject_id == quiz.subject_id
+        }
+        counts[quiz.pk] = QuizCount(
+            attempts=len(own),
+            to_mark=sum(status == AttemptStatus.SUBMITTED for status in own.values()),
+            total=len(expected | set(own)),
+        )
+    return counts
+
+
+@dataclass(frozen=True)
+class AnswerRow:
+    number: int
+    item: QuizQuestion
+    answer: AttemptAnswer | None
+
+
+def attempt_review(attempt: QuizAttempt) -> list[AnswerRow]:
+    """Each question in the student's order, with the student's answer."""
+    answers = {
+        row.item_id: row
+        for row in AttemptAnswer.objects.filter(attempt=attempt).select_related(
+            "option"
+        )
+    }
+    return [
+        AnswerRow(number, item, answers.get(item.pk))
+        for number, item in enumerate(attempt_items(attempt), start=1)
+    ]
+
+
+def mark_attempt(attempt: QuizAttempt, marks: dict[int, Decimal]) -> QuizAttempt:
+    """Save the marks of the short answers (``marks`` maps an item pk to
+    marks). Every short answer needs marks; the attempt is then graded with
+    the sum of all its answers' marks."""
+    with transaction.atomic():
+        locked = QuizAttempt.objects.select_for_update().get(pk=attempt.pk)
+        if locked.status == AttemptStatus.IN_PROGRESS:
+            raise ValidationError(MARK_OPEN_MESSAGE)
+        items = attempt_items(locked)
+        saved = attempt_answers(locked)
+        for number, item in enumerate(items, start=1):
+            question = item.question
+            if question.kind != QuestionKind.SHORT:
+                continue
+            value = marks.get(item.pk)
+            if value is None or not 0 <= value <= question.marks:
+                raise ValidationError(
+                    f"Question {number}: give 0 to {question.marks} marks."
+                )
+            row = saved.get(item.pk) or AttemptAnswer(
+                institute=locked.institute, attempt=locked, item=item
+            )
+            row.marks = value
+            row.save()
+            saved[item.pk] = row
+        locked.score = sum(
+            (row.marks for row in saved.values() if row.marks is not None),
+            Decimal(0),
+        )
+        locked.status = AttemptStatus.GRADED
+        locked.save()
+        return locked
+
+
+def short_items(attempt: QuizAttempt) -> list[tuple[int, QuizQuestion]]:
+    """The short answer questions of an attempt, with their numbers."""
+    return [
+        (number, item)
+        for number, item in enumerate(attempt_items(attempt), start=1)
+        if item.question.kind == QuestionKind.SHORT
+    ]

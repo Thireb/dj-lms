@@ -1,7 +1,8 @@
 """Demo assignments and questions for seed_demo (SPEC 10): three
 assignments of the demo teacher, in the batch and subject the demo student
-also takes, six questions in the demo teacher's bank, and two quizzes
-from them: one live now and one opening tomorrow (SPEC 10).
+also takes, six questions in the demo teacher's bank, and three quizzes
+from them: one live now, one opening tomorrow, and one closed with
+attempts (one graded, one waiting for marks) (SPEC 10).
 
 - one open for a week, which the demo student has not answered yet;
 - one due tomorrow, answered by the demo student and waiting for marks;
@@ -24,6 +25,7 @@ from apps.assessments.models import (
     Question,
     QuestionKind,
     Quiz,
+    QuizAttempt,
     QuizKind,
     Submission,
 )
@@ -35,8 +37,13 @@ from apps.assessments.services import (
     create_assignment,
     create_quiz,
     grade_submission,
+    mark_attempt,
     publish_quiz,
+    quiz_results,
+    save_attempt,
     save_question,
+    short_items,
+    start_attempt,
     submission_rows,
     submit_answer,
 )
@@ -164,6 +171,54 @@ def _seed_quizzes(institute: Institute, teacher, link, questions, now) -> None:
         publish_quiz(quiz)
         if kind == QuizKind.QUIZ:
             Quiz.objects.filter(pk=quiz.pk).update(opens_at=now - timedelta(minutes=5))
+    _seed_closed_quiz(institute, teacher, link, questions[:5], now)
+
+
+def _seed_closed_quiz(institute: Institute, teacher, link, questions, now) -> None:
+    """A quiz that closed 3 days ago (moved back like the live one). The
+    demo student's attempt is graded; one other attempt waits for marks."""
+    quiz = create_quiz(
+        institute,
+        QuizDetails(
+            title=f"{link.subject.name} practice quiz",
+            kind=QuizKind.QUIZ,
+            teacher=teacher,
+            batch=link.batch,
+            subject=link.subject,
+            opens_at=now + timedelta(days=1),
+            duration_minutes=20,
+        ),
+    )
+    add_questions(quiz, questions)
+    publish_quiz(quiz)
+    opens = now - timedelta(days=3)
+    Quiz.objects.filter(pk=quiz.pk).update(opens_at=opens)
+    quiz.refresh_from_db()
+    students = [row.student for row in quiz_results(quiz, now=now)]
+    demo = next((s for s in students if s.user.email == DEMO_STUDENT_EMAIL), None)
+    others = [student for student in students if student != demo]
+    takers = ([demo] if demo else []) + others[:1]
+    for number, student in enumerate(takers):
+        start = opens + timedelta(minutes=2 + number)
+        attempt = start_attempt(quiz, student, now=start)
+        items = {item.question.text: item for item in quiz.items.all()}
+        answers = {}
+        for question in questions:
+            item = items[question.text]
+            if question.kind == QuestionKind.SHORT:
+                answers[item.pk] = (
+                    "The sum of the values divided by how many there are."
+                )
+            else:
+                options = list(question.options.all())
+                answers[item.pk] = options[number % len(options)].pk
+        attempt = save_attempt(
+            attempt, answers, submit=True, now=start + timedelta(minutes=12)
+        )
+        if student == demo:
+            mark_attempt(
+                attempt, {item.pk: Decimal("2.5") for _n, item in short_items(attempt)}
+            )
 
 
 def reset_assignments(institute: Institute) -> int:
@@ -172,6 +227,9 @@ def reset_assignments(institute: Institute) -> int:
 
     Uses ``unscoped`` on purpose: a management command, one institute.
     """
+    # unscoped: seed_demo --reset, limited to the demo institute (their
+    # answers go with them; an attempt keeps its quiz, so it goes first).
+    attempts, _ = QuizAttempt.unscoped.filter(institute=institute).delete()
     # unscoped: seed_demo --reset, limited to the demo institute.
     answers, _ = Submission.unscoped.filter(institute=institute).delete()
     # unscoped: seed_demo --reset, limited to the demo institute.
@@ -182,4 +240,4 @@ def reset_assignments(institute: Institute) -> int:
     # unscoped: seed_demo --reset, limited to the demo institute (the
     # options go with their questions).
     questions, _ = Question.unscoped.filter(institute=institute).delete()
-    return answers + assignments + quizzes + questions
+    return attempts + answers + assignments + quizzes + questions

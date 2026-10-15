@@ -513,3 +513,49 @@ class AttemptForm(BaseForm):
             int(name.removeprefix(ITEM_PREFIX)): value
             for name, value in self.cleaned_data.items()
         }
+
+
+MARK_PREFIX = "marks_"
+
+
+class MarkForm(BaseForm):
+    """Marks for the short answers of an attempt, one box per question."""
+
+    def __init__(
+        self,
+        *args: Any,
+        items: list[tuple[int, QuizQuestion]],
+        answers: dict,
+        cancel_url: str,
+        **kwargs: Any,
+    ):
+        """``answers`` maps an item pk to its saved answer (for the marks
+        given before)."""
+        self.cancel_url = cancel_url
+        super().__init__(*args, **kwargs)
+        for number, item in items:
+            marks = item.question.marks
+            saved = answers.get(item.pk)
+            self.fields[f"{MARK_PREFIX}{item.pk}"] = forms.DecimalField(
+                label=f"Question {number} (out of {marks})",
+                min_value=Decimal(0),
+                max_value=Decimal(marks),
+                max_digits=5,
+                decimal_places=1,
+                widget=forms.NumberInput(attrs={"step": "0.5"}),
+                initial=saved.marks if saved else None,
+            )
+        style_widgets(self)
+        self.helper.layout = self.get_layout()
+
+    def get_layout(self) -> Layout:
+        return Layout(
+            Section("", *self.fields.keys()),
+            FormActions("Save marks", self.cancel_url),
+        )
+
+    def marks(self) -> dict[int, Decimal]:
+        return {
+            int(name.removeprefix(MARK_PREFIX)): value
+            for name, value in self.cleaned_data.items()
+        }

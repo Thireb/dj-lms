@@ -397,15 +397,9 @@ def test_list_empty_then_rows(school) -> None:
     add_quiz(school, title="Empty draft", kind=QuizKind.EXAM)
     html = client.get(LIST_URL).content.decode()
     row = table_row(html, "Fractions quiz")
-    assert cell(row, "questions") == ["2", "questions,", "5", "marks"]
+    assert cell(row, "attempts") == ["0", "/", "1"]  # student 1 takes Math
     assert cell(row, "status") == ["Draft"]
     assert cell(row, "duration") == ["30", "min"]
-    assert cell(table_row(html, "Empty draft"), "questions") == [
-        "0",
-        "questions,",
-        "0",
-        "marks",
-    ]
     html = client.get(LIST_URL, {"kind": "exam"}).content.decode()
     assert "Empty draft" in html and "Fractions quiz" not in html
     _in(quiz, publish_quiz)

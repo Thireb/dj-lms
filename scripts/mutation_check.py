@@ -3196,6 +3196,78 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "        if self.attempt is None or self.attempt.status != AttemptStatus.IN_PROGRESS:\n",
         "        if self.attempt is None:\n",
     ),
+    (
+        "an open attempt cannot be marked (5.3 2b)",
+        "apps/assessments/services.py",
+        "        if locked.status == AttemptStatus.IN_PROGRESS:\n            raise ValidationError(MARK_OPEN_MESSAGE)\n",
+        "        if False:\n            raise ValidationError(MARK_OPEN_MESSAGE)\n",
+    ),
+    (
+        "marks are 0 to the question's marks (5.3 2b)",
+        "apps/assessments/services.py",
+        "            if value is None or not 0 <= value <= question.marks:\n",
+        "            if value is None:\n",
+    ),
+    (
+        "the score adds the MCQ marks (5.3 2b)",
+        "apps/assessments/services.py",
+        "            (row.marks for row in saved.values() if row.marks is not None),\n",
+        "            (row.marks for row in saved.values() if row.marks is not None and row.option_id is None),\n",
+    ),
+    (
+        "marking grades the attempt (5.3 2b)",
+        "apps/assessments/services.py",
+        "        locked.status = AttemptStatus.GRADED\n",
+        "        locked.status = AttemptStatus.SUBMITTED\n",
+    ),
+    (
+        "results submit expired attempts (5.3 2b)",
+        "apps/assessments/services.py",
+        "        row.student_id: close_expired(row, now=now)\n",
+        "        row.student_id: row\n",
+    ),
+    (
+        "results leave out inactive students (5.3 2b)",
+        "apps/assessments/services.py",
+        '        subject_id=quiz.subject_id,\n        student__status=ProfileStatus.ACTIVE,\n    ).values_list("student_id", flat=True)\n',
+        '        subject_id=quiz.subject_id,\n    ).values_list("student_id", flat=True)\n',
+    ),
+    (
+        "to mark counts submitted attempts only (5.3 2b)",
+        "apps/assessments/services.py",
+        "            to_mark=sum(status == AttemptStatus.SUBMITTED for status in own.values()),\n",
+        "            to_mark=len(own),\n",
+    ),
+    (
+        "the attempt page needs the quiz of the URL (5.3 2b)",
+        "apps/assessments/views.py",
+        'pk=self.kwargs["attempt_pk"], quiz=self.quiz)\n',
+        'pk=self.kwargs["attempt_pk"])\n',
+    ),
+    (
+        "the attempt page submits an expired attempt (5.3 2b)",
+        "apps/assessments/views.py",
+        "        self.attempt = close_expired(attempt)\n",
+        "        self.attempt = attempt\n",
+    ),
+    (
+        "no marks form while the student answers (5.3 2b)",
+        "apps/assessments/views.py",
+        "        return bool(self.short) and self.attempt.status != AttemptStatus.IN_PROGRESS\n",
+        "        return bool(self.short)\n",
+    ),
+    (
+        "results show not taken once closed (5.3 2b)",
+        "apps/assessments/ui.py",
+        '    if status == QuizStatus.CLOSED:\n        return Badge(NOT_TAKEN, tone="danger")\n    return Badge("Not started"',
+        '    if False:\n        return Badge(NOT_TAKEN, tone="danger")\n    return Badge("Not started"',
+    ),
+    (
+        "demo reset deletes attempts first (5.3 2b)",
+        "apps/assessments/demo.py",
+        "    attempts, _ = QuizAttempt.unscoped.filter(institute=institute).delete()\n",
+        "    attempts = 0\n",
+    ),
 ]
 
 
