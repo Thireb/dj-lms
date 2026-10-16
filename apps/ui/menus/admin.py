@@ -231,6 +231,12 @@ class AdminMenu:
                         feature="messaging",
                     ),
                     MenuItem(
+                        "Broadcast",
+                        "admin:message_broadcast",
+                        "users",
+                        feature="messaging",
+                    ),
+                    MenuItem(
                         "Message monitor",
                         "admin:message_monitor",
                         "eye",

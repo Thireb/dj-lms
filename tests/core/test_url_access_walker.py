@@ -456,6 +456,7 @@ ROUTE_OBJECTS = {
         for portal in ("admin", "teacher", "student", "guardian")
         for action in ("thread", "action")
     },
+    "admin:message_monitor_thread": _thread,
     **{
         f"{portal}:message_draft_delete": _draft
         for portal in ("admin", "teacher", "student", "guardian")

@@ -194,4 +194,15 @@ urlpatterns = [
         messaging.PAGES["admin"]["draft_delete"].as_view(),
         name="message_draft_delete",
     ),
+    path(
+        "messages/broadcast/",
+        messaging.BroadcastPage.as_view(),
+        name="message_broadcast",
+    ),
+    path("messages/monitor/", messaging.MonitorPage.as_view(), name="message_monitor"),
+    path(
+        "messages/monitor/<int:pk>/",
+        messaging.MonitorThreadPage.as_view(),
+        name="message_monitor_thread",
+    ),
 ]

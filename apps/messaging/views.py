@@ -15,22 +15,26 @@ from django.http import Http404, HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 
+from apps.academics.models import Batch
 from apps.core import menus as menu_keys
 from apps.core.query import id_param, search_param
 from apps.core.roles import Role
-from apps.messaging.forms import ComposeForm, ReplyForm
-from apps.messaging.models import Thread
+from apps.messaging.forms import BroadcastForm, ComposeForm, ReplyForm
+from apps.messaging.models import Broadcast, Thread
 from apps.messaging.services import (
     delete_forever,
     folder_members,
     mark_read,
     member_of,
+    monitor_rows,
+    monitor_threads,
     move_to_trash,
     reachable,
     reply,
     restore,
     save_draft,
     search_people,
+    send_broadcast,
     send_draft,
     send_message,
     set_starred,
@@ -38,7 +42,14 @@ from apps.messaging.services import (
     thread_rows,
     unread_count,
 )
-from apps.messaging.ui import MONITOR_NOTICE, MessageTable, message_rows, person
+from apps.messaging.ui import (
+    MONITOR_NOTICE,
+    BroadcastTable,
+    MessageTable,
+    MonitorTable,
+    message_rows,
+    person,
+)
 from apps.ui.components import (
     Button,
     ConfirmDialog,
@@ -55,6 +66,13 @@ from apps.ui.components.forms import CrispyForm, PortalPostForm
 from apps.ui.views.pages import DetailPage, ListPage, PortalPageView
 
 PAGE_SIZE = 25
+MONITOR_ROLES = {
+    Role.INSTITUTE_ADMIN: "Admin",
+    Role.SUB_ADMIN: "Sub-admin",
+    Role.TEACHER: "Teacher",
+    Role.STUDENT: "Student",
+    Role.GUARDIAN: "Guardian",
+}
 REACH_NOTE = (  # SPEC 6.5, in short
     "Students and guardians: the institute office and their teachers. "
     "Teachers: the office, other teachers, and their students and guardians."
@@ -459,6 +477,163 @@ class DraftDeleteView(MessagingMixin, PortalPageView):
         draft.delete()
         messages.success(request, "Draft deleted.")
         return HttpResponseRedirect(f"{self.url('inbox')}?folder=drafts")
+
+
+# Admin extras (FEATURES 11): Broadcast and Message Monitor
+
+
+class AdminMessagingMixin(MessagingMixin):
+    portal = "admin"
+    menu_key = menu_keys.MESSAGES
+    allowed_roles = PORTAL_ROLES["admin"]
+
+
+class BroadcastPage(AdminMessagingMixin, DetailPage):
+    title = "Broadcast"
+
+    def make_form(self, data: Any = None) -> BroadcastForm:
+        batches = Batch.objects.for_user(self.request.user).filter(is_active=True)
+        return BroadcastForm(
+            data, batches=batches.order_by("name"), cancel_url=self.url("inbox")
+        )
+
+    def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        self.form = self.make_form()
+        return super().get(request, *args, **kwargs)
+
+    def post(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        self.form = self.make_form(request.POST)
+        if self.form.is_valid():
+            data = self.form.cleaned_data
+            try:
+                broadcast = send_broadcast(
+                    request.user,
+                    data["audience"],
+                    data["subject"],
+                    data["body"],
+                    batch=data["batch"],
+                )
+            except ValidationError as error:
+                if hasattr(error, "error_dict"):
+                    for name, errors in error.message_dict.items():
+                        self.form.add_error(
+                            name if name in self.form.fields else None, errors
+                        )
+                else:
+                    self.form.add_error(None, error)
+            else:
+                people = "person" if broadcast.recipients == 1 else "people"
+                messages.success(
+                    request, f"Broadcast sent to {broadcast.recipients} {people}."
+                )
+                return HttpResponseRedirect(request.path)
+        return self.render_to_response(self.get_context_data())
+
+    def get_subtitle(self) -> str:
+        return (
+            "Each person gets the message in their own inbox. "
+            "A reply comes back only to you."
+        )
+
+    def get_primary_cards(self) -> list[Any]:
+        self.form.helper.disable_csrf = True  # PortalPostForm adds the token
+        form = PortalPostForm(
+            action=self.request.path, body=CrispyForm(form=self.form), framed=False
+        )
+        sent = Broadcast.objects.for_user(self.request.user).select_related("batch")[
+            :20
+        ]
+        return [
+            SectionCard(title="New broadcast", icon="send", body=form),
+            SectionCard(
+                title="Sent broadcasts",
+                icon="list",
+                body=BroadcastTable(rows=list(sent)),
+            ),
+        ]
+
+
+class MonitorPage(AdminMessagingMixin, ListPage):
+    """Every thread of the institute (FEATURES 11), read only."""
+
+    title = "Message monitor"
+
+    def get_subtitle(self) -> str:
+        return "Every conversation in the institute. Opening one does not mark it read."
+
+    def get_components(self) -> dict[str, Any]:
+        query = search_param(self.request.GET.get("q"))
+        role = self.request.GET.get("role", "")
+        role = role if role in MONITOR_ROLES else ""
+        threads = monitor_threads(self.request.user, query=query, role=role)
+        page = Paginator(threads, PAGE_SIZE).get_page(self.request.GET.get("page"))
+        filters = FilterBar(
+            [
+                {
+                    "name": "q",
+                    "label": "Search",
+                    "value": query,
+                    "placeholder": "Subject, text or name",
+                },
+                {
+                    "name": "role",
+                    "label": "Role",
+                    "value": role,
+                    "options": [("", "Any role"), *MONITOR_ROLES.items()],
+                },
+            ]
+        )
+        params = urlencode(
+            {key: value for key, value in (("q", query), ("role", role)) if value}
+        )
+        return {
+            "filters": filters,
+            "table": MonitorTable(
+                monitor_rows(list(page.object_list)),
+                open_url=lambda thread: self.url("monitor_thread", pk=thread.pk),
+            ),
+            "pagination": Pagination(page, query=params),
+        }
+
+
+class MonitorThreadPage(AdminMessagingMixin, DetailPage):
+    """One thread, read only; the admin's own read state does not change."""
+
+    title = "Conversation"
+
+    def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        self.thread = get_object_or_404(
+            Thread.objects.for_user(request.user), pk=self.kwargs["pk"]
+        )
+        self.title = self.thread.subject
+        return super().get(request, *args, **kwargs)
+
+    def get_subtitle(self) -> str:
+        return "Read only, from the Message Monitor."
+
+    def get_actions(self) -> list[Any]:
+        return [
+            Button("Back to the monitor", url=self.url("monitor"), variant="secondary")
+        ]
+
+    def get_primary_cards(self) -> list[Any]:
+        rows = message_rows(thread_messages(self.thread), self.request.user)
+        return [SectionCard(title="Conversation", icon="mail", body=MessageList(rows))]
+
+    def get_sidebar_cards(self) -> list[Any]:
+        from apps.messaging.models import ThreadMember
+
+        people = ThreadMember.objects.filter(thread=self.thread).select_related("user")
+        names = ", ".join(
+            sorted(
+                f"{person(row.user)} ({row.user.get_role_display()})" for row in people
+            )
+        )
+        return [
+            SectionCard(
+                title="Details", icon="list", body=DetailList([("People", names)])
+            )
+        ]
 
 
 def _for_portal(base: type, portal: str) -> type:

@@ -72,18 +72,17 @@ def notify(
     users: Iterable[Any],
     event: str,
     text: str | Callable[[Any], str],
-    link: str = "",
+    link: str | Callable[[Any], str] = "",
     *,
     now: datetime | None = None,
 ) -> int:
     """Make one notification per recipient; returns how many were made.
     Runs in the institute's tenant context. ``text`` may be a function of
     the recipient; it runs in the recipient's time zone, so a time in the
-    text is their local time."""
+    text is their local time. ``link`` may be a function of the recipient
+    too (each broadcast recipient has their own thread)."""
     if event not in EVENTS:
         raise ValueError(f"Unknown notification event: {event!r}")
-    if link and not _LINK.match(link):
-        raise ValueError(f"A notification link must be a path in this site: {link!r}")
     institute = get_current_institute()
     if institute is None:
         raise RuntimeError("notify needs the institute's tenant context.")
@@ -102,7 +101,7 @@ def notify(
                 user=user,
                 event=event,
                 text=_text_for(text, user, institute),
-                link=link,
+                link=_link_for(link, user),
                 created_at=now,
             )
         )
@@ -116,6 +115,13 @@ def _text_for(text: str | Callable[[Any], str], user: Any, institute: Any) -> st
         with timezone.override(zone):
             text = text(user)
     return text.strip()[:TEXT_LENGTH]
+
+
+def _link_for(link: str | Callable[[Any], str], user: Any) -> str:
+    link = link(user) if callable(link) else link
+    if link and not _LINK.match(link):
+        raise ValueError(f"A notification link must be a path in this site: {link!r}")
+    return link
 
 
 def unread_count(user: Any) -> int:

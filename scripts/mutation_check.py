@@ -3682,6 +3682,36 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         'Draft.objects.for_user(user), pk=id_param(params.get("draft"))',
         'Draft.objects.all(), pk=id_param(params.get("draft"))',
     ),
+    (
+        "only the office sends a broadcast (6.3)",
+        "apps/messaging/services.py",
+        "    if sender.role not in ADMIN_ROLES:\n",
+        "    if False:\n",
+    ),
+    (
+        "a batch broadcast reaches the guardians too (6.3)",
+        "apps/messaging/services.py",
+        "            | Q(guardian_profile__student_links__student__in=students)\n",
+        "",
+    ),
+    (
+        "broadcast threads stay out of Sent (6.3)",
+        "apps/messaging/services.py",
+        ".exclude(thread__broadcast__sender=user)",
+        "",
+    ),
+    (
+        "the monitor role filter keeps that role (6.3)",
+        "apps/messaging/services.py",
+        "        rows = rows.filter(members__user__role=role)\n",
+        "        pass\n",
+    ),
+    (
+        "a broadcast skips its sender (6.3)",
+        "apps/messaging/services.py",
+        ".exclude(pk=sender.pk)",
+        "",
+    ),
 ]
 
 

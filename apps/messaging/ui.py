@@ -104,3 +104,51 @@ class DraftTable(DataTable):
                 ),
             ]
         )
+
+
+class MonitorTable(DataTable):
+    """Message Monitor (SPEC 3): Date, From, To, Subject, Last message."""
+
+    empty_title = "No messages match."
+
+    def __init__(self, rows, open_url, **props):
+        self.open_url = open_url
+        super().__init__(rows=rows, **props)
+
+    @property
+    def columns(self) -> list[Column]:  # type: ignore[override]
+        return [
+            Column("when", "Date", lambda row: when(row.thread.last_message_at)),
+            Column("from", "From", lambda row: row.sender),
+            Column("to", "To", lambda row: row.to),
+            Column("subject", "Subject", lambda row: row.thread.subject),
+            Column(
+                "preview",
+                "Last message",
+                lambda row: Truncator(row.last_body).chars(PREVIEW),
+            ),
+            Column("actions", "", self.open_button),
+        ]
+
+    def open_button(self, row) -> IconButton:
+        url = self.open_url(row.thread)
+        return IconButton("eye", f"Open {row.thread.subject}", url=url)
+
+
+class BroadcastTable(DataTable):
+    """Sent broadcasts: Date, Sent to, Subject, People."""
+
+    empty_title = "No broadcasts yet."
+
+    @property
+    def columns(self) -> list[Column]:  # type: ignore[override]
+        return [
+            Column("when", "Date", lambda b: when(b.created_at)),
+            Column("audience", "Sent to", self.audience),
+            Column("subject", "Subject", lambda b: b.subject),
+            Column("recipients", "People", lambda b: str(b.recipients)),
+        ]
+
+    def audience(self, broadcast) -> str:
+        label = broadcast.get_audience_display()
+        return f"{label}: {broadcast.batch.name}" if broadcast.batch else label

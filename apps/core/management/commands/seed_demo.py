@@ -15,6 +15,7 @@ from apps.core.features import PLAN_CODE_PREMIUM
 from apps.core.roles import Role
 from apps.institutes.models import Institute, Plan
 from apps.lectures.demo import reset_lectures, seed_lectures
+from apps.messaging.demo import reset_messages, seed_messages
 from apps.people.demo import reset_people, seed_people
 
 DEMO_INSTITUTE_NAME = "Demo Institute"
@@ -54,6 +55,7 @@ class Command(BaseCommand):
         seed_lectures(institute)
         seed_attendance(institute)
         seed_assignments(institute)
+        seed_messages(institute)
         self.stdout.write(self.style.SUCCESS("Demo data ready."))
 
     def _demo_institute(self) -> Institute:
@@ -87,6 +89,7 @@ class Command(BaseCommand):
         deleted = 0
         institute = Institute.objects.filter(name=DEMO_INSTITUTE_NAME).first()
         if institute is not None:
+            deleted += reset_messages(institute)
             deleted += reset_assignments(institute)
             deleted += reset_attendance(institute)
             deleted += reset_lectures(institute)

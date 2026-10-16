@@ -27,3 +27,11 @@ def new_message(thread: Thread, sender: Any, recipients: list[Any]) -> None:
     text = f"New message from {person(sender)}: {thread.subject}"
     for user in recipients:
         notify([user], "new_message", text, thread_url(user, thread))
+
+
+def broadcast_sent(broadcast: Any, threads: dict[Any, Thread]) -> None:
+    """One notification per recipient, each linking to their own thread."""
+    text = f"New message from {person(broadcast.sender)}: {broadcast.subject}"
+    notify(
+        list(threads), "new_message", text, lambda user: thread_url(user, threads[user])
+    )
