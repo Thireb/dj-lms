@@ -3424,6 +3424,42 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         '        return f"Closed {when(quiz.closes_at)}."\n',
         '        return f"Closed. It closes {when(quiz.closes_at)}."\n',
     ),
+    (
+        "notify leaves out inactive users (6.1)",
+        "apps/notifications/services.py",
+        "        if user.pk in seen or not user.is_active or user.institute_id != institute.pk:\n",
+        "        if user.pk in seen or user.institute_id != institute.pk:\n",
+    ),
+    (
+        "notify leaves out other institutes (6.1)",
+        "apps/notifications/services.py",
+        "        if user.pk in seen or not user.is_active or user.institute_id != institute.pk:\n",
+        "        if user.pk in seen or not user.is_active:\n",
+    ),
+    (
+        "notify respects the alert switches (6.1)",
+        "apps/notifications/services.py",
+        "        if switch and not getattr(user, switch):\n",
+        "        if False:\n",
+    ),
+    (
+        "notification links stay in the site (6.1)",
+        "apps/notifications/services.py",
+        '_LINK = re.compile(r"^/(?!/)[^\\s\\\\]*$")\n',
+        '_LINK = re.compile(r".*")\n',
+    ),
+    (
+        "a user sees only their own notifications (6.1)",
+        "apps/notifications/models.py",
+        '        return scoped.filter(user_id=getattr(user, "pk", None))\n',
+        "        return scoped\n",
+    ),
+    (
+        "notifications are kept for 90 days (6.1)",
+        "apps/notifications/services.py",
+        "Notification.objects.filter(created_at__lt=cutoff)",
+        "Notification.objects.filter(created_at__lte=cutoff)",
+    ),
 ]
 
 

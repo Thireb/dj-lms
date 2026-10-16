@@ -345,7 +345,7 @@ Lectures counted = lectures with status `finished` in the month, taught by the t
 
 ### 6.11 Plans and limits (assumed)
 - Basic (B): setup, students, teachers, lectures, attendance, assignments, quizzes, PWA.
-- Premium (P): everything in Basic plus fees, payroll, leave, homework, lesson plans, reports, messages, documents, sub-admin.
+- Premium (P): everything in Basic plus fees, payroll, leave, homework, lesson plans, reports, ~~messages,~~ documents, sub-admin. Owner decision 2026-10-16: messages are Basic (the `messaging` key).
 - Max active students per plan: Basic 100, Premium unlimited. (Adjustable per institute by Super Admin.)
 
 ## 7. Notifications (in-app bell)
@@ -378,6 +378,9 @@ Lectures counted = lectures with status `finished` in the month, taught by the t
 
 - Each user can switch off "fee alerts" and "class alerts" (not system notices).
 - Notifications older than 90 days are deleted.
+- Groups (assumed in 6.1): class alerts are the lecture events and "Quiz opens soon"; fee alerts are the challan, receipt and payment events; every other event is a system notice and always goes. Inactive users get nothing. A notification has a short text and a link to a page in the site.
+- Owner decisions 2026-10-16 (Phase 6): a recurring schedule sends one notification per save or edit, not one per lecture; a reply to a broadcast goes only to the sender, in a new private thread; the Messages pages and the compose form say "Institute admins can read all messages."
+- Assumed for 6.2: only the events of built features are hooked (lectures, assignments, quizzes, portal access); each later phase hooks its own. "Lecture changed" means a new start time, duration, teacher or link. "Starts in 15 minutes" and "Quiz opens soon" (1 hour before Opens) come from the 5-minute job. "Submission received" goes for the first answer only. "Quiz graded" goes when the teacher marks the attempt; an MCQ-only quiz is graded at submit and notifies the guardian only. A guardian's notification names the child.
 
 ## 8. Dashboards (KPI definitions)
 

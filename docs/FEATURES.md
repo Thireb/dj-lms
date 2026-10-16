@@ -130,7 +130,9 @@ Setup order the reference teaches: Campus, Classes, Batches, Subjects, Fee Plans
 - [ ] On approving teacher leave, clashing lectures are listed with three actions: Reschedule, Reassign (to another teacher), Cancel.
 - [ ] Admin screens: Student Leave Approval, Teacher Leave Approval.
 
-## 11. Messages (P)
+## 11. Messages (B)
+
+Owner decision 2026-10-16: Messages are in the Basic plan, as the `messaging` feature key already is (ARCHITECTURE 5, backlog G4). Before, this heading said (P).
 
 - [ ] Mailbox between admin, teachers, students, and guardians.
 - [ ] Folders: Inbox, Sent, Starred, Drafts, Trash.

@@ -160,7 +160,7 @@ Operations:
 - `PortalAccessRule` (student, blocked, exempt) plus an institute setting for automatic defaulter blocking.
 - `SalaryPlan` (type: fixed / per_lecture / per_student / hourly / percent / hybrid, rates), `PlanAssignment`, `PayrollRun`, `SalaryPayment`, `Advance`.
 - `Thread`, `Message` (folders: inbox, sent, starred, drafts, trash; admin broadcast and monitor).
-- `Notification` (user, type, text, link, read_at).
+- `Notification` (user, type, text, link, read_at). Built in 6.1: `Notification` (user, event, text up to 300 characters, link: a path in this site, `created_at`, `read_at`) in the `notifications` app; `for_user` gives every role only their own rows, admins too. `User.fee_alerts` and `User.class_alerts` switch the two alert groups off (SPEC 4.22).
 - `CourseDocument` (batch, subject, file, download_locked).
 - `Certificate` (student, code, issued_on): rules unknown, build last.
 
@@ -194,7 +194,7 @@ Set up in 3.2: `config/celery.py`, broker `REDIS_URL`, no result backend. Tests 
 
 ## 10. Notifications
 
-- Create `Notification` rows in one place (`notifications.services.notify`).
+- Create `Notification` rows in one place (`notifications.services.notify`). Built in 6.1: `notify(users, event, text, link)` runs in the tenant context, knows every SPEC 7 event and its group (`EVENTS`: class alerts, fee alerts or system notices), and leaves out inactive users, users of another institute and users who switched the group off. `notifications.tasks.delete_all_old_notifications` runs nightly at 01:00 UTC.
 - Show a bell with unread count; HTMX polls or refreshes on navigation.
 - Email and WhatsApp/SMS are later options.
 
