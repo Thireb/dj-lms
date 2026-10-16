@@ -3952,6 +3952,84 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         '    return f"\'{text}" if text[:1] in ("=", "+", "-", "@", "\\t", "\\r") else text\n',
         "    return text\n",
     ),
+    (
+        "defaulters wait the grace days (7.3c)",
+        "apps/finance/reports.py",
+        "    return today - timedelta(days=institute.settings.grace_days_after_due)\n",
+        "    return today\n",
+    ),
+    (
+        "defaulters are overdue longer than grace (7.3c)",
+        "apps/finance/reports.py",
+        "        due_date__lt=defaulter_cutoff(institute, today),\n",
+        "        due_date__lte=defaulter_cutoff(institute, today),\n",
+    ),
+    (
+        "defaulters count partial challans (7.3c)",
+        "apps/finance/reports.py",
+        "        status__in=[ChallanStatus.PENDING, ChallanStatus.PARTIAL],\n        due_date__lt=defaulter_cutoff",
+        "        status__in=[ChallanStatus.PENDING],\n        due_date__lt=defaulter_cutoff",
+    ),
+    (
+        "defaulters batch filter (7.3c)",
+        "apps/finance/reports.py",
+        "        challans = challans.filter(student__batch_subjects__batch_id=batch_id)\n",
+        "        pass\n",
+    ),
+    (
+        "defaulters minimum includes the amount (7.3c)",
+        "apps/finance/reports.py",
+        "        groups = groups.filter(due__gte=min_amount)\n",
+        "        groups = groups.filter(due__gt=min_amount)\n",
+    ),
+    (
+        "dashboard money leaves out cancelled (7.3c)",
+        "apps/finance/reports.py",
+        "    live = this_month.exclude(status=ChallanStatus.CANCELLED)\n",
+        "    live = this_month\n",
+    ),
+    (
+        "dashboard collected stops today (7.3c)",
+        "apps/finance/reports.py",
+        "        .filter(paid_on__gte=month, paid_on__lte=today)\n",
+        "        .filter(paid_on__gte=month)\n",
+    ),
+    (
+        "defaulters minimum has a ceiling (7.3c)",
+        "apps/finance/views.py",
+        "            minimum.is_finite() and 0 < minimum <= MAX_FILTER_AMOUNT\n",
+        "            minimum.is_finite() and 0 < minimum\n",
+    ),
+    (
+        "defaulters message needs the menu (7.3c)",
+        "apps/finance/views.py",
+        "                and user_has_menu(user, menu_keys.MESSAGES),\n",
+        "                and True,\n",
+    ),
+    (
+        "defaulters block needs People (7.3c)",
+        "apps/finance/views.py",
+        "                can_block=user_has_menu(user, menu_keys.PEOPLE),\n",
+        "                can_block=True,\n",
+    ),
+    (
+        "dashboard links need Finance (7.3c)",
+        "apps/finance/views.py",
+        "        if user_has_menu(self.request.user, menu_keys.FINANCE):\n",
+        "        if True:\n",
+    ),
+    (
+        "portal action back url refuses // (7.3c)",
+        "apps/people/views.py",
+        'ok = wanted.startswith(home) and "//" not in wanted and wanted.isprintable()',
+        "ok = wanted.startswith(home) and wanted.isprintable()",
+    ),
+    (
+        "portal action back url refuses backslash (7.3c)",
+        "apps/people/views.py",
+        'return wanted if ok and "\\\\" not in wanted else reverse("admin:portal_access")',
+        'return wanted if ok else reverse("admin:portal_access")',
+    ),
 ]
 
 
