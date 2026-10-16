@@ -53,7 +53,9 @@ class MessageTable(DataTable):
     def subject(self, row: ThreadRow) -> Any:
         if not row.unread:
             return row.thread.subject
-        return BlockStack(blocks=[Badge("New", tone="info"), row.thread.subject])
+        return BlockStack(
+            blocks=[Badge("New", tone="info"), row.thread.subject], inline=True
+        )
 
     def open_button(self, row: ThreadRow) -> IconButton:
         label = f"Open {row.thread.subject}"

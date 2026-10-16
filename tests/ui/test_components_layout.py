@@ -115,3 +115,13 @@ def test_sidebar_background_grows_with_its_items() -> None:
 
     assert "min-h-full" in classes
     assert "h-full" not in classes
+
+
+def test_block_stack_inline_puts_items_on_one_line() -> None:
+    from apps.ui.components import Badge
+    from apps.ui.components.block_stack import BlockStack
+
+    html = str(BlockStack(blocks=[Badge("New"), "<b>Subject</b>"], inline=True))
+    assert html.startswith('<div class="flex flex-wrap items-center gap-2">')
+    assert "<span" in html and "&lt;b&gt;Subject" in html
+    assert "space-y-4" in str(BlockStack(blocks=["a"]))

@@ -25,6 +25,11 @@ DEMO_INSTITUTE_USERS: tuple[tuple[str, str], ...] = (
     ("demo-admin@example.com", Role.INSTITUTE_ADMIN),
     ("demo-sub@example.com", Role.SUB_ADMIN),
 )
+# Fake names, so messages and lists show a name, not an email (Phase 6 audit).
+DEMO_NAMES = {
+    "demo-admin@example.com": ("Office", "Admin"),
+    "demo-sub@example.com": ("Office", "Helper"),
+}
 PASSWORD_ENV_VAR = "SEED_DEMO_PASSWORD"
 
 
@@ -79,6 +84,7 @@ class Command(BaseCommand):
     ) -> None:
         user = User.objects.filter(email=email).first() or User(email=email)
         user.role = role
+        user.first_name, user.last_name = DEMO_NAMES.get(email, ("", ""))
         user.institute = institute
         user.timezone = institute.timezone if institute else ""
         user.is_active = True

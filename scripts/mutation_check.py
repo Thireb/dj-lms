@@ -3712,6 +3712,24 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         ".exclude(pk=sender.pk)",
         "",
     ),
+    (
+        "a hidden field shows no label (Phase 6 audit)",
+        "apps/ui/templates/ui/forms/field.html",
+        "{% if field.is_hidden %}{{ field }}{% elif ",
+        "{% if ",
+    ),
+    (
+        "inline BlockStack is one line (Phase 6 audit)",
+        "apps/ui/templates/ui/components/block_stack.html",
+        '{% if inline %}<div class="flex',
+        '{% if False %}<div class="flex',
+    ),
+    (
+        "demo admins have names (Phase 6 audit)",
+        "apps/core/management/commands/seed_demo.py",
+        '        user.first_name, user.last_name = DEMO_NAMES.get(email, ("", ""))\n',
+        "",
+    ),
 ]
 
 
