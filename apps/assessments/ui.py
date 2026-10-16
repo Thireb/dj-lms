@@ -618,7 +618,8 @@ def answer_text(row: AnswerRow) -> str:
 
 class AnswerTable(DataTable):
     """One attempt's answers in the student's order, with the right answer
-    and the marks, on the teacher's attempt page."""
+    and the marks: the teacher's attempt page, and the student's quiz page
+    once the quiz closes."""
 
     empty_title = "This quiz has no questions."
 

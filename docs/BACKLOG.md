@@ -309,6 +309,16 @@ Left out of 5.1 on purpose, or found while building.
 | AS11 | Exam flags come from the student's browser (5.3 part 2c). A student who turns off JavaScript, or blocks the request, sends no flags; the server cannot see a page leave. The paper still works without JavaScript (the server ends the attempt at the deadline). If an institute needs proof, show "no flag data" when the paper's guard never reported in (for example a start ping). | Low | [ ] |
 | AS4 | Notifications for "assignment published", "submission received" and "graded" (SPEC 7) wait for the notification service (roadmap 6.1 and 6.2). | Low | [ ] |
 
+## Phase 5 audit (2026-10-16, after PR #64)
+
+Full review of roadmap 5.1 to 5.4 on `main` 7631c0f: pytest 2130 passed, ruff clean, makemigrations clean, mutation check 557 caught; 17 assessment pages opened as `demo-teacher`, `demo-student`, `demo-guardian` and `demo-admin` at 360px and 1440px (all 200, no sideways scroll, no console errors, no axe WCAG A/AA violations). Security pass clean: `unscoped` only in the demo reset, every view declares `allowed_roles`, the admin quiz pages use the Academic menu key, no `|safe`, the exam flag POST needs the CSRF token.
+
+| # | Item | Priority | Status |
+|---|---|---|---|
+| AS12 | A student who left a batch or subject still saw their old quizzes and assignments in the lists, but the open link gave 404: the lists keep rows with an attempt or answer, the detail scope needed a current enrolment. Fixed: the student and guardian scopes of `Quiz` and `Assignment` also include the rows with the student's own attempt or answer (a draft quiz stays hidden). | Low | [x] |
+| AS13 | The paper's `auto_submit` field marked a normal Submit as "Sent when the time ended" when a student added it by hand. The score did not change. Fixed: the flag counts only within 1 minute of the deadline. | Low | [x] |
+| AS14 | Owner decision: "Your answers" shows the right answers after a quiz closes, even when the teacher uses the same bank question in a later quiz. Real exams have the same risk. Decided 2026-10-16: keep it. | Low | [x] |
+
 ## Later (deployment hardening, Phase 12)
 
 | # | Item | Priority | Status |
