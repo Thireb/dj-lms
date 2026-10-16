@@ -100,7 +100,7 @@ Setup order the reference teaches: Campus, Classes, Batches, Subjects, Fee Plans
 
 ## 8. Fees (P)
 
-- [ ] **Generate challan:** pick students, month, due date; bulk generate; print.
+- [x] **Generate challan:** pick students, month, due date; bulk generate; print. Built in 7.2: Generate challans with a preview, a Celery task, and PDFs (one challan or the filtered list).
 - [ ] Challan Dashboard and Challan Records.
 - [ ] **Process payment:** office records cash or transfer against a challan (amount, date, method).
 - [ ] **Receipt inbox:** guardians upload proof of payment; admin approves or rejects with an optional message. Optional auto-approve setting.

@@ -412,6 +412,7 @@ Lectures counted = lectures with status `finished` in the month, taught by the t
 - Footer: payment instructions text (editable in settings), signature line, note about late fee (if set).
 - Three copies on one page: Institute, Student, Bank/Office (labelled).
 - Bulk print: all selected challans in one PDF, 1 per page.
+- Built in 7.2 (assumed, check against the demo): A4 landscape, the three copies side by side. No logo yet (no upload storage for it; the institute name, address and phone print instead). "Total payable" is the amount, plus a late fee once added, minus what is paid; the amount in words uses thousand and million. "Previous balance" is the unpaid total of the student's older challans, shown and not added. The payment text is one fixed sentence until a settings field exists. Bulk print takes the Challan records filters, leaves out cancelled challans and stops at 300 challans. Print colours come from `ui/print/tokens.css` (the Lexicon tokens).
 
 ### 9.2 Salary slip
 - Header as above. Title "Salary Slip", slip no., month.

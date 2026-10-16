@@ -3826,6 +3826,18 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "    return open_ and today > challan.due_date\n",
         "    return open_ and today >= challan.due_date\n",
     ),
+    (
+        "the previous balance counts older months only (7.2)",
+        "apps/finance/pdf.py",
+        'row["month"] < challan.month',
+        'row["month"] <= challan.month',
+    ),
+    (
+        "bulk print leaves out cancelled challans (7.2)",
+        "apps/finance/views.py",
+        "        ).exclude(status=ChallanStatus.CANCELLED)\n",
+        "        )\n",
+    ),
 ]
 
 

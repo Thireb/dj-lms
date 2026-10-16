@@ -21,6 +21,7 @@ from apps.core.query import id_param, search_param
 from apps.core.roles import Role
 from apps.finance.forms import ChallanConfirmForm, ChallanGenerateForm, FeePlanForm
 from apps.finance.models import Challan, ChallanStatus, FeePlan
+from apps.finance.pdf import challans_pdf
 from apps.finance.services import (
     OVERDUE,
     cancel_challan,
@@ -394,7 +395,17 @@ class ChallanListPage(ChallanMixin, ListPage):
 
     def get_actions(self) -> list[Any]:
         url = reverse("admin:challan_generate")
-        return [Button("Generate challans", url=url, icon="file-plus")]
+        query = self.request.GET.urlencode()
+        print_url = reverse("admin:challan_print") + (f"?{query}" if query else "")
+        return [
+            Button(
+                "Print these challans",
+                url=print_url,
+                variant="secondary",
+                icon="download",
+            ),
+            Button("Generate challans", url=url, icon="file-plus"),
+        ]
 
     def get_components(self) -> dict[str, Any]:
         params = self.request.GET
@@ -463,16 +474,25 @@ class ChallanDetailPage(ChallanMixin, DetailPage):
 
     def get_actions(self) -> list[Any]:
         challan = self.challan
-        if challan.status == ChallanStatus.CANCELLED or challan.paid > 0:
+        if challan.status == ChallanStatus.CANCELLED:
             return []
+        print_button = Button(
+            "Print challan",
+            url=challan_url(challan, "pdf"),
+            variant="secondary",
+            icon="download",
+        )
+        if challan.paid > 0:
+            return [print_button]
         return [
+            print_button,
             ConfirmDialog(
                 f"Cancel {challan.number}? It takes no payments after this.",
                 "Cancel challan",
                 url=challan_url(challan, "cancel"),
                 trigger_label="Cancel challan",
                 dismiss_label="Keep challan",
-            )
+            ),
         ]
 
     def get_primary_cards(self) -> list[Any]:
@@ -512,3 +532,58 @@ class ChallanCancelView(ChallanMixin, PortalPageView):
         else:
             messages.success(request, f"{challan.number} cancelled.")
         return HttpResponseRedirect(challan_url(challan))
+
+
+PRINT_LIMIT = 300  # challans in one bulk PDF
+
+
+def pdf_response(content: bytes, filename: str) -> HttpResponse:
+    response = HttpResponse(content, content_type="application/pdf")
+    response["Content-Disposition"] = f'inline; filename="{filename}"'
+    return response
+
+
+def printable(rows: Any) -> list[Challan]:
+    return list(
+        rows.select_related("student__user", "student__class_label").prefetch_related(
+            "lines", "student__batch_subjects__batch"
+        )
+    )
+
+
+class ChallanPdfView(ChallanMixin, PortalPageView):
+    """One challan as a PDF (SPEC 9.1: three copies on one page)."""
+
+    http_method_names = ["get"]
+
+    def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        challan = self.get_challan()
+        rows = Challan.objects.for_user(request.user).filter(pk=challan.pk)
+        content = challans_pdf(printable(rows), self.get_institute())
+        return pdf_response(content, f"{challan.number}.pdf")
+
+
+class ChallanPrintView(ChallanMixin, PortalPageView):
+    """The challans of the current Challan records filters in one PDF, one
+    per page (SPEC 9.1 bulk print). Cancelled challans are left out."""
+
+    http_method_names = ["get"]
+
+    def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        params = request.GET
+        rows = list_challans(
+            request.user,
+            month=parse_month(search_param(params.get("month"))),
+            batch_id=id_param(search_param(params.get("batch"))),
+            status=search_param(params.get("status")),
+            search=search_param(params.get("q")),
+        ).exclude(status=ChallanStatus.CANCELLED)
+        challans = printable(rows[:PRINT_LIMIT])
+        if not challans:
+            messages.error(request, "No challans to print for these filters.")
+            return HttpResponseRedirect(
+                f"{reverse('admin:challan_list')}?{params.urlencode()}"
+            )
+        return pdf_response(
+            challans_pdf(challans, self.get_institute()), "challans.pdf"
+        )
