@@ -38,6 +38,8 @@ def _settings_payload(**overrides) -> dict[str, str]:
         "currency_code": "PKR",
         "join_window_minutes": "10",
         "fee_due_day": "10",
+        "late_fee": "0",
+        "academic_year_start_month": "4",
         "grace_days_after_due": "5",
         "require_admin_approval_daily_reports": "on",
         "teacher_leave_days_per_year": "12",

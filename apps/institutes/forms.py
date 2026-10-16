@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from calendar import month_name
 from zoneinfo import available_timezones
 
 from crispy_forms.layout import Layout
@@ -40,6 +41,11 @@ class InstituteSettingsForm(TenantModelForm, forms.ModelForm):
     save_label = "Save institute settings"
 
     timezone = forms.CharField(label="Time zone", max_length=63)
+    academic_year_start_month = forms.TypedChoiceField(
+        label="Academic year starts in",
+        choices=[(n, month_name[n]) for n in range(1, 13)],
+        coerce=int,
+    )
     currency_code = forms.ChoiceField(
         label="Currency code",
         choices=CURRENCY_CHOICES,
@@ -51,6 +57,8 @@ class InstituteSettingsForm(TenantModelForm, forms.ModelForm):
             "join_window_minutes",
             "fee_due_day",
             "grace_days_after_due",
+            "late_fee",
+            "academic_year_start_month",
             "auto_block_defaulters",
             "auto_approve_guardian_receipts",
             "require_admin_approval_homework",
@@ -63,6 +71,12 @@ class InstituteSettingsForm(TenantModelForm, forms.ModelForm):
             "lock_course_document_downloads",
             "recurring_lecture_horizon_weeks",
         ]
+        help_texts = {
+            "late_fee": (
+                "Added once to a challan that is not paid in full by its due "
+                "date. 0 means no late fee."
+            ),
+        }
 
     def __init__(self, *args, institute: Institute, **kwargs):
         self.institute = institute
@@ -105,6 +119,8 @@ class InstituteSettingsForm(TenantModelForm, forms.ModelForm):
                 "join_window_minutes",
                 "fee_due_day",
                 "grace_days_after_due",
+                "late_fee",
+                "academic_year_start_month",
                 "auto_block_defaulters",
                 "auto_approve_guardian_receipts",
                 description="When fees fall due and how the portal reacts.",

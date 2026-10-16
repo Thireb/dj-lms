@@ -43,6 +43,8 @@ Menu key `institute`: `institute_admin`, and a `sub_admin` granted Institute.
 | Join window (minutes before start students can join) | number | 10 |
 | Fee due day of month | number 1-28 | 10 |
 | Grace days after due date | number | 5 |
+| Late fee (owner decision 2026-10-16; added once to a challan not paid in full by its due date; 0 = none) | money, 0 to 100,000 | 0 |
+| Academic year starts in (owner decision 2026-10-16; for "fee paid % this academic year") | month | April |
 | Auto-block defaulters from student portal | on/off | off |
 | Auto-approve guardian receipts | on/off | off |
 | Require admin approval for homework | on/off | off |
@@ -163,6 +165,7 @@ Name*, Status. Name unique per institute.
 
 ### 4.4 Fee plan
 Name*, Amount* (greater than 0), Status.
+Built in 7.1 (assumed, check against the demo): the name is unique per institute, ignoring case; the amount is a monthly amount with 2 decimals, at most 10,000,000. A new amount counts only for challans made after the change. Deactivate keeps the plan on students who have it; it is not offered on new enrolments.
 
 ### 4.5 Add lecture
 Title*, Date*, Start time*, Duration (minutes)*, Teacher* (admin only; teacher is fixed when a teacher creates it), Batch*, Subjects* (only those assigned to the chosen teacher in that batch), Delivery mode* (S) Manual link / In person, Meeting link (required if Manual link), Description.

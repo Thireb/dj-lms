@@ -5,6 +5,7 @@ from django.urls import path
 from apps.academics import views as academics
 from apps.assessments import views as assessments
 from apps.attendance import views as attendance
+from apps.finance import views as finance
 from apps.institutes.views import CampusProfilePage, InstituteSettingsPage
 from apps.lectures import views as lectures
 from apps.messaging import views as messaging
@@ -204,5 +205,18 @@ urlpatterns = [
         "messages/monitor/<int:pk>/",
         messaging.MonitorThreadPage.as_view(),
         name="message_monitor_thread",
+    ),
+    # Fees (Phase 7)
+    path("fee-plans/", finance.FeePlanListPage.as_view(), name="fee_plan_list"),
+    path("fee-plans/add/", finance.FeePlanCreatePage.as_view(), name="fee_plan_create"),
+    path(
+        "fee-plans/<int:pk>/edit/",
+        finance.FeePlanEditPage.as_view(),
+        name="fee_plan_edit",
+    ),
+    path(
+        "fee-plans/<int:pk>/status/",
+        finance.FeePlanStatusView.as_view(),
+        name="fee_plan_status",
     ),
 ]

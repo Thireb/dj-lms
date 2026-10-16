@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     "apps.accounts",
     "apps.core",
     "apps.institutes",
+    "apps.finance",
     "apps.lectures",
     "apps.messaging",
     "apps.notifications",

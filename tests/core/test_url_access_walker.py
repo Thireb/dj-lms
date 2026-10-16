@@ -29,8 +29,11 @@ from apps.assessments.models import (
     QuizQuestion,
     Submission,
 )
+from apps.core.features import ALL_FEATURE_KEYS
 from apps.core.roles import Role
 from apps.core.tenancy import tenant_context
+from apps.finance.models import FeePlan
+from apps.institutes.models import Plan
 from apps.lectures.models import Lecture, LectureStatus, RecurringSchedule
 from apps.messaging.models import Draft, Thread, ThreadMember
 from apps.notifications.models import Notification
@@ -398,6 +401,14 @@ def _thread(institute) -> int:
     return thread.pk
 
 
+def _fee_plan(institute) -> int:
+    # unscoped: test setup outside a tenant context.
+    plan, _ = FeePlan.unscoped.get_or_create(
+        institute=institute, name="Walker", defaults={"amount": 1000}
+    )
+    return plan.pk
+
+
 def _draft(institute) -> int:
     email = "drafter-walker@example.com"
     owner = User.objects.filter(email=email).first() or make_user(
@@ -451,6 +462,7 @@ ROUTE_OBJECTS = {
     "student:quiz_event": _live_quiz,
     "student:quiz_attempt": _attempt,
     "notifications:open": _notification,
+    **{f"admin:fee_plan_{action}": _fee_plan for action in ("edit", "status")},
     **{
         f"{portal}:message_{action}": _thread
         for portal in ("admin", "teacher", "student", "guardian")
@@ -527,6 +539,13 @@ def test_roles_outside_allowed_roles_get_403(route: Route, institute_a) -> None:
 @pytest.mark.django_db
 @pytest.mark.parametrize("route", PRODUCT_ROUTES, ids=lambda r: r.name)
 def test_an_allowed_role_gets_through(route: Route, institute_a) -> None:
+    feature = getattr(route.view_class, "feature_key", None)
+    if feature and feature not in institute_a.features:
+        # A Premium feature (fees): the walker's institute is on Basic.
+        institute_a.plan = Plan.objects.create(
+            code="walker-all", name="Walker", feature_keys=sorted(ALL_FEATURE_KEYS)
+        )
+        institute_a.save()
     statuses = {}
     for role in route.view_class.allowed_roles:
         client = Client()
