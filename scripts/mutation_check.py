@@ -3388,6 +3388,18 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "        if closed and attempt.status != AttemptStatus.IN_PROGRESS:\n",
         "        if closed:\n",
     ),
+    (
+        "answers to grade counts quiz attempts (5.4)",
+        "apps/assessments/services.py",
+        "    return answers + attempts\n",
+        "    return answers\n",
+    ),
+    (
+        "answers to grade counts only submitted attempts (5.4)",
+        "apps/assessments/services.py",
+        "        .filter(status=AttemptStatus.SUBMITTED)\n        .count()\n",
+        "        .count()\n",
+    ),
 ]
 
 
