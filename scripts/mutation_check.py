@@ -7,7 +7,8 @@ Usage: uv run python scripts/mutation_check.py [name-filter] [--jobs N]
 (default origin/main): use it while building, and the full run at handover.
 
 Prints CAUGHT, MISSED or STALE per entry and exits 1 if any entry is MISSED
-or STALE. Commit first: the entries run against HEAD, each worker in its own
+or STALE. Commit first: the entries run against HEAD (cores - 2 workers at a
+time), each worker in its own
 git worktree with its own test database, so the working tree is never touched.
 
 To be fast without changing the result, each entry runs in up to 3 stages and
@@ -3544,7 +3545,8 @@ def load_cache() -> dict[str, str]:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("name_filter", nargs="?", default="")
-    parser.add_argument("--jobs", type=int, default=4)
+    # Leave 2 cores for the rest of the machine.
+    parser.add_argument("--jobs", type=int, default=max(1, (os.cpu_count() or 4) - 2))
     parser.add_argument("--changed", nargs="?", const="origin/main", metavar="BASE")
     args = parser.parse_args()
     entries = [entry for entry in MUTATIONS if args.name_filter in entry[0]]
