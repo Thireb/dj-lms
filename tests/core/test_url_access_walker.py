@@ -374,6 +374,7 @@ ROUTE_OBJECTS = {
     "admin:lecture_edit": _lecture,
     "teacher:lecture_edit": _lecture,
     "admin:lecture_detail": _lecture,
+    "admin:quiz_detail": _quiz,
     "admin:lecture_cancel": _lecture,
     "teacher:lecture_detail": _lecture,
     "teacher:lecture_start": _lecture,

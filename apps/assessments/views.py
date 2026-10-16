@@ -94,6 +94,7 @@ from apps.assessments.services import (
     update_quiz,
 )
 from apps.assessments.ui import (
+    AdminQuizTable,
     AnswerTable,
     QuestionTable,
     QuizItemTable,
@@ -116,6 +117,7 @@ from apps.assessments.ui import (
     submission_badge,
     when,
 )
+from apps.core import menus as menu_keys
 from apps.core.query import id_param, search_param
 from apps.core.responses import forbidden_response
 from apps.core.roles import Role
@@ -893,21 +895,23 @@ class QuizMixin(TeacherAssignmentMixin):
 class TeacherQuizListPage(QuizMixin, ListPage):
     title = "Quizzes and exams"
     filter_keys = ("kind", "status")
+    table_class: type[TeacherQuizTable] = TeacherQuizTable
 
     def get_actions(self) -> list[Any]:
         return [Button("Add quiz", url=self.url("create"), icon="plus")]
 
+    def empty_state(self) -> EmptyState:
+        return EmptyState(
+            "No quizzes yet.",
+            text="Add a quiz, pick questions from your bank, then publish.",
+            icon="square-pen",
+            action=Button("Add your first quiz", url=self.url("create")),
+        )
+
     def get_components(self) -> dict[str, Any]:
         user = self.request.user
         if not Quiz.objects.for_user(user).exists():
-            return {
-                "table": EmptyState(
-                    "No quizzes yet.",
-                    text="Add a quiz, pick questions from your bank, then publish.",
-                    icon="square-pen",
-                    action=Button("Add your first quiz", url=self.url("create")),
-                )
-            }
+            return {"table": self.empty_state()}
         filters = {
             key: search_param(self.request.GET.get(key)) for key in self.filter_keys
         }
@@ -935,7 +939,7 @@ class TeacherQuizListPage(QuizMixin, ListPage):
                     },
                 ]
             ),
-            "table": TeacherQuizTable(
+            "table": self.table_class(
                 list(page.object_list), counts=quiz_counts(list(page.object_list))
             ),
             "pagination": Pagination(page, query=query),
@@ -1033,14 +1037,19 @@ class TeacherQuizDetailPage(QuizMixin, DetailPage):
     Back to draft until it opens."""
 
     title = "Quiz"
+    open_links = True  # the Mark / Open buttons in Results
+    show_teacher = False
 
     def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
         self.quiz = self.get_quiz()
         self.title = self.quiz.title
         self.now = timezone.now()
         self.items = quiz_items(self.quiz)
-        self.editable = not has_opened(self.quiz, self.now)
+        self.editable = self.can_edit()
         return super().get(request, *args, **kwargs)
+
+    def can_edit(self) -> bool:
+        return not has_opened(self.quiz, self.now)
 
     def get_subtitle(self) -> str:
         quiz = self.quiz
@@ -1113,6 +1122,7 @@ class TeacherQuizDetailPage(QuizMixin, DetailPage):
             total=self.total(),
             status=quiz_status(self.quiz, self.now),
             flags=event_counts(self.quiz) if flagged_kinds(self.quiz) else None,
+            open_links=self.open_links,
         )
         return SectionCard(title="Results", icon="users", body=table)
 
@@ -1120,7 +1130,9 @@ class TeacherQuizDetailPage(QuizMixin, DetailPage):
         return sum(item.question.marks for item in self.items)
 
     def get_sidebar_cards(self) -> list[Any]:
-        rows = quiz_detail_rows(self.quiz, total=self.total(), now=self.now)
+        rows = quiz_detail_rows(
+            self.quiz, total=self.total(), now=self.now, show_teacher=self.show_teacher
+        )
         return [SectionCard(title="Details", icon="list", body=DetailList(rows))]
 
 
@@ -1535,3 +1547,72 @@ class StudentAttemptPage(StudentQuizMixin, FormPage):
             return HttpResponseRedirect(self.request.path)
         messages.success(self.request, "Answers submitted.")
         return HttpResponseRedirect(self.quiz_url("detail", self.quiz))
+
+
+# Admin "Quizzes and exams" overview (roadmap 5.3 part 2d, SPEC 3)
+
+
+class AdminQuizMixin:
+    portal = "admin"
+    menu_key = menu_keys.ACADEMIC
+    active_item = None
+    allowed_roles = [Role.INSTITUTE_ADMIN, Role.SUB_ADMIN]
+
+    def url(self, action: str, **kwargs: Any) -> str:
+        return reverse(f"admin:quiz_{action}", kwargs=kwargs or None)
+
+    def get_quiz(self) -> Quiz:
+        """Any quiz of the institute, through ``for_user``."""
+        rows = Quiz.objects.for_user(self.request.user).select_related(
+            "batch", "subject", "teacher__user"
+        )
+        return get_object_or_404(rows, pk=self.kwargs["pk"])
+
+
+class AdminQuizListPage(AdminQuizMixin, TeacherQuizListPage):
+    """Every quiz and exam of the institute, read only."""
+
+    table_class = AdminQuizTable
+
+    def get_subtitle(self) -> str:
+        return "Teachers make and publish quizzes. Open one to see its results."
+
+    def get_actions(self) -> list[Any]:
+        return []
+
+    def empty_state(self) -> EmptyState:
+        return EmptyState(
+            "No quizzes yet.",
+            text="Quizzes and exams show here when teachers add them.",
+            icon="square-pen",
+        )
+
+
+class AdminQuizPage(AdminQuizMixin, TeacherQuizDetailPage):
+    """One quiz, read only: Results once it opens, its questions and the
+    details with the teacher."""
+
+    open_links = False
+    show_teacher = True
+
+    def can_edit(self) -> bool:
+        return False
+
+    def get_subtitle(self) -> str:
+        quiz = self.quiz
+        status = QuizStatus(quiz_status(quiz, self.now))
+        if status == QuizStatus.DRAFT:
+            return "Draft: students do not see it yet."
+        if status == QuizStatus.SCHEDULED:
+            return f"Published. It opens {when(quiz.opens_at)}."
+        return f"{status.label}. It closes {when(quiz.closes_at)}."
+
+    def get_primary_cards(self) -> list[Any]:
+        questions = SectionCard(
+            title="Questions",
+            icon="list-checks",
+            body=QuizItemTable(self.items, editable=False),
+        )
+        if not has_opened(self.quiz, self.now):
+            return [questions]
+        return [self.results_card(), questions]

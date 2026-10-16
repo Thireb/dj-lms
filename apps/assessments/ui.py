@@ -416,11 +416,14 @@ class QuizItemTable(DataTable):
         return PostButton("Remove", url, variant="secondary")
 
 
-def quiz_detail_rows(quiz: Quiz, *, total: int, now: datetime) -> list[tuple]:
+def quiz_detail_rows(
+    quiz: Quiz, *, total: int, now: datetime, show_teacher: bool = False
+) -> list[tuple]:
     exam = quiz.kind == QuizKind.EXAM
     rows: list[tuple[str, Any]] = [
         ("Status", quiz_status_badge(quiz_status(quiz, now))),
         ("Type", quiz.get_kind_display()),
+        *([("Teacher", str(quiz.teacher))] if show_teacher else []),
         ("Batch", quiz.batch.name),
         ("Subject", quiz.subject.name),
         ("Opens", when(quiz.opens_at)),
@@ -540,14 +543,17 @@ class QuizResultTable(DataTable):
         total: int,
         status: str,
         flags: dict[int, dict[str, int]] | None = None,
+        open_links: bool = True,
         **props,
     ):
         """``flags`` (exam mode) adds the Exam flags column: per attempt,
-        the count of each kind."""
+        the count of each kind. ``open_links=False`` drops the teacher's
+        Mark / Open buttons (the admin overview)."""
         self.quiz = quiz
         self.total = total
         self.status = status
         self.flags = flags
+        self.open_links = open_links
         super().__init__(rows=rows, **props)
 
     @property
@@ -568,7 +574,7 @@ class QuizResultTable(DataTable):
                 if self.flags is not None
                 else []
             ),
-            Column("actions", "", self.open_button),
+            *([Column("actions", "", self.open_button)] if self.open_links else []),
         ]
 
     def flag_text(self, row: ResultRow) -> str:
@@ -662,3 +668,26 @@ def exam_flag_list(events: list[AttemptEvent]) -> DetailList:
         rows.append(("Flags", "None"))
     rows.append(("Note", "Flags do not change the score."))
     return DetailList(rows)
+
+
+# Admin overview (roadmap 5.3 part 2d)
+
+
+def admin_quiz_url(quiz: Quiz) -> str:
+    return reverse("admin:quiz_detail", kwargs={"pk": quiz.pk})
+
+
+class AdminQuizTable(TeacherQuizTable):
+    """Admin "Quizzes and exams" (SPEC 3): Title, Type, Teacher, Batch,
+    Opens, Duration, Attempts, Status; "View results" opens the quiz."""
+
+    @property
+    def columns(self) -> list[Column]:  # type: ignore[override]
+        columns = super().columns
+        teacher = Column("teacher", "Teacher", lambda quiz: str(quiz.teacher))
+        return [*columns[:2], teacher, *columns[2:]]
+
+    def actions(self, quiz: Quiz) -> IconButton:
+        return IconButton(
+            "eye", f"View results: {quiz.title}", url=admin_quiz_url(quiz)
+        )
