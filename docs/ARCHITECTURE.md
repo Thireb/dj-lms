@@ -12,7 +12,7 @@ How the Django project is organised. Keep it simple: one Django project, many sm
 - WeasyPrint for PDFs (challans, salary receipts, certificates).
 - S3-compatible object storage for uploads (Cloudflare R2 or S3).
 - WhiteNoise for static files, Gunicorn as the server.
-- pytest + pytest-django for tests, ruff for lint and format.
+- pytest + pytest-django for tests (pytest-xdist runs them in parallel), ruff for lint and format.
 
 UI rule: components are Python classes in `apps/ui`; domain apps subclass them in their own `ui.py`. Apps import from `apps.ui`, never the other way round.
 

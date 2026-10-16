@@ -20,6 +20,7 @@ dependencies = [
 dev = [
     "pytest>=8.0",
     "pytest-django>=4.9",
+    "pytest-xdist>=3.8.0",
     "ruff>=0.8",
 ]
 
@@ -49,3 +50,6 @@ DJANGO_SETTINGS_MODULE = "config.settings.test"
 pythonpath = ["."]
 python_files = ["test_*.py"]
 testpaths = ["tests"]
+# Keep the test database between runs (Django runs new migrations on it).
+# After a branch with different migrations, add --create-db once.
+addopts = "--reuse-db"
