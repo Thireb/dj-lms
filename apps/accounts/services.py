@@ -145,14 +145,19 @@ def update_profile(
     last_name: str,
     phone: str,
     timezone: str,
+    alerts: dict[str, bool] | None = None,
 ) -> User:
+    """``alerts``: the notification switches the form showed (SPEC 4.22)."""
     user.first_name = first_name
     user.last_name = last_name
     user.phone = phone
     user.timezone = timezone
-    user.save(
-        update_fields=["first_name", "last_name", "phone", "timezone"],
-    )
+    fields = ["first_name", "last_name", "phone", "timezone"]
+    for name, value in (alerts or {}).items():
+        if name in ("class_alerts", "fee_alerts"):
+            setattr(user, name, bool(value))
+            fields.append(name)
+    user.save(update_fields=fields)
     return user
 
 

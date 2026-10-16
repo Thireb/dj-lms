@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     "apps.core",
     "apps.institutes",
     "apps.lectures",
+    "apps.notifications",
     "apps.people",
     "apps.superadmin",
     "apps.ui",
@@ -145,5 +146,10 @@ CELERY_BEAT_SCHEDULE = {
     "finish-ended-lectures": {
         "task": "apps.lectures.tasks.finish_all_ended_lectures",
         "schedule": crontab(minute="*/5"),
+    },
+    # Notifications older than 90 days are deleted (roadmap 6.1, SPEC 7).
+    "delete-old-notifications": {
+        "task": "apps.notifications.tasks.delete_all_old_notifications",
+        "schedule": crontab(hour=1, minute=0),
     },
 }

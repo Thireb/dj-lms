@@ -30,7 +30,13 @@ from apps.ui.components.layout import (
     TopNavShell,
 )
 from apps.ui.components.lectures import Calendar, CountdownCard, LectureRow
-from apps.ui.components.nav import FilterBar, NotificationBell, Pagination
+from apps.ui.components.nav import (
+    FilterBar,
+    NotificationBell,
+    NotificationCount,
+    NotificationPanel,
+    Pagination,
+)
 from apps.ui.components.pdf import PdfHeader
 
 __all__ = [
@@ -52,6 +58,8 @@ __all__ = [
     "LectureRow",
     "Modal",
     "NotificationBell",
+    "NotificationCount",
+    "NotificationPanel",
     "PageHeader",
     "Pagination",
     "PdfHeader",

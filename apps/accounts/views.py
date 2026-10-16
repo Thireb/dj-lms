@@ -19,6 +19,7 @@ from django.views.generic import TemplateView
 
 from apps.accounts import throttle
 from apps.accounts.forms import (
+    ALERT_FIELDS,
     ChangePasswordForm,
     ForgotPasswordForm,
     LoginForm,
@@ -301,6 +302,7 @@ class ProfileView(AccountFormPage):
                 "last_name": fresh.last_name,
                 "phone": fresh.phone or "",
                 "timezone": fresh.timezone or "",
+                **{name: "on" for name in ALERT_FIELDS if getattr(fresh, name)},
             },
             user=fresh,
         )
@@ -331,6 +333,11 @@ class ProfileView(AccountFormPage):
             last_name=form.cleaned_data["last_name"],
             phone=form.cleaned_data.get("phone", ""),
             timezone=form.cleaned_data.get("timezone", ""),
+            alerts={
+                name: form.cleaned_data[name]
+                for name in ALERT_FIELDS
+                if name in form.cleaned_data
+            },
         )
         messages.success(self.request, "Profile updated.")
         return HttpResponseRedirect(self.get_success_url())

@@ -245,7 +245,7 @@ Title*, Batch*, Subject, File* (PDF, DOC, PPT, images, up to 25 MB), Description
 Name*, Email*, Password*, Allowed menus* (checkboxes of the 8 groups), Status.
 
 ### 4.22 Account and profile
-Name, Phone, Photo, Time zone, Appearance (Light/Dark/Auto), Notification switches (fee alerts, class alerts), Change password (current, new, confirm).
+Name, Phone, Photo, Time zone, Appearance (Light/Dark/Auto), Notification switches (fee alerts, class alerts), Change password (current, new, confirm). Built in 6.1 (assumed): "Class alerts" and "Fee alerts" on My profile, on by default; a teacher sees only Class alerts (no fee events), the super admin neither.
 
 ### 4.23 Login and first-time password
 Login: Email*, Password*, Show password, Remember me. First-time link: New password*, Confirm*. Password rule: at least 8 characters, not too common, not too similar to the email. Email is not case sensitive. Passwords keep every space. After 5 failed sign-ins in 15 minutes for the same email and IP: "Too many failed attempts. Try again in 15 minutes." Without Remember me the session ends when the browser closes (and after 12 hours on the server); with it, after 14 days. A lost link: the super admin uses "New sign-in link" on the institute page (older links stop working).
@@ -345,7 +345,7 @@ Lectures counted = lectures with status `finished` in the month, taught by the t
 
 ### 6.11 Plans and limits (assumed)
 - Basic (B): setup, students, teachers, lectures, attendance, assignments, quizzes, PWA.
-- Premium (P): everything in Basic plus fees, payroll, leave, homework, lesson plans, reports, messages, documents, sub-admin.
+- Premium (P): everything in Basic plus fees, payroll, leave, homework, lesson plans, reports, ~~messages,~~ documents, sub-admin. Owner decision 2026-10-16: messages are Basic (the `messaging` key).
 - Max active students per plan: Basic 100, Premium unlimited. (Adjustable per institute by Super Admin.)
 
 ## 7. Notifications (in-app bell)
@@ -378,6 +378,9 @@ Lectures counted = lectures with status `finished` in the month, taught by the t
 
 - Each user can switch off "fee alerts" and "class alerts" (not system notices).
 - Notifications older than 90 days are deleted.
+- Groups (assumed in 6.1): class alerts are the lecture events and "Quiz opens soon"; fee alerts are the challan, receipt and payment events; every other event is a system notice and always goes. Inactive users get nothing. A notification has a short text and a link to a page in the site.
+- Owner decisions 2026-10-16 (Phase 6): a recurring schedule sends one notification per save or edit, not one per lecture; a reply to a broadcast goes only to the sender, in a new private thread; the Messages pages and the compose form say "Institute admins can read all messages."
+- Assumed for 6.2: only the events of built features are hooked (lectures, assignments, quizzes, portal access); each later phase hooks its own. "Lecture changed" means a new start time, duration, teacher or link. "Starts in 15 minutes" and "Quiz opens soon" (1 hour before Opens) come from the 5-minute job. "Submission received" goes for the first answer only. "Quiz graded" goes when the teacher marks the attempt; an MCQ-only quiz is graded at submit and notifies the guardian only. A guardian's notification names the child.
 
 ## 8. Dashboards (KPI definitions)
 

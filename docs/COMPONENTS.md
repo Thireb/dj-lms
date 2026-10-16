@@ -32,7 +32,8 @@ apps/ui/
                    # ProgressRing, ChartCard, EmptyState, TextBlock
     actions.py     # Button, IconButton, QuickAction, ConfirmDialog, CopyField, Toast
     lectures.py    # CountdownCard, LectureRow, Calendar
-    nav.py         # NotificationBell, ChildSwitcher, FilterBar, Pagination
+    nav.py         # NotificationBell, NotificationCount, NotificationPanel,
+                   # ChildSwitcher, FilterBar, Pagination
     pdf.py         # PdfHeader
   forms/
     base.py        # BaseForm, TenantModelForm, HtmxModalForm
@@ -283,7 +284,9 @@ Every item here is a class. Names are fixed.
 | `Calendar` | lectures | week (seven day cards, side by side from lg) or month (a grid of weeks from md; on phones a list of the month's days that have entries), with previous, Today and next links; each day is a `CalendarDay` (`day`, `items`, `is_today`, `in_month`) and each entry a `CalendarItem` (`time`, `title`, `detail`, `status`, `tone`: `info`, `success`, `warning`, `neutral` or `danger`, `url`); an unsafe item `url` renders as plain text | `days`, `view` (`week`, `month`), `label`, `previous_url`, `today_url`, `next_url`, `empty_text`, `empty_day_text` |
 | `AttemptTimer` | quizzes | the time left in a quiz attempt, kept at the top of the screen (sticky); the last minute turns red and is announced once to screen readers; at zero `attemptTimer` in `static/js/app.js` submits the form `form_id` once with `auto_submit=1`; `deadline` is validated to a UTC ISO string in `data-deadline` | `deadline`, `form_id`, `label` (text without JavaScript) |
 | `ExamGuard` | quizzes | exam mode on the attempt page: says what is recorded ("It does not change your score"); with `full_screen` an "Enter full screen" button shows while not in full screen; `examGuard` in `static/js/app.js` posts `kind=left_page` when the page is hidden (with `flag_leaving`) and `kind=left_full_screen` when full screen ends (with `full_screen`) to `event_url`, with the CSRF token of the form `form_id`; nothing is sent while the page navigates (Submit, the timer); an unsafe `event_url` renders empty | `event_url`, `form_id`, `full_screen`, `flag_leaving` |
-| `NotificationBell` | nav | bell + unread count | `user` |
+| `NotificationBell` | nav | top bar bell (6.1): a link to the Notifications page; with JavaScript a click opens the panel (loaded from `notifications:panel` when opened) and the count loads on each page and every 60 seconds (`notifications:count`, HTMX); empty for the super admin | `user`, `unread_count` |
+| `NotificationCount` | nav | the bell's unread badge ("99+" above 99) and "Notifications, N unread" for screen readers | `unread_count` |
+| `NotificationPanel` | nav | the bell's list: each row a POST button that marks it read and opens its link (unread rows bold, with "Unread:" for screen readers), "Mark all as read" (back to `next_url`), "See all notifications"; unsafe URLs render empty; render with `request` for the CSRF tokens | `rows` (`text`, `when`, `open_url`, `is_read`), `list_url`, `read_all_url`, `next_url` |
 | `ChildSwitcher` | nav | guardian top bar: a POST form with a "Child" select that sends on change ("Show" button without JavaScript); `options` (value, label), `chosen`, `url`, `next_url`. Pages get it from `GuardianChildMixin.get_child_switcher()` | `options`, `chosen`, `url`, `next_url` |
 | `FilterBar` | nav | search field with an icon + selects and "Apply filters"; "Clear" shows when a filter has a value. Each filter (dict or object) has `name`, `label`, optional `value`, `placeholder`; a filter with `options` (list of value, label) renders a select; a filter with `hidden=True` is a hidden input that keeps a value (such as the chosen tab) and does not count for "Clear"; a select with `kept=True` (a guardian's chosen child) does not count for "Clear", and "Clear" keeps its value; `input_type="date"` renders a date field | `filters` |
 | `Pagination` | nav | "Showing X to Y of N", then previous, page numbers (elided when long) and next; `query` keeps the current filters | `page_obj`, `query` |

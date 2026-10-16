@@ -2,6 +2,8 @@ from apps.ui.components.nav import (
     ChildSwitcher,
     FilterBar,
     NotificationBell,
+    NotificationCount,
+    NotificationPanel,
     Pagination,
 )
 from django.core.paginator import Paginator
@@ -11,6 +13,32 @@ from tests.ui.fixtures.sample_ui import demo_user
 def test_notification_bell_renders() -> None:
     html = str(NotificationBell(demo_user(), unread_count=2))
     assert "notification-bell" in html
+    assert 'href="/notifications/"' in html and "Notifications, 2 unread" in html
+
+
+def test_notification_bell_is_empty_for_the_super_admin() -> None:
+    assert str(NotificationBell(demo_user(role="super_admin"))).strip() == ""
+
+
+def test_notification_count_caps_the_badge() -> None:
+    assert ">99+</span>" in str(NotificationCount(150))
+    html = str(NotificationCount(0))
+    assert "Notifications</span>" in html and "bg-danger" not in html
+
+
+def test_notification_panel_rows() -> None:
+    from types import SimpleNamespace
+
+    rows = [
+        SimpleNamespace(text="<i>New</i>", when="Fri", open_url="/n/1/", is_read=False),
+        SimpleNamespace(text="Old", when="Thu", open_url="javascript:x", is_read=True),
+    ]
+    html = str(NotificationPanel(rows, "/notifications/", "/notifications/read-all/"))
+    assert "&lt;i&gt;New&lt;/i&gt;" in html and html.count("Unread: ") == 1
+    assert 'action="/n/1/"' in html and "javascript:" not in html
+    assert "Mark all as read" in html
+    empty = str(NotificationPanel([], "/notifications/", "/notifications/read-all/"))
+    assert "No notifications yet." in empty and "Mark all as read" not in empty
 
 
 def test_filter_bar_renders() -> None:

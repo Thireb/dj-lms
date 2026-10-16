@@ -32,6 +32,8 @@ from apps.assessments.models import (
 from apps.core.roles import Role
 from apps.core.tenancy import tenant_context
 from apps.lectures.models import Lecture, LectureStatus, RecurringSchedule
+from apps.notifications.models import Notification
+from apps.notifications.services import notify
 from apps.people.models import StudentProfile, TeacherProfile
 from apps.people.services import create_student_profile, create_teacher_profile
 from apps.ui.views.pages import PortalPageView
@@ -51,6 +53,9 @@ PUBLIC_ALLOWLIST = {
     "root",
 }
 SKIPPED_NAMESPACES = {"developer"}  # /django-admin/, gated by middleware tests.
+# Parts of the bell that HTMX loads: a signed-out user gets an empty 204, so
+# HTMX never shows the sign-in page inside the bell (roadmap 6.1).
+EMPTY_FOR_ANONYMOUS = {"notifications:count", "notifications:panel"}
 
 
 @dataclass(frozen=True)
@@ -356,6 +361,17 @@ def _quiz_attempt(institute) -> dict[str, int]:
     return {"pk": pk, "attempt_pk": attempt.pk}
 
 
+def _notification(institute) -> int:
+    email = "notified-walker@example.com"
+    user = User.objects.filter(email=email).first() or make_user(
+        email=email, role=Role.TEACHER, institute=institute
+    )
+    with tenant_context(institute):
+        notify([user], "new_message", "Walker note.")
+    # unscoped: test setup outside a tenant context.
+    return Notification.unscoped.filter(user=user).first().pk
+
+
 ROUTE_OBJECTS = {
     **{
         f"admin:{prefix}_{action}": _name_row(model)
@@ -397,6 +413,7 @@ ROUTE_OBJECTS = {
     "student:quiz_start": _live_quiz,
     "student:quiz_event": _live_quiz,
     "student:quiz_attempt": _attempt,
+    "notifications:open": _notification,
     **{
         f"{portal}:lecture_schedule_{action}": _schedule
         for portal in ("admin", "teacher")
@@ -441,6 +458,9 @@ def _user_for(role: str, institute):
 @pytest.mark.parametrize("route", PRODUCT_ROUTES, ids=lambda r: r.name)
 def test_anonymous_is_redirected_to_login(route: Route, institute_a) -> None:
     response = Client().get(_url(route, institute_a))
+    if route.name in EMPTY_FOR_ANONYMOUS:
+        assert (response.status_code, response.content) == (204, b"")
+        return
     assert response.status_code == 302
     assert response["Location"].startswith(reverse("accounts:login"))
 

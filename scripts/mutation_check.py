@@ -3424,6 +3424,72 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         '        return f"Closed {when(quiz.closes_at)}."\n',
         '        return f"Closed. It closes {when(quiz.closes_at)}."\n',
     ),
+    (
+        "notify leaves out inactive users (6.1)",
+        "apps/notifications/services.py",
+        "        if user.pk in seen or not user.is_active or user.institute_id != institute.pk:\n",
+        "        if user.pk in seen or user.institute_id != institute.pk:\n",
+    ),
+    (
+        "notify leaves out other institutes (6.1)",
+        "apps/notifications/services.py",
+        "        if user.pk in seen or not user.is_active or user.institute_id != institute.pk:\n",
+        "        if user.pk in seen or not user.is_active:\n",
+    ),
+    (
+        "notify respects the alert switches (6.1)",
+        "apps/notifications/services.py",
+        "        if switch and not getattr(user, switch):\n",
+        "        if False:\n",
+    ),
+    (
+        "notification links stay in the site (6.1)",
+        "apps/notifications/services.py",
+        '_LINK = re.compile(r"^/(?!/)[^\\s\\\\]*$")\n',
+        '_LINK = re.compile(r".*")\n',
+    ),
+    (
+        "a user sees only their own notifications (6.1)",
+        "apps/notifications/models.py",
+        '        return scoped.filter(user_id=getattr(user, "pk", None))\n',
+        "        return scoped\n",
+    ),
+    (
+        "notifications are kept for 90 days (6.1)",
+        "apps/notifications/services.py",
+        "Notification.objects.filter(created_at__lt=cutoff)",
+        "Notification.objects.filter(created_at__lte=cutoff)",
+    ),
+    (
+        "bell parts give a signed-out user 204 (6.1)",
+        "apps/notifications/views.py",
+        "        if not request.user.is_authenticated:\n            return HttpResponse(status=204)\n",
+        "",
+    ),
+    (
+        "the back path refuses a backslash (6.1)",
+        "apps/notifications/views.py",
+        '    bad = "\\\\" in path or not value.isprintable()',
+        "    bad = not value.isprintable()",
+    ),
+    (
+        "the super admin has no bell (6.1)",
+        "apps/ui/components/nav.py",
+        '        ctx["enabled"] = getattr(self.props["user"], "role", "") in BELL_ROLES\n',
+        '        ctx["enabled"] = True\n',
+    ),
+    (
+        "teachers get no fee alert switch (6.1)",
+        "apps/accounts/forms.py",
+        '        return ["class_alerts"]\n',
+        "        return list(ALERT_FIELDS)\n",
+    ),
+    (
+        "profile service changes only the switches (6.1)",
+        "apps/accounts/services.py",
+        '        if name in ("class_alerts", "fee_alerts"):\n',
+        "        if True:\n",
+    ),
 ]
 
 

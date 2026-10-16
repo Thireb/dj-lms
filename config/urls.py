@@ -15,6 +15,7 @@ urlpatterns = [
     path("student/", include("apps.ui.urlconf.student")),
     path("guardian/", include("apps.ui.urlconf.guardian")),
     path("super/", include("apps.superadmin.urls")),
+    path("notifications/", include("apps.notifications.urls")),
     path("", root_redirect, name="root"),
     path("", include("apps.ui.urls")),
 ]
