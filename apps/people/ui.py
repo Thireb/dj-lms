@@ -122,6 +122,25 @@ class StudentTable(DataTable):
     empty_title = "No students match these filters."
 
 
+class StudentFeeTable(StudentTable):
+    """All Students with "Monthly fee" (SPEC 3), when the institute has fees.
+    ``fees`` maps a student pk to the monthly fee (one query per page)."""
+
+    def __init__(self, rows, fees, institute, **props):
+        self.fees, self.institute = fees, institute
+        super().__init__(rows, **props)
+
+    @property
+    def columns(self) -> list[Column]:  # type: ignore[override]
+        from apps.finance.ui import money
+
+        fee = Column(
+            "fee", "Monthly fee", lambda s: money(self.fees.get(s.pk), self.institute)
+        )
+        base = list(StudentTable.columns)
+        return [*base[:-2], fee, *base[-2:]]
+
+
 def _row_result(row) -> BlockStack:
     if row.ok:
         return BlockStack(blocks=[Badge("Ready", tone="success")])

@@ -12,6 +12,7 @@ from urllib.parse import urlencode
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
+from django.db.models import Q
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
@@ -22,6 +23,8 @@ from apps.core import menus as menu_keys
 from apps.core.menus import user_has_menu
 from apps.core.query import id_param, search_param
 from apps.core.roles import Role
+from apps.finance.models import FeePlan, StudentFeePlan
+from apps.finance.services import monthly_fees
 from apps.people.bulk_upload import (
     RowCheck,
     UploadError,
@@ -59,6 +62,7 @@ from apps.people.services import (
 from apps.people.ui import (
     BulkPreviewTable,
     PortalAccessTable,
+    StudentFeeTable,
     StudentTable,
     TeacherTable,
     people_summary,
@@ -198,6 +202,12 @@ class StudentListPage(PeopleListPage):
     first_label = "Enrol your first student"
     table_class = StudentTable
     filter_keys = ("q", "batch", "class_label", "status")
+
+    def get_table(self, rows: list[Any], filtered: bool) -> Any:
+        institute = self.get_institute()
+        if not rows or "fees" not in (getattr(institute, "features", None) or ()):
+            return super().get_table(rows, filtered)
+        return StudentFeeTable(rows, fees=monthly_fees(rows), institute=institute)
 
     def get_rows(self, filters: dict[str, str]) -> Any:
         return list_students(
@@ -339,11 +349,33 @@ def _student_details(data: dict[str, Any]) -> StudentDetails:
     )
 
 
-class StudentEnrolPage(PeopleFormPage):
+class StudentFeesMixin:
+    """Fee plans on the student forms when the institute has fees (7.1)."""
+
+    def has_fees(self) -> bool:
+        return "fees" in (getattr(self.get_institute(), "features", None) or ())
+
+    def fee_form_kwargs(self, current: dict | None = None) -> dict[str, Any]:
+        if not self.has_fees():
+            return {}
+        current = current or {}
+        plans = FeePlan.objects.for_user(self.request.user).filter(
+            Q(is_active=True) | Q(pk__in=list(current))
+        )
+        return {"fee_plans": list(plans.order_by("name")), "current_fees": current}
+
+    def fee_choices(self, form: Any) -> list | None:
+        return form.fee_choices() if self.has_fees() else None
+
+
+class StudentEnrolPage(StudentFeesMixin, PeopleFormPage):
     title = "Enrol student"
     url_prefix = "student"
     form_class = StudentEnrolForm
     success_message = "Student enrolled."
+
+    def get_form_kwargs(self) -> dict[str, Any]:
+        return {**super().get_form_kwargs(), **self.fee_form_kwargs()}
 
     def save(self, form: StudentEnrolForm) -> None:
         data = form.cleaned_data
@@ -356,10 +388,11 @@ class StudentEnrolPage(PeopleFormPage):
             guardian_name=data["guardian_name"],
             guardian_email=data["guardian_email"],
             guardian_password=data["guardian_password"],
+            fee_plans=self.fee_choices(form),
         )
 
 
-class StudentEditPage(ProfileEditPage):
+class StudentEditPage(StudentFeesMixin, ProfileEditPage):
     title = "Edit student"
     url_prefix = "student"
     model = StudentProfile
@@ -367,7 +400,15 @@ class StudentEditPage(ProfileEditPage):
     success_message = "Student saved."
 
     def get_form_kwargs(self) -> dict[str, Any]:
-        return {**super().get_form_kwargs(), "current_label": self.profile.class_label}
+        current = {
+            row.fee_plan_id: row
+            for row in StudentFeePlan.objects.filter(student=self.profile)
+        }
+        return {
+            **super().get_form_kwargs(),
+            "current_label": self.profile.class_label,
+            **self.fee_form_kwargs(current),
+        }
 
     def get_initial(self) -> dict[str, Any]:
         student = self.profile
@@ -392,6 +433,7 @@ class StudentEditPage(ProfileEditPage):
             _student_details(data),
             email=data["email"],
             selections=form.selections(),
+            fee_plans=self.fee_choices(form),
         )
 
 

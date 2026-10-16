@@ -8,9 +8,11 @@ from django import forms
 from apps.academics.forms import BatchSubjectField
 from apps.academics.models import ClassLabel
 from apps.academics.services import Selections
+from apps.finance.models import DiscountType
+from apps.finance.services import FeeChoice, check_fee_choices
 from apps.people.models import Gender, cnic_validator
-from apps.ui.forms.base import BaseForm
-from apps.ui.forms.layout import FormActions, Section
+from apps.ui.forms.base import BaseForm, style_widgets
+from apps.ui.forms.layout import FormActions, Row, Section
 from apps.ui.forms.widgets import DatePicker, PasswordInput
 
 
@@ -120,8 +122,23 @@ class StudentForm(PersonForm):
     city = forms.CharField(label="City", max_length=100, required=False)
     email = forms.EmailField(label="Student email (sign-in)")
 
-    def __init__(self, *args, current_label: ClassLabel | None = None, **kwargs):
+    def __init__(
+        self,
+        *args,
+        current_label: ClassLabel | None = None,
+        fee_plans: list | None = None,
+        current_fees: dict | None = None,
+        **kwargs,
+    ):
+        # Set before the base form builds the layout (fee_section reads them).
+        self.fee_plans = fee_plans  # None: the institute has no fees feature
+        self.current_fees = current_fees or {}
         super().__init__(*args, **kwargs)
+        for plan in fee_plans or []:
+            self.add_fee_fields(plan, self.current_fees.get(plan.pk))
+        if fee_plans:
+            style_widgets(self)
+            self.helper.layout = self.get_layout()
         user = kwargs["user"]
         labels = ClassLabel.objects.for_user(user).filter(is_active=True)
         if current_label is not None:
@@ -132,6 +149,64 @@ class StudentForm(PersonForm):
 
     def login_fields(self) -> list[str]:
         return ["email"]
+
+    def add_fee_fields(self, plan, current) -> None:
+        """SPEC 4.1: a fee plan with an optional discount (amount or percent)."""
+        key = f"fee_{plan.pk}"
+        self.fields[key] = forms.BooleanField(
+            label=f"{plan.name}: {plan.amount:,.2f} a month",
+            required=False,
+            initial=current is not None,
+        )
+        self.fields[f"{key}_type"] = forms.ChoiceField(
+            label="Discount",
+            choices=DiscountType.choices,
+            required=False,  # only a ticked plan uses it; empty = no discount
+            initial=current.discount_type if current else DiscountType.NONE,
+        )
+        self.fields[f"{key}_discount"] = forms.DecimalField(
+            label="Discount amount or percent",
+            required=False,
+            min_value=0,
+            decimal_places=2,
+            initial=current.discount if current and current.discount else None,
+        )
+
+    def fee_choices(self) -> list[FeeChoice]:
+        data = self.cleaned_data
+        return [
+            FeeChoice(
+                plan,
+                data.get(f"fee_{plan.pk}_type") or DiscountType.NONE,
+                data.get(f"fee_{plan.pk}_discount") or 0,
+            )
+            for plan in self.fee_plans or []
+            if data.get(f"fee_{plan.pk}")
+        ]
+
+    def clean(self):
+        cleaned = super().clean()
+        if self.fee_plans is not None:
+            errors = check_fee_choices(self.fee_choices(), set(self.current_fees))
+            for key, message in errors.items():
+                field = f"fee_{key}_discount" if key and key.isdigit() else None
+                self.add_error(field, message)
+        return cleaned
+
+    def fee_section(self) -> list[Section]:
+        if self.fee_plans is None:
+            return []
+        rows = [
+            Row(
+                f"fee_{plan.pk}",
+                f"fee_{plan.pk}_type",
+                f"fee_{plan.pk}_discount",
+                css_class="lg:grid-cols-3",
+            )
+            for plan in self.fee_plans
+        ]
+        note = "The monthly fee is the plans minus their discounts."
+        return [Section("Fees", *rows, description=note)]
 
     def get_layout(self):
         return Layout(
@@ -160,6 +235,7 @@ class StudentForm(PersonForm):
                 "batch_subjects",
                 description="The batches and subjects this student studies.",
             ),
+            *self.fee_section(),
             Section(
                 "Sign-in",
                 *self.login_fields(),
