@@ -422,6 +422,7 @@ def record_payment(
     note: str = "",
     by: Any = None,
     today: date | None = None,
+    receipt: Any = None,
 ) -> Payment:
     """Money against one challan, up to its balance (partial payments are
     allowed). The challan row is locked, so two clerks cannot both pay it."""
@@ -458,6 +459,7 @@ def record_payment(
             reference=reference.strip()[:100],
             note=note.strip()[:300],
             received_by=by,
+            receipt=receipt,
         )
         locked.paid += amount
         set_status(locked)

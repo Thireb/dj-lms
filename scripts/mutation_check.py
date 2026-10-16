@@ -3868,6 +3868,48 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "Q(paid_on=payment.paid_on, pk__lte=payment.pk)",
         "Q(paid_on=payment.paid_on)",
     ),
+    (
+        "a PDF receipt must start like a PDF (7.3b)",
+        "apps/finance/receipts.py",
+        '        ok = upload.read(5) == b"%PDF-"\n',
+        "        ok = True\n",
+    ),
+    (
+        "an image receipt must match its name (7.3b)",
+        "apps/finance/receipts.py",
+        "                ok = image.format == IMAGE_FORMATS[suffix]\n",
+        "                ok = True\n",
+    ),
+    (
+        "only the child's guardian sends a receipt (7.3b)",
+        "apps/finance/receipts.py",
+        "    if not GuardianStudentLink.objects.filter(\n",
+        "    if False and not GuardianStudentLink.objects.filter(\n",
+    ),
+    (
+        "a receipt cannot pay more than the balance (7.3b)",
+        "apps/finance/receipts.py",
+        "    elif challans and amount > balance:\n",
+        "    elif False:\n",
+    ),
+    (
+        "approval pays the oldest challan first (7.3b)",
+        "apps/finance/receipts.py",
+        '            .order_by("month", "due_date", "pk")\n',
+        '            .order_by("-month", "due_date", "pk")\n',
+    ),
+    (
+        "approval checks the balance again (7.3b)",
+        "apps/finance/receipts.py",
+        "        if locked.amount > balance:\n",
+        "        if False:\n",
+    ),
+    (
+        "auto-approve follows the setting (7.3b)",
+        "apps/finance/receipts.py",
+        "    if student.institute.settings.auto_approve_guardian_receipts:\n",
+        "    if False:\n",
+    ),
 ]
 
 

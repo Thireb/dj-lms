@@ -49,6 +49,13 @@ REMEMBER_ME_SECONDS = 60 * 60 * 24 * 14
 # Client IP for sign-in limits: a header your proxy always sets, for example
 # HTTP_X_REAL_IP. Empty means REMOTE_ADDR (no proxy).
 TRUSTED_PROXY_IP_HEADER = os.environ.get("TRUSTED_PROXY_IP_HEADER", "")
+
+# Private uploads (guardian fee receipts, roadmap 7.3b; owner decision
+# 2026-10-16): outside static and never served directly; a view that checks
+# the user's access streams each file. Use a persistent volume in production.
+PRIVATE_MEDIA_ROOT = Path(
+    os.environ.get("PRIVATE_MEDIA_ROOT") or BASE_DIR / "private_media"
+)
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = ("ui/forms",)

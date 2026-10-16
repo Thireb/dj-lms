@@ -237,6 +237,7 @@ Date*, Batch*, Subject, Student (optional, for one-student reports), Topic cover
 
 ### 4.17 Fee Pay (guardian)
 Child* (S), Challan(s) or months* (multi), Amount* (default = selected balance), Paid on* (date), Reference (text), Receipt file* (JPG, PNG, WEBP, PDF, up to 5 MB). On submit: status `waiting`, admins notified.
+Built in 7.3b (assumed, check against the demo): the guardian chooses open challans (pending or partly paid) of the child chosen in the header; the amount is up to their balance; the date is not in the future. The file type is checked from its content (an image must open as that type, a PDF must start like one) and the file is stored privately under a random name (owner decision: private local disk). The number is `RCP-NNNN`. Approving records one payment per challan, oldest first, with method Online and the receipt's reference (or its number); it is refused if the challans now owe less than the receipt (for example the office was paid meanwhile). With auto-approve on, a receipt is approved as it is sent.
 
 ### 4.18 Leave request
 From*, To*, Reason*. For teachers, show days used and remaining.
