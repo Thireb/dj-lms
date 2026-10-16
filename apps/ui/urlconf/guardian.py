@@ -1,5 +1,6 @@
 from django.urls import path
 
+from apps.assessments import views as assessments
 from apps.attendance import views as attendance
 from apps.lectures import views as lectures
 from apps.people import views as people
@@ -16,4 +17,10 @@ urlpatterns = [
         name="lecture_schedule",
     ),
     path("attendance/", attendance.GuardianAttendancePage.as_view(), name="attendance"),
+    path(
+        "assignments/",
+        assessments.GuardianAssignmentListPage.as_view(),
+        name="assignment_list",
+    ),
+    path("quizzes/", assessments.GuardianQuizListPage.as_view(), name="quiz_list"),
 ]

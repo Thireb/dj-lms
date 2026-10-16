@@ -40,9 +40,16 @@ class GuardianMenu:
                         feature="lesson_plans",
                     ),
                     MenuItem(
+                        "Assignments",
+                        "guardian:assignment_list",
+                        "list-checks",
+                        menu_key="assignments",
+                    ),
+                    MenuItem(
                         "Quizzes and exams",
                         "guardian:quiz_list",
                         "square-pen",
+                        menu_key="quizzes",
                     ),
                     MenuItem(
                         "Class attendance",
