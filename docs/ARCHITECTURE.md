@@ -180,6 +180,7 @@ Set up in 3.2: `config/celery.py`, broker `REDIS_URL`, no result backend. Tests 
 - Generate recurring lectures. Built in 3.2: `lectures.tasks.generate_schedule_lectures` after a save, and `extend_all_schedules` nightly at 00:30 UTC (Celery beat).
 - Finish lectures past their end. Built in 3.5: `lectures.tasks.finish_all_ended_lectures` every 5 minutes (Celery beat): live lectures become finished and never-started ones not held, for active institutes.
 - Lecture reminders. Built in 6.2: `lectures.tasks.remind_all_lectures` every 5 minutes sends "starts soon" once for each scheduled lecture in the next 15 minutes (`Lecture.reminded_at`; a new start time clears it).
+- Quiz reminders. Built in 6.2: `assessments.tasks.remind_all_quizzes` every 5 minutes sends "opens soon" once for each published quiz that opens in the next hour (`Quiz.reminded_at`; a new time or Back to draft clears it).
 - Bulk challan generation.
 - Challan and lecture reminders.
 - Monthly payroll run.

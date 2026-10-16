@@ -32,6 +32,7 @@ from apps.academics.models import (
     Subject,
     TeacherBatchSubject,
 )
+from apps.assessments import notices
 from apps.assessments.models import (
     MAX_OPTIONS,
     MIN_OPTIONS,
@@ -149,7 +150,9 @@ def create_assignment(
     institute: Institute, details: AssignmentDetails, *, now: datetime | None = None
 ) -> Assignment:
     _check(institute, details, None, now or timezone.now())
-    return _apply(Assignment(institute=institute), details)
+    assignment = _apply(Assignment(institute=institute), details)
+    notices.assignment_published(assignment)
+    return assignment
 
 
 def update_assignment(
@@ -356,12 +359,15 @@ def submit_answer(
         row = Submission.objects.filter(assignment=locked, student=student).first()
         if row is not None and row.is_graded:
             raise ValidationError("This answer is graded and cannot change.")
-        if row is None:
+        first = row is None
+        if first:
             row = Submission(institute=locked.institute, assignment=locked)
             row.student = student
         row.answer = answer
         row.submitted_at = now or timezone.now()
         row.save()
+        if first:
+            notices.answer_received(row)
         return row
 
 
@@ -391,6 +397,7 @@ def grade_submission(
         row.graded_at = now or timezone.now()
         row.graded_by = graded_by
         row.save()
+        notices.answer_graded(row, marks_text(marks, assignment.total_marks))
         return row
 
 
@@ -647,6 +654,8 @@ def _apply_quiz(quiz: Quiz, details: QuizDetails) -> Quiz:
         "pass_marks",
         "shuffle_questions",
     ):
+        if name == "opens_at" and quiz.opens_at != details.opens_at:
+            quiz.reminded_at = None  # remind again before the new time
         setattr(quiz, name, getattr(details, name))
     exam = details.kind == QuizKind.EXAM  # SPEC 4.16: exam settings only
     quiz.require_full_screen = exam and details.require_full_screen
@@ -758,6 +767,7 @@ def unpublish_quiz(quiz: Quiz, *, now: datetime | None = None) -> Quiz:
     with transaction.atomic():
         locked = _locked_quiz(quiz, now)
         locked.is_published = False
+        locked.reminded_at = None
         locked.save()
         return locked
 
@@ -902,6 +912,9 @@ def _finish(
     attempt.submitted_at = min(now, attempt.deadline)
     attempt.auto_submitted = auto
     attempt.save()
+    if not short:  # graded at submit: the student sees the score already
+        score = marks_text(total, sum(item.question.marks for item in items))
+        notices.quiz_graded(attempt, score, to_student=False)
 
 
 def save_attempt(
@@ -1115,6 +1128,8 @@ def mark_attempt(attempt: QuizAttempt, marks: dict[int, Decimal]) -> QuizAttempt
         )
         locked.status = AttemptStatus.GRADED
         locked.save()
+        total = sum(item.question.marks for item in items)
+        notices.quiz_graded(locked, marks_text(locked.score, total))
         return locked
 
 
@@ -1184,3 +1199,29 @@ def event_counts(quiz: Quiz) -> dict[int, dict[str, int]]:
     for attempt_id, kind, total in rows:
         counts[attempt_id][kind] = total
     return dict(counts)
+
+
+# Quiz reminders (roadmap 6.2, SPEC 7 "quiz opens soon")
+
+QUIZ_REMIND_BEFORE = timedelta(hours=1)  # assumed: "soon" is 1 hour
+
+
+def remind_upcoming_quizzes(now: datetime | None = None) -> int:
+    """Send "opens soon" once for each published quiz that opens in the
+    next hour. The 5-minute job calls it in the tenant context; a locked
+    row is left for the run that holds it."""
+    now = now or timezone.now()
+    sent = 0
+    with transaction.atomic():
+        due = Quiz.objects.select_for_update(skip_locked=True).filter(
+            is_published=True,
+            reminded_at__isnull=True,
+            opens_at__gt=now,
+            opens_at__lte=now + QUIZ_REMIND_BEFORE,
+        )
+        for quiz in due:
+            notices.quiz_soon(quiz)
+            quiz.reminded_at = now
+            quiz.save(update_fields=["reminded_at"])
+            sent += 1
+    return sent

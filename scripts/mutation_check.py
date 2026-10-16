@@ -3544,6 +3544,54 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "        return create_lecture(self.get_institute(), details, actor=self.request.user)\n",
         "        return create_lecture(self.get_institute(), details)\n",
     ),
+    (
+        "only the first answer tells the teacher (6.2)",
+        "apps/assessments/services.py",
+        "        if first:\n            notices.answer_received(row)\n",
+        "        notices.answer_received(row)\n",
+    ),
+    (
+        "an MCQ quiz graded at submit tells the guardian only (6.2)",
+        "apps/assessments/services.py",
+        "        notices.quiz_graded(attempt, score, to_student=False)\n",
+        "        notices.quiz_graded(attempt, score)\n",
+    ),
+    (
+        "guardian-only notices skip the student (6.2)",
+        "apps/notifications/audience.py",
+        "    if to_students:\n",
+        "    if True:\n",
+    ),
+    (
+        "quiz reminders cover the next hour only (6.2)",
+        "apps/assessments/services.py",
+        "            opens_at__lte=now + QUIZ_REMIND_BEFORE,\n",
+        "",
+    ),
+    (
+        "drafts get no quiz reminder (6.2)",
+        "apps/assessments/services.py",
+        "            is_published=True,\n",
+        "",
+    ),
+    (
+        "a quiz is reminded once (6.2)",
+        "apps/assessments/services.py",
+        "            reminded_at__isnull=True,\n",
+        "",
+    ),
+    (
+        "back to draft clears the quiz reminder (6.2)",
+        "apps/assessments/services.py",
+        "        locked.reminded_at = None\n",
+        "",
+    ),
+    (
+        "portal access is told only on a change (6.2)",
+        "apps/people/services.py",
+        "    if changed:\n",
+        "    if True:\n",
+    ),
 ]
 
 
