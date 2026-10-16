@@ -3730,6 +3730,12 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         '        user.first_name, user.last_name = DEMO_NAMES.get(email, ("", ""))\n',
         "",
     ),
+    (
+        "a blocked student can still open Messages (P6-8)",
+        "apps/people/middleware.py",
+        '        return not (match.url_name or "").startswith(OPEN_PAGE_PREFIX)\n',
+        "        return True\n",
+    ),
 ]
 
 

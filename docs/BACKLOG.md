@@ -333,7 +333,7 @@ Full review of roadmap 6.1 to 6.3 on the local `phase/6` branch (one PR for the 
 | P6-5 | The demo admin and sub-admin had no names, so messages and the monitor showed their emails. `seed_demo` names them "Office Admin" and "Office Helper". | Low | [x] |
 | P6-6 | A signed-out user on a feature-gated page (the first ones are Messages) got 403, not the sign-in page: the feature check ran before the role check. Fixed in 6.3 part 2. | Low | [x] |
 | P6-7 | Polling: each portal page now loads 2 small HTMX parts (the bell count and the Messages badge) and refreshes both every 60 seconds, on top of "Up next" every 30 seconds (P3-8). Join them into one request, or use a longer interval, before large institutes. | Low | [ ] |
-| P6-8 | A blocked student (portal access paused) cannot open Messages, because every `/student/` page shows "Access paused". The page shows the institute phone (SPEC 6.2). Decide if a blocked student may still message the office. | Low | [ ] |
+| P6-8 | A blocked student (portal access paused) cannot open Messages, because every `/student/` page shows "Access paused". The page shows the institute phone (SPEC 6.2). Decide if a blocked student may still message the office. Owner decision 2026-10-16: yes. Messages stay open while blocked (the reach rule does not change), and "Access paused" has a "Message the office" button. | Low | [x] |
 | P6-9 | A notification text keeps the time in the zone the recipient had when it was made; a later time zone change does not rewrite old notifications. Accepted: the zone name is in the text. | Low | [x] |
 
 ## Later (deployment hardening, Phase 12)

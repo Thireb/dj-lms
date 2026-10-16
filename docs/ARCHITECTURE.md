@@ -140,7 +140,7 @@ People:
 - Status: activating or deactivating a student or teacher changes `profile.status` and `User.is_active` together, in one service call (decided 2026-10-07). An inactive person cannot sign in, and an open session ends on the next request.
 - Names: forms take one "Full name"; the service splits it at the first space into `first_name` and `last_name`.
 
-- `PortalAccessRule` (student, blocked, exempt, changed_at): no row means open and not exempt. `StudentPortalAccessMiddleware` (after `TenantMiddleware`) shows the full-page "Access paused" message for every `/student/` page while the student is blocked; account pages and the guardian portal stay open. Exempt only protects from the automatic rule (7.6); a manual block still applies.
+- `PortalAccessRule` (student, blocked, exempt, changed_at): no row means open and not exempt. `StudentPortalAccessMiddleware` (after `TenantMiddleware`) shows the full-page "Access paused" message for every `/student/` page while the student is blocked; account pages and the guardian portal stay open. Exempt only protects from the automatic rule (7.6); a manual block still applies. Messages (`student:message_*`) stay open while blocked (owner decision 2026-10-16, P6-8).
 
 Academics:
 - `ClassLabel`, `Batch`, `Subject`: name and `is_active`. Names are unique per institute, ignoring case.

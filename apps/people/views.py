@@ -673,6 +673,19 @@ class AdminDashboardPage(DashboardPage):
 ACCESS_PAUSED = "Access paused. Please contact the institute office"
 
 
+def _paused_actions(institute: Any) -> list[Any]:
+    """Messages stay open for a blocked student (P6-8), so they can write to
+    the office; then Sign out."""
+    actions: list[Any] = []
+    if "messaging" in (getattr(institute, "features", None) or ()):
+        url = reverse("student:message_compose")
+        actions.append(
+            Button("Message the office", url=url, variant="light", icon="mail")
+        )
+    actions.append(SignOutForm(logout_url=reverse("accounts:logout"), variant="light"))
+    return actions
+
+
 def access_paused_response(request: HttpRequest) -> HttpResponse:
     """The full page a blocked student sees instead of the student portal."""
     institute = getattr(request, "institute", None)
@@ -681,12 +694,7 @@ def access_paused_response(request: HttpRequest) -> HttpResponse:
     shell = PublicFormShell(
         page_title="Access paused",
         header=PageHeader(title="Access paused"),
-        content=BlockStack(
-            blocks=[
-                message,
-                SignOutForm(logout_url=reverse("accounts:logout"), variant="light"),
-            ]
-        ),
+        content=BlockStack(blocks=[message, *_paused_actions(institute)]),
         variant="notice",
         icon="circle-pause",
     )
