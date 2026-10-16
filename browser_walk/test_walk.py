@@ -46,7 +46,19 @@ USERS = {
     "guardian": "demo-guardian@example.com",
 }
 # Not pages: a file download and the HTMX parts that pages reload.
-SKIPPED = {"admin:student_bulk_template", "teacher:up_next", "student:up_next"}
+SKIPPED = {
+    "admin:student_bulk_template",
+    "teacher:up_next",
+    "student:up_next",
+    "notifications:count",
+    "notifications:panel",
+}
+# Pages outside the portal URLs that every role opens in its own shell.
+SHARED = {
+    "notifications:list": ["admin", "teacher", "student", "guardian"],
+    "accounts:profile": list(USERS),
+    "accounts:change_password": list(USERS),
+}
 
 DEMO_TEACHER = "demo-teacher@example.com"
 DEMO_STUDENT = "demo-student@example.com"
@@ -154,11 +166,11 @@ def _routes() -> list[tuple[str, Any, tuple[str, ...]]]:
                 walk(pattern.url_patterns, pattern.namespace or namespace)
             elif isinstance(pattern, URLPattern) and pattern.name:
                 view = getattr(pattern.callback, "view_class", None)
-                if namespace not in USERS or view is None:
+                name = f"{namespace}:{pattern.name}"
+                if view is None or (namespace not in USERS and name not in SHARED):
                     continue
                 if "get" not in view.http_method_names:
                     continue
-                name = f"{namespace}:{pattern.name}"
                 if name not in SKIPPED:
                     found.append((name, view, tuple(pattern.pattern.converters)))
 
@@ -177,7 +189,8 @@ def _pages() -> tuple[dict[str, list[tuple[str, str]]], list[str]]:
         if kwargs and not values:
             not_walked.append(name)
             continue
-        pages[name.split(":")[0]].append((name, reverse(name, kwargs=values)))
+        for role in SHARED.get(name, [name.split(":")[0]]):
+            pages[role].append((name, reverse(name, kwargs=values)))
     return pages, not_walked
 
 

@@ -245,7 +245,7 @@ Title*, Batch*, Subject, File* (PDF, DOC, PPT, images, up to 25 MB), Description
 Name*, Email*, Password*, Allowed menus* (checkboxes of the 8 groups), Status.
 
 ### 4.22 Account and profile
-Name, Phone, Photo, Time zone, Appearance (Light/Dark/Auto), Notification switches (fee alerts, class alerts), Change password (current, new, confirm).
+Name, Phone, Photo, Time zone, Appearance (Light/Dark/Auto), Notification switches (fee alerts, class alerts), Change password (current, new, confirm). Built in 6.1 (assumed): "Class alerts" and "Fee alerts" on My profile, on by default; a teacher sees only Class alerts (no fee events), the super admin neither.
 
 ### 4.23 Login and first-time password
 Login: Email*, Password*, Show password, Remember me. First-time link: New password*, Confirm*. Password rule: at least 8 characters, not too common, not too similar to the email. Email is not case sensitive. Passwords keep every space. After 5 failed sign-ins in 15 minutes for the same email and IP: "Too many failed attempts. Try again in 15 minutes." Without Remember me the session ends when the browser closes (and after 12 hours on the server); with it, after 14 days. A lost link: the super admin uses "New sign-in link" on the institute page (older links stop working).

@@ -22,11 +22,69 @@ class ChildSwitcher(Component):
         )
 
 
+# Roles that get notifications (SPEC 7); the super admin has none.
+BELL_ROLES = {"institute_admin", "sub_admin", "teacher", "student", "guardian"}
+COUNT_CAP = 99  # the badge shows "99+" above this
+
+
+class NotificationCount(Component):
+    """The bell's unread count: a badge and words for screen readers. The
+    bell loads it on each page and every 60 seconds (HTMX)."""
+
+    template_name = "ui/components/notification_count.html"
+
+    def __init__(self, unread_count=0, **props):
+        count = max(0, int(unread_count))
+        shown = f"{COUNT_CAP}+" if count > COUNT_CAP else str(count)
+        super().__init__(unread_count=count, shown=shown, **props)
+
+
 class NotificationBell(Component):
+    """Top bar bell (roadmap 6.1). A link to the Notifications page; with
+    JavaScript it opens the latest notifications (``panel_url``, loaded
+    when opened) and keeps the unread count fresh (``count_url``)."""
+
     template_name = "ui/components/notification_bell.html"
 
     def __init__(self, user, unread_count=0, **props):
         super().__init__(user=user, unread_count=unread_count, **props)
+
+    def get_context(self):
+        from django.urls import reverse
+
+        ctx = super().get_context()
+        ctx["enabled"] = getattr(self.props["user"], "role", "") in BELL_ROLES
+        ctx["count"] = NotificationCount(self.props["unread_count"])
+        ctx["list_url"] = reverse("notifications:list")
+        ctx["count_url"] = reverse("notifications:count")
+        ctx["panel_url"] = reverse("notifications:panel")
+        return ctx
+
+
+class NotificationPanel(Component):
+    """The bell's list: the latest notifications, each a POST button that
+    marks it read and opens its link, then "Mark all as read" and "See all".
+    ``rows`` have ``text``, ``when``, ``open_url`` and ``is_read``. Render
+    with ``request`` for the CSRF tokens."""
+
+    template_name = "ui/components/notification_panel.html"
+
+    def __init__(self, rows, list_url, read_all_url, next_url="", **props):
+        super().__init__(
+            rows=[
+                {
+                    "text": row.text,
+                    "when": row.when,
+                    "open_url": safe_url(row.open_url),
+                    "is_read": row.is_read,
+                }
+                for row in rows
+            ],
+            list_url=safe_url(list_url),
+            read_all_url=safe_url(read_all_url),
+            next_url=safe_url(next_url),
+            **props,
+        )
 
 
 def _get(field, key: str, default=""):

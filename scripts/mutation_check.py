@@ -3460,6 +3460,36 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "Notification.objects.filter(created_at__lt=cutoff)",
         "Notification.objects.filter(created_at__lte=cutoff)",
     ),
+    (
+        "bell parts give a signed-out user 204 (6.1)",
+        "apps/notifications/views.py",
+        "        if not request.user.is_authenticated:\n            return HttpResponse(status=204)\n",
+        "",
+    ),
+    (
+        "the back path refuses a backslash (6.1)",
+        "apps/notifications/views.py",
+        '    bad = "\\\\" in path or not value.isprintable()',
+        "    bad = not value.isprintable()",
+    ),
+    (
+        "the super admin has no bell (6.1)",
+        "apps/ui/components/nav.py",
+        '        ctx["enabled"] = getattr(self.props["user"], "role", "") in BELL_ROLES\n',
+        '        ctx["enabled"] = True\n',
+    ),
+    (
+        "teachers get no fee alert switch (6.1)",
+        "apps/accounts/forms.py",
+        '        return ["class_alerts"]\n',
+        "        return list(ALERT_FIELDS)\n",
+    ),
+    (
+        "profile service changes only the switches (6.1)",
+        "apps/accounts/services.py",
+        '        if name in ("class_alerts", "fee_alerts"):\n',
+        "        if True:\n",
+    ),
 ]
 
 
