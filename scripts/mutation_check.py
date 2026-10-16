@@ -2815,8 +2815,8 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
     (
         "answers to grade count only ungraded answers (5.1)",
         "apps/assessments/services.py",
-        "    return Submission.objects.for_user(user).filter(marks__isnull=True).count()\n",
-        "    return Submission.objects.for_user(user).count()\n",
+        "    answers = Submission.objects.for_user(user).filter(marks__isnull=True).count()\n",
+        "    answers = Submission.objects.for_user(user).count()\n",
     ),
     (
         "student list needs the enrolment's subject (5.1)",
