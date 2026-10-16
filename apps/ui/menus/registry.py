@@ -84,6 +84,7 @@ def resolve_menu_groups(
                     disabled=disabled,
                     url_name=item.url_name,
                     post_only=post_only,
+                    badge_url=(safe_reverse(item.badge) or "") if item.badge else "",
                 )
             )
         if items:

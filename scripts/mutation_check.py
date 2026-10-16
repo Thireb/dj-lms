@@ -3652,6 +3652,36 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "    others.update(trashed_at=None, deleted=False)\n",
         "",
     ),
+    (
+        "a thread deleted forever stays closed (6.3)",
+        "apps/messaging/views.py",
+        "        if self.member is None or self.member.deleted:\n",
+        "        if self.member is None:\n",
+    ),
+    (
+        "thread actions need a member (6.3)",
+        "apps/messaging/views.py",
+        "        if member is None or member.deleted:\n",
+        "        if False:\n",
+    ),
+    (
+        "the unread badge gives a signed-out user 204 (6.3)",
+        "apps/messaging/views.py",
+        "        if not request.user.is_authenticated:\n            return HttpResponse(status=204)\n",
+        "",
+    ),
+    (
+        "a signed-out user on a feature page goes to sign in (6.3)",
+        "apps/core/mixins/access.py",
+        '        if key and getattr(user, "is_authenticated", False):\n',
+        "        if key:\n",
+    ),
+    (
+        "drafts open only for their owner (6.3)",
+        "apps/messaging/views.py",
+        'Draft.objects.for_user(user), pk=id_param(params.get("draft"))',
+        'Draft.objects.all(), pk=id_param(params.get("draft"))',
+    ),
 ]
 
 

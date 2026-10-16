@@ -140,3 +140,15 @@ class Pagination(Component):
         )
         ctx["ellipsis"] = paginator.ELLIPSIS
         return ctx
+
+
+class MenuBadge(Component):
+    """A menu item's count (unread messages), loaded with HTMX by the menu.
+    Nothing shows for 0; "99+" above 99."""
+
+    template_name = "ui/components/menu_badge.html"
+
+    def __init__(self, count=0, **props):
+        count = max(0, int(count))
+        shown = f"{COUNT_CAP}+" if count > COUNT_CAP else str(count)
+        super().__init__(count=count, shown=shown, **props)

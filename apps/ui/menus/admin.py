@@ -222,6 +222,7 @@ class AdminMenu:
                         "admin:message_inbox",
                         "inbox",
                         feature="messaging",
+                        badge="admin:message_unread",
                     ),
                     MenuItem(
                         "Send message",
