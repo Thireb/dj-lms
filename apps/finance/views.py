@@ -4,13 +4,14 @@ from __future__ import annotations
 
 from datetime import date
 from decimal import Decimal
+from pathlib import Path
 from typing import Any
 from urllib.parse import urlencode
 
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
-from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
+from django.http import FileResponse, HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.utils import timezone
@@ -24,9 +25,25 @@ from apps.finance.forms import (
     ChallanGenerateForm,
     FeePlanForm,
     PaymentForm,
+    ReceiptForm,
+    RejectReceiptForm,
 )
-from apps.finance.models import Challan, ChallanStatus, FeePlan, Payment, PaymentMethod
+from apps.finance.models import (
+    Challan,
+    ChallanStatus,
+    FeePlan,
+    Payment,
+    PaymentMethod,
+    ReceiptStatus,
+    ReceiptSubmission,
+)
 from apps.finance.pdf import challans_pdf, receipt_pdf
+from apps.finance.receipts import (
+    approve_receipt,
+    open_challans_of,
+    reject_receipt,
+    submit_receipt,
+)
 from apps.finance.services import (
     OVERDUE,
     cancel_challan,
@@ -48,16 +65,21 @@ from apps.finance.ui import (
     ChallanLineTable,
     ChallanTable,
     FeePlanTable,
+    GuardianReceiptTable,
     PaymentTable,
     PayTable,
+    ReceiptImage,
+    ReceiptInboxTable,
     SkippedTable,
     challan_badge,
     challan_url,
     date_text,
     money,
     month_text,
+    receipt_badge,
 )
 from apps.people.models import ProfileStatus, StudentProfile
+from apps.people.views import GuardianChildMixin
 from apps.ui.components import (
     Button,
     ConfirmDialog,
@@ -779,3 +801,360 @@ class StudentFeeHistoryPage(ChallanMixin, DetailPage):
             ("Due", money(history.due, institute)),
         ]
         return [SectionCard(title="Totals", icon="list", body=DetailList(rows))]
+
+
+# Receipts (roadmap 7.3b): guardian Fee pay, admin Receipt inbox
+
+CONTENT_TYPES = {
+    ".pdf": "application/pdf",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+    ".webp": "image/webp",
+}
+
+
+def receipt_file_response(receipt: ReceiptSubmission) -> HttpResponse:
+    """Stream a private receipt file. Shown in the browser, never sniffed
+    as another type, never cached by a shared cache."""
+    suffix = Path(receipt.file.name).suffix.lower()
+    response = FileResponse(
+        receipt.file.open("rb"),
+        content_type=CONTENT_TYPES.get(suffix, "application/octet-stream"),
+        as_attachment=False,
+        filename=f"{receipt.number}{suffix}",
+    )
+    response["X-Content-Type-Options"] = "nosniff"
+    response["Cache-Control"] = "private, no-store"
+    return response
+
+
+class GuardianFeeMixin(GuardianChildMixin):
+    portal = "guardian"
+    feature_key = "fees"
+    allowed_roles = [Role.GUARDIAN]
+
+
+class GuardianFeePayPage(GuardianFeeMixin, DetailPage):
+    """SPEC 3 Guardian Fee Pay: the form (SPEC 4.17) and the history of
+    sent receipts with their status."""
+
+    title = "Fee pay"
+    active_item = "fee_pay"
+
+    def load(self) -> None:
+        self.open = open_challans_of(self.child) if self.child else []
+
+    def make_form(self, data: Any = None, files: Any = None) -> ReceiptForm:
+        institute = self.get_institute()
+        choices = [
+            (c.pk, f"{c.number}, {month_text(c.month)}: {money(c.balance, institute)}")
+            for c in self.open
+        ]
+        total = sum((c.balance for c in self.open), Decimal("0"))
+        return ReceiptForm(
+            data,
+            files,
+            choices=choices,
+            cancel_url=reverse("guardian:home"),
+            initial={
+                "challans": [pk for pk, _ in choices],
+                "amount": total or None,
+                "paid_on": timezone.localdate(),
+            },
+        )
+
+    def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        self.load()
+        self.form = self.make_form()
+        return super().get(request, *args, **kwargs)
+
+    def post(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        self.load()
+        if self.child is None:
+            return HttpResponseRedirect(request.path)
+        self.form = self.make_form(request.POST, request.FILES)
+        if self.form.is_valid():
+            data = self.form.cleaned_data
+            by_pk = {challan.pk: challan for challan in self.open}
+            try:
+                receipt = submit_receipt(
+                    request.user,
+                    self.child,
+                    challans=[by_pk[pk] for pk in data["challans"] if pk in by_pk],
+                    amount=data["amount"],
+                    paid_on=data["paid_on"],
+                    reference=data["reference"],
+                    upload=data["file"],
+                )
+            except ValidationError as error:
+                if hasattr(error, "error_dict"):
+                    for name, errors in error.message_dict.items():
+                        target = name if name in self.form.fields else None
+                        self.form.add_error(target, errors)
+                else:
+                    self.form.add_error(None, error)
+            else:
+                if receipt.status == ReceiptStatus.APPROVED:
+                    messages.success(
+                        request, f"Receipt {receipt.number} sent and approved."
+                    )
+                else:
+                    messages.success(
+                        request,
+                        f"Receipt {receipt.number} sent. The office checks it soon.",
+                    )
+                return HttpResponseRedirect(request.path)
+        return self.render_to_response(self.get_context_data())
+
+    def get_subtitle(self) -> str:
+        if self.child is None:
+            return ""
+        return f"Send proof of a payment for {self.child}."
+
+    def get_primary_cards(self) -> list[Any]:
+        if self.child is None:
+            return [
+                EmptyState(
+                    "No children are linked to this account yet.",
+                    text="Contact the institute office.",
+                    icon="graduation-cap",
+                )
+            ]
+        institute = self.get_institute()
+        history = ReceiptSubmission.objects.for_user(self.request.user).filter(
+            student=self.child
+        )
+        cards: list[Any] = []
+        if self.open:
+            self.form.helper.disable_csrf = True  # PortalPostForm adds the token
+            form = PortalPostForm(
+                action=self.request.path, body=CrispyForm(form=self.form), framed=False
+            )
+            cards.append(SectionCard(title="Send a receipt", icon="upload", body=form))
+        else:
+            cards.append(
+                SectionCard(
+                    title="Send a receipt",
+                    icon="upload",
+                    body=EmptyState(
+                        "Nothing to pay.", text="No challan is open.", icon="check"
+                    ),
+                )
+            )
+        cards.append(
+            SectionCard(
+                title="Receipts you sent",
+                icon="list",
+                body=GuardianReceiptTable(
+                    list(history.prefetch_related("challans")), institute=institute
+                ),
+            )
+        )
+        return cards
+
+
+class GuardianReceiptFileView(GuardianFeeMixin, PortalPageView):
+    http_method_names = ["get"]
+
+    def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        rows = ReceiptSubmission.objects.for_user(request.user)
+        return receipt_file_response(get_object_or_404(rows, pk=self.kwargs["pk"]))
+
+
+class ReceiptMixin(ChallanMixin):
+    def get_receipt(self) -> ReceiptSubmission:
+        rows = ReceiptSubmission.objects.for_user(self.request.user).select_related(
+            "student__user", "submitted_by", "reviewed_by"
+        )
+        return get_object_or_404(rows, pk=self.kwargs["pk"])
+
+
+class ReceiptInboxPage(ReceiptMixin, ListPage):
+    """SPEC 3 Receipt Inbox, with the status and date range filters."""
+
+    title = "Receipt inbox"
+    filter_keys = ("status", "from", "to")
+
+    def get_subtitle(self) -> str:
+        return "Receipts guardians sent. Approve to record the payments."
+
+    def get_components(self) -> dict[str, Any]:
+        params = self.request.GET
+        filters = {key: search_param(params.get(key)) for key in self.filter_keys}
+        status = filters["status"] if filters["status"] in ReceiptStatus.values else ""
+        rows = ReceiptSubmission.objects.for_user(self.request.user)
+        if status:
+            rows = rows.filter(status=status)
+        start, end = parse_iso(filters["from"]), parse_iso(filters["to"])
+        if start:
+            rows = rows.filter(created_at__date__gte=start)
+        if end:
+            rows = rows.filter(created_at__date__lte=end)
+        rows = rows.select_related("student__user", "submitted_by").prefetch_related(
+            "challans"
+        )
+        page = Paginator(rows, PAGE_SIZE).get_page(params.get("page"))
+        query = urlencode({key: value for key, value in filters.items() if value})
+        return {
+            "filters": FilterBar(
+                [
+                    {
+                        "name": "status",
+                        "label": "Status",
+                        "value": status,
+                        "options": [("", "Any status"), *ReceiptStatus.choices],
+                    },
+                    {
+                        "name": "from",
+                        "label": "From",
+                        "value": filters["from"],
+                        "input_type": "date",
+                    },
+                    {
+                        "name": "to",
+                        "label": "To",
+                        "value": filters["to"],
+                        "input_type": "date",
+                    },
+                ]
+            ),
+            "table": ReceiptInboxTable(
+                list(page.object_list), institute=self.get_institute()
+            ),
+            "pagination": Pagination(page, query=query),
+        }
+
+
+class ReceiptDetailPage(ReceiptMixin, DetailPage):
+    """One receipt: the file, the challans it pays, Approve and Reject."""
+
+    title = "Receipt"
+
+    def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        self.receipt = self.get_receipt()
+        self.title = self.receipt.number
+        self.form = RejectReceiptForm()
+        return super().get(request, *args, **kwargs)
+
+    def get_subtitle(self) -> str:
+        sent = date_text(self.receipt.created_at.date())
+        return f"{who(self.receipt.student)}, sent {sent}"
+
+    def file_url(self) -> str:
+        return reverse("admin:receipt_file", kwargs={"pk": self.receipt.pk})
+
+    def get_actions(self) -> list[Any]:
+        actions: list[Any] = [
+            Button(
+                "Open the file",
+                url=self.file_url(),
+                variant="secondary",
+                icon="file",
+                new_tab=True,
+            )
+        ]
+        if self.receipt.status == ReceiptStatus.WAITING:
+            actions.append(
+                ConfirmDialog(
+                    "Approve this receipt? The payments are recorded on the challans, "
+                    "oldest first.",
+                    "Approve",
+                    url=reverse(
+                        "admin:receipt_approve", kwargs={"pk": self.receipt.pk}
+                    ),
+                    trigger_label="Approve",
+                    variant="primary",
+                )
+            )
+        return actions
+
+    def get_primary_cards(self) -> list[Any]:
+        receipt, institute = self.receipt, self.get_institute()
+        cards: list[Any] = []
+        if Path(receipt.file.name).suffix.lower() != ".pdf":
+            cards.append(
+                SectionCard(
+                    title="Receipt",
+                    icon="file",
+                    body=ReceiptImage(self.file_url(), f"Receipt {receipt.number}"),
+                )
+            )
+        challans = list(receipt.challans.select_related("student__user"))
+        cards.append(
+            SectionCard(
+                title="Challans it pays",
+                icon="receipt-text",
+                body=ChallanTable(challans, institute=institute),
+            )
+        )
+        if receipt.status == ReceiptStatus.WAITING:
+            self.form.helper.disable_csrf = True  # PortalPostForm adds the token
+            url = reverse("admin:receipt_reject", kwargs={"pk": receipt.pk})
+            cards.append(
+                SectionCard(
+                    title="Reject",
+                    icon="x",
+                    body=PortalPostForm(
+                        action=url, body=CrispyForm(form=self.form), framed=False
+                    ),
+                )
+            )
+        return cards
+
+    def get_sidebar_cards(self) -> list[Any]:
+        receipt, institute = self.receipt, self.get_institute()
+        user = receipt.submitted_by
+        rows: list[tuple[str, Any]] = [
+            ("Status", receipt_badge(receipt)),
+            ("Amount", money(receipt.amount, institute)),
+            ("Paid on", date_text(receipt.paid_on)),
+            ("Reference", receipt.reference or "-"),
+            ("Guardian", (user.get_full_name() or user.email) if user else "-"),
+        ]
+        if receipt.reason:
+            rows.append(("Reason", receipt.reason))
+        return [SectionCard(title="Details", icon="list", body=DetailList(rows))]
+
+
+class ReceiptApproveView(ReceiptMixin, PortalPageView):
+    http_method_names = ["post"]
+
+    def post(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        receipt = self.get_receipt()
+        try:
+            approve_receipt(receipt, by=request.user)
+        except ValidationError as error:
+            messages.error(request, " ".join(error.messages))
+        else:
+            messages.success(
+                request, f"{receipt.number} approved. The payments are recorded."
+            )
+        return HttpResponseRedirect(
+            reverse("admin:receipt_detail", kwargs={"pk": receipt.pk})
+        )
+
+
+class ReceiptRejectView(ReceiptMixin, PortalPageView):
+    http_method_names = ["post"]
+
+    def post(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        receipt = self.get_receipt()
+        form = RejectReceiptForm(request.POST)
+        reason = form.cleaned_data["reason"] if form.is_valid() else ""
+        try:
+            reject_receipt(receipt, reason=reason, by=request.user)
+        except ValidationError as error:
+            messages.error(request, " ".join(error.messages))
+        else:
+            messages.success(request, f"{receipt.number} rejected.")
+        return HttpResponseRedirect(
+            reverse("admin:receipt_detail", kwargs={"pk": receipt.pk})
+        )
+
+
+class AdminReceiptFileView(ReceiptMixin, PortalPageView):
+    http_method_names = ["get"]
+
+    def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        return receipt_file_response(self.get_receipt())

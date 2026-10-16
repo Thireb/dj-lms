@@ -251,4 +251,23 @@ urlpatterns = [
         finance.StudentFeeHistoryPage.as_view(),
         name="student_fee_history",
     ),
+    path("receipts/", finance.ReceiptInboxPage.as_view(), name="receipt_inbox"),
+    path(
+        "receipts/<int:pk>/", finance.ReceiptDetailPage.as_view(), name="receipt_detail"
+    ),
+    path(
+        "receipts/<int:pk>/approve/",
+        finance.ReceiptApproveView.as_view(),
+        name="receipt_approve",
+    ),
+    path(
+        "receipts/<int:pk>/reject/",
+        finance.ReceiptRejectView.as_view(),
+        name="receipt_reject",
+    ),
+    path(
+        "receipts/<int:pk>/file/",
+        finance.AdminReceiptFileView.as_view(),
+        name="receipt_file",
+    ),
 ]

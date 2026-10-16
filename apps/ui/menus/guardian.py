@@ -72,6 +72,7 @@ class GuardianMenu:
                         "Fee pay",
                         "guardian:fee_pay",
                         "credit-card",
+                        menu_key="fee_pay",
                         feature="fees",
                     ),
                 ),

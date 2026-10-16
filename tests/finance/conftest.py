@@ -51,11 +51,10 @@ def give_plan(student, plan, discount_type="none", discount="0") -> StudentFeePl
         )
 
 
-@pytest.fixture(autouse=True)
-def private_media(settings, tmp_path):
-    """Receipt files go to a temporary folder in every finance test."""
-    settings.PRIVATE_MEDIA_ROOT = tmp_path / "private"
-    return settings.PRIVATE_MEDIA_ROOT
+@pytest.fixture
+def private_media(_private_media):
+    """The temporary private folder (set for every test in tests/conftest)."""
+    return _private_media
 
 
 def png_upload(name="receipt.png"):

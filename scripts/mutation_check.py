@@ -3910,6 +3910,24 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "    if student.institute.settings.auto_approve_guardian_receipts:\n",
         "    if False:\n",
     ),
+    (
+        "receipt files are never sniffed (7.3b)",
+        "apps/finance/views.py",
+        '    response["X-Content-Type-Options"] = "nosniff"\n',
+        "",
+    ),
+    (
+        "a guardian opens only their child's receipt files (7.3b)",
+        "apps/finance/views.py",
+        "        rows = ReceiptSubmission.objects.for_user(request.user)\n        return receipt_file_response(",
+        "        rows = ReceiptSubmission.objects.all()\n        return receipt_file_response(",
+    ),
+    (
+        "finance admins hear about new receipts (7.3b)",
+        "apps/finance/notices.py",
+        "    return [user for user in users if user_has_menu(user, FINANCE)]\n",
+        "    return []\n",
+    ),
 ]
 
 

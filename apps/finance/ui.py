@@ -9,6 +9,8 @@ from django.urls import reverse
 
 from apps.ui.components import Badge, Column, DataTable
 from apps.ui.components.actions import IconButton
+from apps.ui.components.base import Component
+from apps.ui.safe_url import safe_url
 
 
 def money(amount: Decimal | None, institute: Any) -> str:
@@ -205,3 +207,91 @@ class PaymentTable(DataTable):
         return IconButton(
             "download", f"Receipt {payment.number}", url=payment_url(payment)
         )
+
+
+# Receipts (roadmap 7.3b)
+
+RECEIPT_TONES = {"waiting": "warning", "approved": "success", "rejected": "danger"}
+
+
+def receipt_badge(receipt) -> Badge:
+    return Badge(receipt.get_status_display(), tone=RECEIPT_TONES[receipt.status])
+
+
+def months_of(receipt) -> str:
+    return ", ".join(month_text(challan.month) for challan in receipt.challans.all())
+
+
+class ReceiptInboxTable(DataTable):
+    """Receipt Inbox (SPEC 3): Submitted on, Student, Guardian, Months,
+    Amount, Reference, Status."""
+
+    empty_title = "No receipts match these filters."
+
+    def __init__(self, rows, institute, **props):
+        self.institute = institute
+        super().__init__(rows=rows, **props)
+
+    @property
+    def columns(self) -> list[Column]:  # type: ignore[override]
+        return [
+            Column(
+                "submitted", "Submitted on", lambda r: date_text(r.created_at.date())
+            ),
+            Column(
+                "student",
+                "Student",
+                lambda r: f"{r.student} ({r.student.student_code})",
+            ),
+            Column("guardian", "Guardian", self.guardian),
+            Column("months", "Months", months_of),
+            Column("amount", "Amount", lambda r: money(r.amount, self.institute)),
+            Column("reference", "Reference", lambda r: r.reference or "-"),
+            Column("status", "Status", receipt_badge),
+            Column("actions", "", self.open_button),
+        ]
+
+    def guardian(self, receipt) -> str:
+        user = receipt.submitted_by
+        return (user.get_full_name() or user.email) if user else "-"
+
+    def open_button(self, receipt) -> IconButton:
+        url = reverse("admin:receipt_detail", kwargs={"pk": receipt.pk})
+        return IconButton("eye", f"View {receipt.number}", url=url)
+
+
+class GuardianReceiptTable(DataTable):
+    """Fee pay history (SPEC 3 Guardian: "a history list of submissions with
+    status")."""
+
+    empty_title = "No receipts sent yet."
+
+    def __init__(self, rows, institute, **props):
+        self.institute = institute
+        super().__init__(rows=rows, **props)
+
+    @property
+    def columns(self) -> list[Column]:  # type: ignore[override]
+        return [
+            Column("number", "Receipt", lambda r: r.number),
+            Column("submitted", "Sent on", lambda r: date_text(r.created_at.date())),
+            Column("months", "Months", months_of),
+            Column("amount", "Amount", lambda r: money(r.amount, self.institute)),
+            Column("status", "Status", receipt_badge),
+            Column("reason", "Note", lambda r: r.reason or "-"),
+            Column("actions", "", self.file_button),
+        ]
+
+    def file_button(self, receipt) -> IconButton:
+        url = reverse("guardian:receipt_file", kwargs={"pk": receipt.pk})
+        return IconButton("file", f"Open {receipt.number}", url=url, new_tab=True)
+
+
+class ReceiptImage(Component):
+    """A receipt photo on the admin page, loaded from the checked file view
+    (never a public URL)."""
+
+    template_name = "finance/receipt_image.html"
+
+    def __init__(self, url, alt, **props):
+        super().__init__(url=safe_url(url), alt=alt, **props)
