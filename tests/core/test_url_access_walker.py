@@ -32,7 +32,7 @@ from apps.assessments.models import (
 from apps.core.features import ALL_FEATURE_KEYS
 from apps.core.roles import Role
 from apps.core.tenancy import tenant_context
-from apps.finance.models import FeePlan
+from apps.finance.models import Challan, FeePlan
 from apps.institutes.models import Plan
 from apps.lectures.models import Lecture, LectureStatus, RecurringSchedule
 from apps.messaging.models import Draft, Thread, ThreadMember
@@ -401,6 +401,23 @@ def _thread(institute) -> int:
     return thread.pk
 
 
+def _challan(institute) -> int:
+    # unscoped: test setup outside a tenant context.
+    existing = Challan.unscoped.filter(institute=institute).first()
+    if existing is not None:
+        return existing.pk
+    today = timezone.localdate()
+    return Challan.unscoped.create(
+        institute=institute,
+        student_id=_student(institute),
+        number="CH-WALKER-0001",
+        month=today.replace(day=1),
+        issue_date=today,
+        due_date=today,
+        amount=1000,
+    ).pk
+
+
 def _fee_plan(institute) -> int:
     # unscoped: test setup outside a tenant context.
     plan, _ = FeePlan.unscoped.get_or_create(
@@ -463,6 +480,7 @@ ROUTE_OBJECTS = {
     "student:quiz_attempt": _attempt,
     "notifications:open": _notification,
     **{f"admin:fee_plan_{action}": _fee_plan for action in ("edit", "status")},
+    **{f"admin:challan_{action}": _challan for action in ("detail", "cancel")},
     **{
         f"{portal}:message_{action}": _thread
         for portal in ("admin", "teacher", "student", "guardian")

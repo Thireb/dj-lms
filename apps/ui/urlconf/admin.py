@@ -219,4 +219,18 @@ urlpatterns = [
         finance.FeePlanStatusView.as_view(),
         name="fee_plan_status",
     ),
+    path("challans/", finance.ChallanListPage.as_view(), name="challan_list"),
+    path(
+        "challans/generate/",
+        finance.ChallanGeneratePage.as_view(),
+        name="challan_generate",
+    ),
+    path(
+        "challans/<int:pk>/", finance.ChallanDetailPage.as_view(), name="challan_detail"
+    ),
+    path(
+        "challans/<int:pk>/cancel/",
+        finance.ChallanCancelView.as_view(),
+        name="challan_cancel",
+    ),
 ]

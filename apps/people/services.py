@@ -37,16 +37,22 @@ STUDENT_CODE_PREFIX = "STU"
 TEACHER_CODE_PREFIX = "TCH"
 
 
-def next_code(institute: Institute, prefix: str) -> str:
-    """Return the next code for the prefix. Numbers are never reused."""
+def next_number(institute: Institute, key: str) -> int:
+    """The next number for a key (at most 8 characters). Numbers are never
+    reused; the row lock keeps two saves from getting the same one."""
     require_tenant_context(institute)
     with transaction.atomic():
         sequence, _ = CodeSequence.objects.select_for_update().get_or_create(
-            institute=institute, prefix=prefix
+            institute=institute, prefix=key
         )
         sequence.last_number += 1
         sequence.save(update_fields=["last_number"])
-    return f"{prefix}-{sequence.last_number:03d}"
+    return sequence.last_number
+
+
+def next_code(institute: Institute, prefix: str) -> str:
+    """Return the next code for the prefix, like STU-054."""
+    return f"{prefix}-{next_number(institute, prefix):03d}"
 
 
 @transaction.atomic

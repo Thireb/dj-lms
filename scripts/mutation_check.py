@@ -3796,6 +3796,36 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "            FeeChoice(plan, DiscountType.PERCENT, value) for plan in plans\n",
         "            FeeChoice(plan, DiscountType.PERCENT, value) for plan in plans[:1]\n",
     ),
+    (
+        "a cancelled challan does not block the month (7.2)",
+        "apps/finance/services.py",
+        '        .exclude(status=ChallanStatus.CANCELLED)\n        .values_list("student_id", "number")',
+        '        .values_list("student_id", "number")',
+    ),
+    (
+        "a student without a fee plan is skipped (7.2)",
+        "apps/finance/services.py",
+        "        elif not lines[student.pk]:\n",
+        "        elif False:\n",
+    ),
+    (
+        "a challan with payments is not cancelled (7.2)",
+        "apps/finance/services.py",
+        "        if locked.paid > 0:\n",
+        "        if False:\n",
+    ),
+    (
+        "a challan is not due in the past (7.2)",
+        "apps/finance/services.py",
+        "    if due_date < today:\n",
+        "    if False:\n",
+    ),
+    (
+        "overdue starts the day after the due date (7.2)",
+        "apps/finance/services.py",
+        "    return open_ and today > challan.due_date\n",
+        "    return open_ and today >= challan.due_date\n",
+    ),
 ]
 
 

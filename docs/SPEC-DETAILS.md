@@ -192,6 +192,7 @@ Rules chosen in 3.2 (ASSUMED, compare with the demo):
 
 ### 4.7 Generate challans
 Month* (month picker), Due date* (default from settings), Students: all active / by batch / pick students. Preview table (student, amount) with a checkbox per row. Skip rule: a student who already has a non-cancelled challan for that month is skipped and listed.
+Built in 7.2 (assumed, check against the demo): "pick students" is the preview: every planned student is ticked, and the admin unticks the ones to leave out. A student with no fee plan is skipped and listed too. The due date is today or later and not before the month; empty means the fee due day of that month. The challan number is `CH-YYYYMM-NNNN`, a running number per institute and month. Generate queues a Celery task; when the broker is down the challans are made in the request. Running it twice makes no duplicates (the skip rule is checked again for each challan).
 
 ### 4.8 Process payment
 Search challan or student*, Amount* (up to balance), Date* (default today), Method* (S) Cash / Bank transfer / Online / Other, Reference, Note. Allows partial payment.
