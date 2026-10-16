@@ -441,6 +441,14 @@ def quiz_detail_rows(
     return rows
 
 
+def opened_quiz_text(quiz: Quiz, status: str) -> str:
+    """The page subtitle once the quiz has opened (backlog AS15: a closed
+    quiz says when it closed)."""
+    if status == QuizStatus.CLOSED:
+        return f"Closed {when(quiz.closes_at)}."
+    return f"Live. It closes {when(quiz.closes_at)}."
+
+
 # Quiz attempts (roadmap 5.3)
 
 # SPEC 2: blue, amber, green.
@@ -618,7 +626,8 @@ def answer_text(row: AnswerRow) -> str:
 
 class AnswerTable(DataTable):
     """One attempt's answers in the student's order, with the right answer
-    and the marks, on the teacher's attempt page."""
+    and the marks: the teacher's attempt page, and the student's quiz page
+    once the quiz closes."""
 
     empty_title = "This quiz has no questions."
 

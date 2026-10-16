@@ -13,7 +13,7 @@ from django.urls import reverse
 
 from tests.assessments.test_attempts import _save, _start, live_quiz
 from tests.assessments.test_exam_mode import live_exam
-from tests.assessments.test_quizzes import add_quiz
+from tests.assessments.test_quizzes import add_quiz, opened
 from tests.conftest import cell, make_user, table_row
 from tests.lectures.conftest import signed_in
 from tests.school import link_teacher
@@ -143,3 +143,19 @@ def test_opened_quiz_shows_results_read_only(school) -> None:
     assert attempt_url not in html
     assert str(school.teacher_1) in html  # Details: Teacher
     assert "Remove" not in html and "Add from bank" not in html
+
+
+@pytest.mark.django_db
+def test_a_closed_quiz_says_when_it_closed(school) -> None:
+    """Backlog AS15: the subtitle of a closed quiz uses the past."""
+    quiz, _ = live_quiz(school)
+    teacher = signed_in(school.teacher_1.user)
+    teacher_url = reverse("teacher:quiz_detail", kwargs={"pk": quiz.pk})
+    assert "Live. It closes" in teacher.get(teacher_url).content.decode()
+    opened(quiz, minutes_ago=60)  # closed after 30 + 10 minutes
+    for client, url in (
+        (teacher, teacher_url),
+        (signed_in(_admin(school)), _detail(quiz)),
+    ):
+        html = client.get(url).content.decode()
+        assert "Closed " in html and "It closes" not in html, url

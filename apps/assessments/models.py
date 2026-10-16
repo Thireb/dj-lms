@@ -19,7 +19,7 @@ from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.db.models import F
+from django.db.models import F, Q
 
 from apps.core.managers import TenantManager, TenantQuerySet, UnscopedTenantManager
 from apps.core.models import TenantModel
@@ -34,9 +34,10 @@ MAX_QUIZ_MINUTES = 300
 # SPEC 6.8: a quiz closes 10 minutes after opens + duration.
 QUIZ_GRACE_MINUTES = 10
 
-# A student or guardian sees an assignment only through an enrolment in its
-# batch and subject. Both conditions sit in one filter() call, so they must
-# hold on the same enrolment row (the same rule as lectures).
+# A student or guardian sees an assignment through an enrolment in its
+# batch and subject, or through their own answer. The 2 enrolment conditions
+# sit in one Q, so they must hold on the same enrolment row (the same rule
+# as lectures).
 _ENROLMENT = "subject__student_links__"
 STUDENT_LOOKUPS = {
     Role.STUDENT: f"{_ENROLMENT}student__user_id",
@@ -51,6 +52,14 @@ SUBMISSION_LOOKUPS = {
 }
 
 
+def _enrolled_or_own(lookup: str, own: str, user_id: Any) -> Q:
+    """An enrolment in the row's batch and subject, or the student's own
+    answer or attempt (backlog AS12: a student who left the batch still
+    opens their work)."""
+    enrolled = Q(**{lookup: user_id, f"{_ENROLMENT}batch_id": F("batch_id")})
+    return enrolled | Q(**{own: user_id})
+
+
 class SubmissionStatus(models.TextChoices):
     """SPEC 2. Not stored: it comes from the row and the due time."""
 
@@ -62,7 +71,8 @@ class SubmissionStatus(models.TextChoices):
 
 class AssignmentQuerySet(TenantQuerySet):
     """Admins see the institute, a teacher their own assignments, a student
-    or guardian the assignments of their (child's) batch and subject."""
+    or guardian the assignments of their (child's) batch and subject, and
+    the ones they (their child) answered."""
 
     def for_user(self, user: Any) -> AssignmentQuerySet:
         scoped = super().for_user(user)
@@ -75,9 +85,8 @@ class AssignmentQuerySet(TenantQuerySet):
         lookup = STUDENT_LOOKUPS.get(role or "")
         if lookup is None:
             return scoped.none()
-        return scoped.filter(
-            **{lookup: user_id, f"{_ENROLMENT}batch_id": F("batch_id")}
-        ).distinct()
+        own = f"submissions__{SUBMISSION_LOOKUPS[role]}"
+        return scoped.filter(_enrolled_or_own(lookup, own, user_id)).distinct()
 
 
 class SubmissionQuerySet(TenantQuerySet):
@@ -351,7 +360,8 @@ class QuizStatus(models.TextChoices):
 
 class QuizQuerySet(TenantQuerySet):
     """Admins see the institute, a teacher their own quizzes, a student or
-    guardian the published quizzes of their (child's) batch and subject."""
+    guardian the published quizzes of their (child's) batch and subject,
+    and the ones they (their child) attempted."""
 
     def for_user(self, user: Any) -> QuizQuerySet:
         scoped = super().for_user(user)
@@ -364,9 +374,9 @@ class QuizQuerySet(TenantQuerySet):
         lookup = STUDENT_LOOKUPS.get(role or "")
         if lookup is None:
             return scoped.none()
+        own = f"attempts__{ATTEMPT_LOOKUPS[role]}"
         return scoped.filter(
-            is_published=True,
-            **{lookup: user_id, f"{_ENROLMENT}batch_id": F("batch_id")},
+            _enrolled_or_own(lookup, own, user_id), is_published=True
         ).distinct()
 
 

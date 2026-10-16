@@ -426,12 +426,25 @@ def test_timer_submit_is_marked_automatic(school) -> None:
     quiz, _ = live_quiz(school, short=False)
     client = signed_in(school.student_1.user)
     client.post(reverse("student:quiz_start", kwargs={"pk": quiz.pk}))
+    # unscoped: test set-up outside a tenant context; the timer is at zero.
+    QuizAttempt.unscoped.update(deadline=timezone.now())
     paper = reverse("student:quiz_attempt", kwargs={"pk": quiz.pk})
     client.post(paper, {"auto_submit": "1"})
     attempt = QuizAttempt.unscoped.get()  # unscoped: test assertion
     assert attempt.status == AttemptStatus.GRADED and attempt.auto_submitted
     html = client.get(reverse("student:quiz_detail", kwargs={"pk": quiz.pk}))
     assert "Sent when the time ended." in html.content.decode()
+
+
+@pytest.mark.django_db
+def test_an_early_timer_flag_is_a_normal_submit(school) -> None:
+    """Backlog AS13: a form that sends ``auto_submit`` before the time ends
+    is submitted, but not marked as sent when the time ended."""
+    quiz, _ = live_quiz(school, short=False)
+    attempt = _start(quiz, school.student_1)
+    early = attempt.deadline - timedelta(minutes=5)
+    saved = _save(attempt, {}, submit=True, auto=True, now=early)
+    assert saved.status == AttemptStatus.GRADED and not saved.auto_submitted
 
 
 @pytest.mark.django_db

@@ -11,6 +11,7 @@ This project's coding rules live in `AGENTS.md` (imported above). Everything bel
 - Claude Code **builds features and audits them**.
 - Build one roadmap item per branch, started from the latest `main`. Commit, but do not push. The user pushes and opens the PR.
 - Before handing over a branch, run the PR review procedure below on your own diff.
+- With every branch, write the PR description from `.github/pull_request_template.md`. Always fill "Deviations from docs": each "(assumed)" choice, each doc gap, and each part left out on purpose. Write "None" only when there is none.
 - A self-review is not independent. For larger PRs, the user also asks for a review in a fresh session.
 
 ## Read first

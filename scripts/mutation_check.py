@@ -2743,8 +2743,8 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
     (
         "assignment enrolment is one row: batch and subject (5.1)",
         "apps/assessments/models.py",
-        '            **{lookup: user_id, f"{_ENROLMENT}batch_id": F("batch_id")}\n',
-        "            **{lookup: user_id}\n",
+        '    enrolled = Q(**{lookup: user_id, f"{_ENROLMENT}batch_id": F("batch_id")})\n',
+        "    enrolled = Q(**{lookup: user_id})\n",
     ),
     (
         "assignment rows stay in one institute (5.1)",
@@ -2965,8 +2965,8 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
     (
         "students see only published quizzes (5.3)",
         "apps/assessments/models.py",
-        "            is_published=True,\n",
-        "",
+        "            _enrolled_or_own(lookup, own, user_id), is_published=True\n",
+        "            _enrolled_or_own(lookup, own, user_id)\n",
     ),
     (
         "quiz questions are for staff only (5.3)",
@@ -3399,6 +3399,24 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "apps/assessments/services.py",
         "        .filter(status=AttemptStatus.SUBMITTED)\n        .count()\n",
         "        .count()\n",
+    ),
+    (
+        "a student who left keeps their own work (AS12)",
+        "apps/assessments/models.py",
+        "    return enrolled | Q(**{own: user_id})\n",
+        "    return enrolled\n",
+    ),
+    (
+        "the timer flag counts only near the deadline (AS13)",
+        "apps/assessments/services.py",
+        "        timer = auto and now >= locked.deadline - ANSWER_GRACE\n",
+        "        timer = auto\n",
+    ),
+    (
+        "a closed quiz says when it closed (AS15)",
+        "apps/assessments/ui.py",
+        '        return f"Closed {when(quiz.closes_at)}."\n',
+        '        return f"Closed. It closes {when(quiz.closes_at)}."\n',
     ),
 ]
 

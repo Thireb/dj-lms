@@ -112,6 +112,7 @@ from apps.assessments.ui import (
     exam_mode_text,
     form_card,
     minutes_text,
+    opened_quiz_text,
     quiz_detail_rows,
     quiz_status_badge,
     quiz_url,
@@ -1062,7 +1063,7 @@ class TeacherQuizDetailPage(QuizMixin, DetailPage):
             return "Draft: students do not see it until you publish it."
         if status == QuizStatus.SCHEDULED:
             return f"Students see it now. It opens {when(quiz.opens_at)}."
-        return f"{status.label}. It closes {when(quiz.closes_at)}."
+        return opened_quiz_text(quiz, status)
 
     def get_actions(self) -> list[Any]:
         if not self.editable:
@@ -1622,7 +1623,7 @@ class AdminQuizPage(AdminQuizMixin, TeacherQuizDetailPage):
             return "Draft: students do not see it yet."
         if status == QuizStatus.SCHEDULED:
             return f"Published. It opens {when(quiz.opens_at)}."
-        return f"{status.label}. It closes {when(quiz.closes_at)}."
+        return opened_quiz_text(quiz, status)
 
     def get_primary_cards(self) -> list[Any]:
         questions = SectionCard(

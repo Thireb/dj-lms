@@ -914,7 +914,8 @@ def save_attempt(
 ) -> QuizAttempt:
     """Save the answers; ``submit`` ends the attempt. Answers that arrive
     after the deadline and its grace minute are not saved, and the attempt
-    is submitted with what it has."""
+    is submitted with what it has. ``auto`` (the timer at zero) marks the
+    attempt as sent when the time ended, within a minute of the deadline."""
     now = now or timezone.now()
     with transaction.atomic():
         locked = QuizAttempt.objects.select_for_update().get(pk=attempt.pk)
@@ -924,8 +925,11 @@ def save_attempt(
         late = now > locked.deadline + ANSWER_GRACE
         if not late:
             _write_answers(locked, items, answers)
+        # Backlog AS13: the page's ``auto`` flag counts only near the deadline,
+        # so a Submit cannot claim that the time ended.
+        timer = auto and now >= locked.deadline - ANSWER_GRACE
         if submit or late:
-            _finish(locked, items, auto=auto or late, now=now)
+            _finish(locked, items, auto=timer or late, now=now)
         return locked
 
 
