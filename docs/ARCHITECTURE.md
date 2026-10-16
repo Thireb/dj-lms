@@ -9,7 +9,7 @@ How the Django project is organised. Keep it simple: one Django project, many sm
 - Redis for cache and task queue.
 - Celery + Celery Beat for background and scheduled jobs.
 - Django templates + Python component classes + django-crispy-forms + Tailwind CSS + HTMX + Alpine.js for UI (see `COMPONENTS.md` and `UI-GUIDELINES.md`).
-- WeasyPrint for PDFs (challans, salary receipts, certificates).
+- WeasyPrint for PDFs (challans, salary receipts, certificates). Added in Phase 7 (owner approved 2026-10-16; BSD licence; it brings `pydyf`, `tinycss2`, `cssselect2`, `tinyhtml5`, `fonttools`, `pyphen` and Pillow). It needs the Pango and HarfBuzz system libraries (DEPLOYMENT.md, CI).
 - S3-compatible object storage for uploads (Cloudflare R2 or S3).
 - WhiteNoise for static files, Gunicorn as the server.
 - pytest + pytest-django for tests (pytest-xdist runs them in parallel), ruff for lint and format.
