@@ -237,4 +237,18 @@ urlpatterns = [
     path(
         "challans/<int:pk>/pdf/", finance.ChallanPdfView.as_view(), name="challan_pdf"
     ),
+    path(
+        "challans/<int:pk>/pay/", finance.ChallanPayPage.as_view(), name="challan_pay"
+    ),
+    path("payments/", finance.PaymentProcessPage.as_view(), name="payment_process"),
+    path(
+        "payments/<int:pk>/receipt/",
+        finance.PaymentReceiptView.as_view(),
+        name="payment_receipt",
+    ),
+    path(
+        "students/<int:pk>/fees/",
+        finance.StudentFeeHistoryPage.as_view(),
+        name="student_fee_history",
+    ),
 ]

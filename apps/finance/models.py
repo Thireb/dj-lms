@@ -196,3 +196,53 @@ class ChallanLine(TenantModel):
     @property
     def net(self) -> Decimal:
         return self.amount - self.discount
+
+
+class PaymentMethod(models.TextChoices):
+    CASH = "cash", "Cash"
+    BANK_TRANSFER = "bank_transfer", "Bank transfer"
+    ONLINE = "online", "Online"
+    OTHER = "other", "Other"
+
+
+class Payment(TenantModel):
+    """Money received against one challan (SPEC 4.8; partial payments
+    allowed). The number is PAY-YYYYMM-NNNN by the month it was paid."""
+
+    challan = models.ForeignKey(
+        Challan, on_delete=models.PROTECT, related_name="payments"
+    )
+    student = models.ForeignKey(
+        "people.StudentProfile", on_delete=models.PROTECT, related_name="payments"
+    )
+    number = models.CharField(max_length=20)
+    amount = models.DecimalField(
+        **MONEY, validators=[MinValueValidator(Decimal("0.01"))]
+    )
+    paid_on = models.DateField()
+    method = models.CharField(max_length=16, choices=PaymentMethod.choices)
+    reference = models.CharField(max_length=100, blank=True)
+    note = models.CharField(max_length=300, blank=True)
+    received_by = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    objects = TenantManager.from_queryset(StudentRowQuerySet)()
+    unscoped = UnscopedTenantManager.from_queryset(StudentRowQuerySet)()
+
+    class Meta:
+        ordering = ["-paid_on", "-pk"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["institute", "number"], name="finance_payment_number_unique"
+            )
+        ]
+        indexes = [models.Index(fields=["institute", "paid_on"])]
+
+    def __str__(self) -> str:
+        return self.number

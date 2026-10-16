@@ -102,7 +102,7 @@ Setup order the reference teaches: Campus, Classes, Batches, Subjects, Fee Plans
 
 - [x] **Generate challan:** pick students, month, due date; bulk generate; print. Built in 7.2: Generate challans with a preview, a Celery task, and PDFs (one challan or the filtered list).
 - [ ] Challan Dashboard and Challan Records.
-- [ ] **Process payment:** office records cash or transfer against a challan (amount, date, method).
+- [x] **Process payment:** office records cash or transfer against a challan (amount, date, method). Built in 7.3, with partial payments, a receipt PDF and each student's fee history.
 - [ ] **Receipt inbox:** guardians upload proof of payment; admin approves or rejects with an optional message. Optional auto-approve setting.
 - [ ] **Fee Pay (guardian):** choose child, months/year paid for, amount, optional reference, upload receipt (JPG, PNG, WEBP, PDF), submit. Status starts as Waiting.
 - [ ] After approval the challan shows Paid.

@@ -8,7 +8,7 @@ from crispy_forms.layout import Layout
 from django import forms
 
 from apps.academics.models import Batch
-from apps.finance.models import MAX_AMOUNT
+from apps.finance.models import MAX_AMOUNT, PaymentMethod
 from apps.ui.forms.base import BaseForm, FormActions, Section
 from apps.ui.forms.widgets import DatePicker, GroupedCheckboxes, MoneyInput
 
@@ -127,5 +127,44 @@ class ChallanConfirmForm(BaseForm):
             "month",
             "due_date",
             Section(None, "students"),
+            FormActions(self.save_label, self.cancel_url),
+        )
+
+
+class PaymentForm(BaseForm):
+    """SPEC 4.8: Amount* (up to the balance), Date*, Method*, Reference,
+    Note. The challan comes from the Process payment search."""
+
+    save_label = "Record payment"
+
+    amount = forms.DecimalField(
+        label="Amount", min_value=Decimal("0.01"), decimal_places=2, widget=MoneyInput
+    )
+    paid_on = forms.DateField(label="Paid on", widget=DatePicker())
+    method = forms.ChoiceField(label="Method", choices=PaymentMethod.choices)
+    reference = forms.CharField(
+        label="Reference",
+        max_length=100,
+        required=False,
+        help_text="A bank or transfer reference, if any.",
+    )
+    note = forms.CharField(label="Note", max_length=300, required=False)
+
+    def __init__(self, *args, cancel_url, **kwargs):
+        self.cancel_url = cancel_url
+        super().__init__(*args, **kwargs)
+
+    def get_layout(self) -> Layout:
+        return Layout(
+            Section(
+                "Payment",
+                "amount",
+                "paid_on",
+                "method",
+                "reference",
+                "note",
+                description="Partial payments are allowed, up to the balance.",
+                columns=2,
+            ),
             FormActions(self.save_label, self.cancel_url),
         )

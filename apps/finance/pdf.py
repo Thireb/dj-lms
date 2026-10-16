@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any
 
-from django.db.models import F, Sum
+from django.db.models import F, Q, Sum
 from django.template.loader import render_to_string
 from django.utils import timezone
 
@@ -146,3 +146,41 @@ def challans_pdf(challans: list[Challan], institute: Any) -> bytes:
     from weasyprint import HTML
 
     return HTML(string=challan_html(challans, institute)).write_pdf()
+
+
+# Payment receipt (SPEC 9.3)
+
+
+def receipt_pdf(payment: Any, institute: Any) -> bytes:
+    """Header, receipt no., date, student, challan no., amount, method,
+    balance after, received by."""
+    from weasyprint import HTML
+
+    context = receipt_context(payment, institute)
+    return HTML(
+        string=render_to_string("finance/receipt_pdf.html", context)
+    ).write_pdf()
+
+
+def receipt_context(payment: Any, institute: Any) -> dict[str, Any]:
+    """The receipt's text; "balance after" counts this payment and the ones
+    before it."""
+    challan = payment.challan
+    earlier = challan.payments.filter(
+        Q(paid_on__lt=payment.paid_on) | Q(paid_on=payment.paid_on, pk__lte=payment.pk)
+    ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+    by = payment.received_by
+    unit, cents = CURRENCY_WORDS.get(
+        institute.currency_code, (institute.currency_code, "cents")
+    )
+    return {
+        "institute": institute,
+        "payment": payment,
+        "student": f"{payment.student} ({payment.student.student_code})",
+        "date": date_text(payment.paid_on),
+        "amount": money(payment.amount, institute),
+        "words": amount_in_words(payment.amount, unit, cents),
+        "balance_after": money(challan.total - earlier, institute),
+        "received_by": (by.get_full_name() or by.email) if by else "-",
+        "month": month_text(challan.month),
+    }

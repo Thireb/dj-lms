@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Payment receipt</title>
+<style>
+{% include "ui/print/tokens.css" %}
+  @page { size: A5 landscape; margin: 10mm; }
+  body { margin: 0; font-family: "DejaVu Sans", Arial, sans-serif; font-size: 9.5pt; color: var(--text); }
+  h1 { font-size: 13pt; margin: 0; color: var(--primary); }
+  .institute { font-size: 8pt; color: var(--ink-2); }
+  h2 { font-size: 11pt; text-align: center; margin: 4mm 0 3mm; padding: 1.5mm 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 1.4mm 1mm; text-align: left; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: normal; width: 32%; }
+  .amount td { font-weight: bold; font-size: 11pt; }
+  .words { font-style: italic; margin: 2mm 0; }
+  .sign { margin-top: 12mm; border-top: 1px solid var(--text); width: 45%; padding-top: 1mm; font-size: 8pt; }
+</style>
+</head>
+<body>
+  <h1>{{ institute.name }}</h1>
+  <div class="institute">{{ institute.address }}{% if institute.phone %} · {{ institute.phone }}{% endif %}</div>
+  <h2>Payment Receipt</h2>
+  <table>
+    <tr><th>Receipt no.</th><td>{{ payment.number }}</td></tr>
+    <tr><th>Date</th><td>{{ date }}</td></tr>
+    <tr><th>Student</th><td>{{ student }}</td></tr>
+    <tr><th>Challan no.</th><td>{{ payment.challan.number }} ({{ month }})</td></tr>
+    <tr class="amount"><th>Amount</th><td>{{ amount }}</td></tr>
+    <tr><th>Method</th><td>{{ payment.get_method_display }}{% if payment.reference %} ({{ payment.reference }}){% endif %}</td></tr>
+    <tr><th>Balance after</th><td>{{ balance_after }}</td></tr>
+    <tr><th>Received by</th><td>{{ received_by }}</td></tr>
+  </table>
+  <div class="words">{{ words }}</div>
+  <div class="sign">Signature and stamp</div>
+</body>
+</html>
