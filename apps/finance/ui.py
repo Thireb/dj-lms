@@ -155,3 +155,53 @@ class SkippedTable(DataTable):
             ),
             Column("why", "Why", lambda row: row[1]),
         ]
+
+
+# Payments (roadmap 7.3)
+
+
+def payment_url(payment, action: str = "receipt") -> str:
+    return reverse(f"admin:payment_{action}", kwargs={"pk": payment.pk})
+
+
+class PayTable(ChallanTable):
+    """Process payment: open challans with "Record payment"."""
+
+    empty_title = "No open challans match. Search by challan no., name or ID."
+
+    def open_button(self, challan) -> IconButton:
+        label = f"Record payment for {challan.number}"
+        return IconButton("banknote", label, url=challan_url(challan, "pay"))
+
+
+class PaymentTable(DataTable):
+    """Payments: Receipt no., Date, Challan no., Amount, Method, Reference,
+    Received by, and the receipt PDF."""
+
+    empty_title = "No payments yet."
+
+    def __init__(self, rows, institute, **props):
+        self.institute = institute
+        super().__init__(rows=rows, **props)
+
+    @property
+    def columns(self) -> list[Column]:  # type: ignore[override]
+        return [
+            Column("number", "Receipt no.", lambda p: p.number),
+            Column("date", "Date", lambda p: date_text(p.paid_on)),
+            Column("challan", "Challan no.", lambda p: p.challan.number),
+            Column("amount", "Amount", lambda p: money(p.amount, self.institute)),
+            Column("method", "Method", lambda p: p.get_method_display()),
+            Column("reference", "Reference", lambda p: p.reference or "-"),
+            Column("by", "Received by", self.received_by),
+            Column("actions", "", self.receipt_button),
+        ]
+
+    def received_by(self, payment) -> str:
+        user = payment.received_by
+        return (user.get_full_name() or user.email) if user else "-"
+
+    def receipt_button(self, payment) -> IconButton:
+        return IconButton(
+            "download", f"Receipt {payment.number}", url=payment_url(payment)
+        )

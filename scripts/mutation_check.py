@@ -3838,6 +3838,36 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "        ).exclude(status=ChallanStatus.CANCELLED)\n",
         "        )\n",
     ),
+    (
+        "a payment cannot exceed the balance (7.3)",
+        "apps/finance/services.py",
+        "        elif amount > locked.balance:\n",
+        "        elif False:\n",
+    ),
+    (
+        "a cancelled challan takes no payment (7.3)",
+        "apps/finance/services.py",
+        "        if locked.status == ChallanStatus.CANCELLED:\n            raise ValidationError(NOT_OPEN)\n",
+        "",
+    ),
+    (
+        "a payment date is not in the future (7.3)",
+        "apps/finance/services.py",
+        "        if paid_on > today:\n",
+        "        if False:\n",
+    ),
+    (
+        "a challan is paid at balance 0 (7.3)",
+        "apps/finance/services.py",
+        "    elif challan.balance <= 0:\n",
+        "    elif challan.balance < 0:\n",
+    ),
+    (
+        "the receipt balance counts payments up to it (7.3)",
+        "apps/finance/pdf.py",
+        "Q(paid_on=payment.paid_on, pk__lte=payment.pk)",
+        "Q(paid_on=payment.paid_on)",
+    ),
 ]
 
 

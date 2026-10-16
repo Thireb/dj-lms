@@ -32,7 +32,7 @@ from apps.assessments.models import (
 from apps.core.features import ALL_FEATURE_KEYS
 from apps.core.roles import Role
 from apps.core.tenancy import tenant_context
-from apps.finance.models import Challan, FeePlan
+from apps.finance.models import Challan, FeePlan, Payment
 from apps.institutes.models import Plan
 from apps.lectures.models import Lecture, LectureStatus, RecurringSchedule
 from apps.messaging.models import Draft, Thread, ThreadMember
@@ -418,6 +418,23 @@ def _challan(institute) -> int:
     ).pk
 
 
+def _payment(institute) -> int:
+    # unscoped: test setup outside a tenant context.
+    challan = Challan.unscoped.get(pk=_challan(institute))
+    payment, _ = Payment.unscoped.get_or_create(
+        institute=institute,
+        number="PAY-WALKER-0001",
+        defaults={
+            "challan": challan,
+            "student_id": challan.student_id,
+            "amount": 100,
+            "paid_on": challan.issue_date,
+            "method": "cash",
+        },
+    )
+    return payment.pk
+
+
 def _fee_plan(institute) -> int:
     # unscoped: test setup outside a tenant context.
     plan, _ = FeePlan.unscoped.get_or_create(
@@ -482,6 +499,9 @@ ROUTE_OBJECTS = {
     **{f"admin:fee_plan_{action}": _fee_plan for action in ("edit", "status")},
     **{f"admin:challan_{action}": _challan for action in ("detail", "cancel", "pdf")},
     "admin:challan_print": _challan,  # no pk: makes a challan to print
+    "admin:challan_pay": _challan,
+    "admin:payment_receipt": _payment,
+    "admin:student_fee_history": _student,
     **{
         f"{portal}:message_{action}": _thread
         for portal in ("admin", "teacher", "student", "guardian")

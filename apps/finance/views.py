@@ -19,19 +19,27 @@ from apps.academics.models import Batch
 from apps.core import menus as menu_keys
 from apps.core.query import id_param, search_param
 from apps.core.roles import Role
-from apps.finance.forms import ChallanConfirmForm, ChallanGenerateForm, FeePlanForm
-from apps.finance.models import Challan, ChallanStatus, FeePlan
-from apps.finance.pdf import challans_pdf
+from apps.finance.forms import (
+    ChallanConfirmForm,
+    ChallanGenerateForm,
+    FeePlanForm,
+    PaymentForm,
+)
+from apps.finance.models import Challan, ChallanStatus, FeePlan, Payment, PaymentMethod
+from apps.finance.pdf import challans_pdf, receipt_pdf
 from apps.finance.services import (
     OVERDUE,
     cancel_challan,
     check_challan_dates,
     create_fee_plan,
     default_due_date,
+    fee_history,
     list_challans,
     list_fee_plans,
     month_start,
+    open_challans,
     preview_challans,
+    record_payment,
     set_fee_plan_active,
     update_fee_plan,
 )
@@ -40,6 +48,8 @@ from apps.finance.ui import (
     ChallanLineTable,
     ChallanTable,
     FeePlanTable,
+    PaymentTable,
+    PayTable,
     SkippedTable,
     challan_badge,
     challan_url,
@@ -482,10 +492,16 @@ class ChallanDetailPage(ChallanMixin, DetailPage):
             variant="secondary",
             icon="download",
         )
+        actions: list[Any] = [print_button]
+        if challan.balance > 0:
+            pay = Button(
+                "Record payment", url=challan_url(challan, "pay"), icon="banknote"
+            )
+            actions.append(pay)
         if challan.paid > 0:
-            return [print_button]
+            return actions
         return [
-            print_button,
+            *actions,
             ConfirmDialog(
                 f"Cancel {challan.number}? It takes no payments after this.",
                 "Cancel challan",
@@ -500,7 +516,15 @@ class ChallanDetailPage(ChallanMixin, DetailPage):
         lines = ChallanLineTable(
             rows=list(self.challan.lines.all()), institute=institute
         )
-        return [SectionCard(title="Fees", icon="receipt", body=lines)]
+        payments = self.challan.payments.select_related("challan", "received_by")
+        return [
+            SectionCard(title="Fees", icon="receipt", body=lines),
+            SectionCard(
+                title="Payments",
+                icon="banknote",
+                body=PaymentTable(list(payments), institute=institute),
+            ),
+        ]
 
     def get_sidebar_cards(self) -> list[Any]:
         challan, institute = self.challan, self.get_institute()
@@ -517,6 +541,10 @@ class ChallanDetailPage(ChallanMixin, DetailPage):
             ("Paid", money(challan.paid, institute)),
             ("Due", money(challan.balance, institute)),
         ]
+        history = reverse(
+            "admin:student_fee_history", kwargs={"pk": challan.student_id}
+        )
+        rows.append(("Student", Button("Fee history", url=history, variant="ghost")))
         return [SectionCard(title="Details", icon="list", body=DetailList(rows))]
 
 
@@ -587,3 +615,167 @@ class ChallanPrintView(ChallanMixin, PortalPageView):
         return pdf_response(
             challans_pdf(challans, self.get_institute()), "challans.pdf"
         )
+
+
+# Payments (Finance menu, roadmap 7.3, SPEC 4.8)
+
+
+class PaymentProcessPage(ChallanMixin, ListPage):
+    """Search a challan or student, then Record payment (SPEC 4.8)."""
+
+    title = "Process payment"
+
+    def get_subtitle(self) -> str:
+        return "Find the challan by its number, the student's name or ID."
+
+    def get_components(self) -> dict[str, Any]:
+        search = search_param(self.request.GET.get("q"))
+        rows = (
+            open_challans(self.request.user, search)
+            if search
+            else Challan.objects.none()
+        )
+        page = Paginator(rows, PAGE_SIZE).get_page(self.request.GET.get("page"))
+        table: Any = (
+            PayTable(list(page.object_list), institute=self.get_institute())
+            if search
+            else EmptyState(
+                "Search to start.",
+                text="Pending and partly paid challans show here.",
+                icon="search",
+            )
+        )
+        return {
+            "filters": FilterBar(
+                [
+                    {
+                        "name": "q",
+                        "label": "Challan or student",
+                        "value": search,
+                        "placeholder": "Challan no., name or ID",
+                    }
+                ]
+            ),
+            "table": table,
+            "pagination": Pagination(
+                page, query=urlencode({"q": search}) if search else ""
+            ),
+        }
+
+
+class ChallanPayPage(ChallanMixin, FormPage):
+    """Record a payment against one challan."""
+
+    title = "Record payment"
+    form_class = PaymentForm
+
+    def dispatch_challan(self) -> None:
+        self.challan = self.get_challan()
+
+    def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        self.dispatch_challan()
+        if self.challan.status in (ChallanStatus.PAID, ChallanStatus.CANCELLED):
+            messages.info(request, f"{self.challan.number} has nothing to pay.")
+            return HttpResponseRedirect(challan_url(self.challan))
+        return super().get(request, *args, **kwargs)
+
+    def post(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        self.dispatch_challan()
+        return super().post(request, *args, **kwargs)
+
+    def get_subtitle(self) -> str:
+        challan, institute = self.challan, self.get_institute()
+        return (
+            f"{challan.number}, {who(challan.student)}, {month_text(challan.month)}: "
+            f"balance {money(challan.balance, institute)}."
+        )
+
+    def get_form_kwargs(self) -> dict[str, Any]:
+        return {
+            **super().get_form_kwargs(),
+            "cancel_url": challan_url(self.challan),
+            "initial": {
+                "amount": self.challan.balance,
+                "paid_on": timezone.localdate(),
+                "method": PaymentMethod.CASH,
+            },
+        }
+
+    def form_valid(self, form: PaymentForm) -> HttpResponse:
+        data = form.cleaned_data
+        try:
+            payment = record_payment(
+                self.challan,
+                amount=data["amount"],
+                paid_on=data["paid_on"],
+                method=data["method"],
+                reference=data["reference"],
+                note=data["note"],
+                by=self.request.user,
+            )
+        except ValidationError as error:
+            if hasattr(error, "error_dict"):
+                for name, errors in error.message_dict.items():
+                    form.add_error(name if name in form.fields else None, errors)
+            else:
+                form.add_error(None, error)
+            return self.form_invalid(form)
+        amount = money(payment.amount, self.get_institute())
+        messages.success(
+            self.request, f"Payment {payment.number} of {amount} recorded."
+        )
+        return HttpResponseRedirect(challan_url(self.challan))
+
+
+class PaymentReceiptView(ChallanMixin, PortalPageView):
+    """The payment receipt PDF (SPEC 9.3)."""
+
+    http_method_names = ["get"]
+
+    def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        rows = Payment.objects.for_user(request.user).select_related(
+            "challan", "student__user", "received_by"
+        )
+        payment = get_object_or_404(rows, pk=self.kwargs["pk"])
+        content = receipt_pdf(payment, self.get_institute())
+        return pdf_response(content, f"{payment.number}.pdf")
+
+
+class StudentFeeHistoryPage(ChallanMixin, DetailPage):
+    """One student's challans and payments, with the totals (roadmap 7.3)."""
+
+    title = "Fee history"
+
+    def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        rows = StudentProfile.objects.for_user(request.user).select_related("user")
+        self.student = get_object_or_404(rows, pk=self.kwargs["pk"])
+        self.history = fee_history(self.student)
+        self.title = f"Fee history: {self.student}"
+        return super().get(request, *args, **kwargs)
+
+    def get_subtitle(self) -> str:
+        return who(self.student)
+
+    def get_primary_cards(self) -> list[Any]:
+        institute = self.get_institute()
+        return [
+            SectionCard(
+                title="Challans",
+                icon="receipt-text",
+                body=ChallanTable(self.history.challans, institute=institute),
+            ),
+            SectionCard(
+                title="Payments",
+                icon="banknote",
+                body=PaymentTable(self.history.payments, institute=institute),
+            ),
+        ]
+
+    def get_sidebar_cards(self) -> list[Any]:
+        history, institute = self.history, self.get_institute()
+        rows = [
+            ("Billed", money(history.billed, institute)),
+            ("Paid", money(history.paid, institute)),
+            ("Due", money(history.due, institute)),
+        ]
+        return [SectionCard(title="Totals", icon="list", body=DetailList(rows))]

@@ -21,6 +21,8 @@ from apps.finance.models import (
     ChallanStatus,
     DiscountType,
     FeePlan,
+    Payment,
+    PaymentMethod,
     StudentFeePlan,
 )
 from apps.people.models import ProfileStatus
@@ -385,3 +387,115 @@ def list_challans(
             | Q(student__user__last_name__icontains=word)
         )
     return rows.order_by("-month", "-number")
+
+
+# Payments (roadmap 7.3, SPEC 4.8 and 6.1)
+
+NOT_OPEN = "This challan is cancelled and takes no payments."
+OVERPAY = "The amount is more than the balance of {balance}."
+
+
+def payment_key(paid_on: date) -> str:
+    return f"PY{paid_on:%Y%m}"
+
+
+def set_status(challan: Challan) -> None:
+    """SPEC 6.1: pending with no payment, partial with some, paid when the
+    balance is 0. A cancelled challan keeps its status."""
+    if challan.status == ChallanStatus.CANCELLED:
+        return
+    if challan.paid <= 0:
+        challan.status = ChallanStatus.PENDING
+    elif challan.balance <= 0:
+        challan.status = ChallanStatus.PAID
+    else:
+        challan.status = ChallanStatus.PARTIAL
+
+
+def record_payment(
+    challan: Challan,
+    *,
+    amount: Decimal,
+    paid_on: date,
+    method: str,
+    reference: str = "",
+    note: str = "",
+    by: Any = None,
+    today: date | None = None,
+) -> Payment:
+    """Money against one challan, up to its balance (partial payments are
+    allowed). The challan row is locked, so two clerks cannot both pay it."""
+    # people.services imports this module, so import here.
+    from apps.people.services import next_number
+
+    require_tenant_context(challan.institute)
+    today = today or timezone.localdate()
+    with transaction.atomic():
+        locked = Challan.objects.select_for_update().get(pk=challan.pk)
+        errors: dict[str, str] = {}
+        if locked.status == ChallanStatus.CANCELLED:
+            raise ValidationError(NOT_OPEN)
+        amount = to_money(amount)
+        if amount <= 0:
+            errors["amount"] = "The amount must be more than 0."
+        elif amount > locked.balance:
+            errors["amount"] = OVERPAY.format(balance=locked.balance)
+        if paid_on > today:
+            errors["paid_on"] = "The date cannot be in the future."
+        if method not in PaymentMethod.values:
+            errors["method"] = "Choose how it was paid."
+        if errors:
+            raise ValidationError(errors)
+        number = next_number(locked.institute, payment_key(paid_on))
+        payment = Payment.objects.create(
+            institute=locked.institute,
+            challan=locked,
+            student_id=locked.student_id,
+            number=f"PAY-{paid_on:%Y%m}-{number:04d}",
+            amount=amount,
+            paid_on=paid_on,
+            method=method,
+            reference=reference.strip()[:100],
+            note=note.strip()[:300],
+            received_by=by,
+        )
+        locked.paid += amount
+        set_status(locked)
+        locked.save(update_fields=["paid", "status"])
+    return payment
+
+
+def open_challans(user: Any, search: str) -> QuerySet[Challan]:
+    """Process payment's search: pending or partial challans by challan
+    number, student name or student ID (SPEC 4.8)."""
+    rows = list_challans(user, search=search).filter(
+        status__in=[ChallanStatus.PENDING, ChallanStatus.PARTIAL]
+    )
+    return rows.order_by("due_date", "number")
+
+
+@dataclass(frozen=True)
+class FeeHistory:
+    challans: list[Challan]
+    payments: list[Payment]
+    billed: Decimal
+    paid: Decimal
+
+    @property
+    def due(self) -> Decimal:
+        return self.billed - self.paid
+
+
+def fee_history(student: Any) -> FeeHistory:
+    """Every challan (not cancelled) and payment of one student."""
+    challans = list(
+        Challan.objects.filter(student=student)
+        .exclude(status=ChallanStatus.CANCELLED)
+        .order_by("-month")
+    )
+    payments = list(
+        Payment.objects.filter(student=student).select_related("challan", "received_by")
+    )
+    billed = sum((challan.total for challan in challans), Decimal("0"))
+    paid = sum((challan.paid for challan in challans), Decimal("0"))
+    return FeeHistory(challans, payments, billed, paid)

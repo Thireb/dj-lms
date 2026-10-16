@@ -196,6 +196,7 @@ Built in 7.2 (assumed, check against the demo): "pick students" is the preview: 
 
 ### 4.8 Process payment
 Search challan or student*, Amount* (up to balance), Date* (default today), Method* (S) Cash / Bank transfer / Online / Other, Reference, Note. Allows partial payment.
+Built in 7.3 (assumed, check against the demo): the search lists pending and partly paid challans (by challan no., student name or ID); the amount starts at the balance; the date cannot be in the future; the receipt number is `PAY-YYYYMM-NNNN` by the month paid. The balance includes a late fee once it is added. Each payment has a receipt PDF; each student has a Fee history page (from the challan page).
 
 ### 4.9 Reject receipt
 Reason* (short text, shown to guardian).
