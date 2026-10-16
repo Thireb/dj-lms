@@ -302,6 +302,7 @@ Full name*, Institute name*, Phone*, Email, Website, Message*. Saved for Super A
 - Teacher: admin, other teachers, students in their batches, guardians of those students.
 - Student: admin, teachers of their batches.
 - Guardian: admin, teachers of their children's batches.
+- Built in 6.3 (assumed, check against the demo): "admin" means the institute admin and the sub-admins. "Their batches" means any batch the teacher teaches (not only the same subject). Only active users can be reached; a reply goes to the others in the thread while at least one of them is active. A new message starts a thread with one person; replies stay in it. Subject is optional ("(No subject)"); the body is required, up to 5,000 characters. Inbox has threads with a message from someone else, Sent threads with a message from the user. Trash keeps a thread until "Delete forever", which removes it only for that user; a new reply brings a thread back to the Inbox for everyone in it.
 
 ### 6.6 Payroll (monthly, per teacher)
 Lectures counted = lectures with status `finished` in the month, taught by the teacher (the lecture's current teacher).
