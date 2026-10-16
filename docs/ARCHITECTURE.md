@@ -140,7 +140,7 @@ People:
 - Status: activating or deactivating a student or teacher changes `profile.status` and `User.is_active` together, in one service call (decided 2026-10-07). An inactive person cannot sign in, and an open session ends on the next request.
 - Names: forms take one "Full name"; the service splits it at the first space into `first_name` and `last_name`.
 
-- `PortalAccessRule` (student, blocked, exempt, changed_at): no row means open and not exempt. `StudentPortalAccessMiddleware` (after `TenantMiddleware`) shows the full-page "Access paused" message for every `/student/` page while the student is blocked; account pages and the guardian portal stay open. Exempt only protects from the automatic rule (7.6); a manual block still applies.
+- `PortalAccessRule` (student, blocked, exempt, changed_at): no row means open and not exempt. `StudentPortalAccessMiddleware` (after `TenantMiddleware`) shows the full-page "Access paused" message for every `/student/` page while the student is blocked; account pages and the guardian portal stay open. Exempt only protects from the automatic rule (7.6); a manual block still applies. Messages (`student:message_*`) stay open while blocked (owner decision 2026-10-16, P6-8).
 
 Academics:
 - `ClassLabel`, `Batch`, `Subject`: name and `is_active`. Names are unique per institute, ignoring case.
@@ -159,7 +159,7 @@ Operations:
 - `FeePlan`, `StudentFeePlan` (with discount), `Challan` (student, month, due date, amount, status), `Payment` (method, date, amount), `ReceiptSubmission` (guardian, challan/months, amount, file, status: waiting/approved/rejected, admin message).
 - `PortalAccessRule` (student, blocked, exempt) plus an institute setting for automatic defaulter blocking.
 - `SalaryPlan` (type: fixed / per_lecture / per_student / hourly / percent / hybrid, rates), `PlanAssignment`, `PayrollRun`, `SalaryPayment`, `Advance`.
-- `Thread`, `Message` (folders: inbox, sent, starred, drafts, trash; admin broadcast and monitor).
+- `Thread`, `Message` (folders: inbox, sent, starred, drafts, trash; admin broadcast and monitor). Built in 6.3 (the `messaging` app): `Thread` (subject, `last_message_at`, optional `Broadcast`), `ThreadMember` (each person's own state: `last_read_at`, `starred`, `trashed_at`, `deleted`), `Message` (sender, body up to 5,000 characters), `Draft` (owner, optional recipient, subject, body) and `Broadcast` (sender, audience, batch, subject, body). `for_user`: admins and sub-admins see every thread and message (Message Monitor); everyone else only threads they are in; `ThreadMember` and `Draft` rows only their own owner, admins too; `Broadcast` only admins. `messaging.services` holds the SPEC 6.5 reach rule (`reachable`), sending, replies, folders, unread counts, star, trash, restore, delete forever and drafts.
 - `Notification` (user, type, text, link, read_at). Built in 6.1: `Notification` (user, event, text up to 300 characters, link: a path in this site, `created_at`, `read_at`) in the `notifications` app; `for_user` gives every role only their own rows, admins too. `User.fee_alerts` and `User.class_alerts` switch the two alert groups off (SPEC 4.22).
 - `CourseDocument` (batch, subject, file, download_locked).
 - `Certificate` (student, code, issued_on): rules unknown, build last.
@@ -179,6 +179,8 @@ Set up in 3.2: `config/celery.py`, broker `REDIS_URL`, no result backend. Tests 
 
 - Generate recurring lectures. Built in 3.2: `lectures.tasks.generate_schedule_lectures` after a save, and `extend_all_schedules` nightly at 00:30 UTC (Celery beat).
 - Finish lectures past their end. Built in 3.5: `lectures.tasks.finish_all_ended_lectures` every 5 minutes (Celery beat): live lectures become finished and never-started ones not held, for active institutes.
+- Lecture reminders. Built in 6.2: `lectures.tasks.remind_all_lectures` every 5 minutes sends "starts soon" once for each scheduled lecture in the next 15 minutes (`Lecture.reminded_at`; a new start time clears it).
+- Quiz reminders. Built in 6.2: `assessments.tasks.remind_all_quizzes` every 5 minutes sends "opens soon" once for each published quiz that opens in the next hour (`Quiz.reminded_at`; a new time or Back to draft clears it).
 - Bulk challan generation.
 - Challan and lecture reminders.
 - Monthly payroll run.
@@ -194,7 +196,7 @@ Set up in 3.2: `config/celery.py`, broker `REDIS_URL`, no result backend. Tests 
 
 ## 10. Notifications
 
-- Create `Notification` rows in one place (`notifications.services.notify`). Built in 6.1: `notify(users, event, text, link)` runs in the tenant context, knows every SPEC 7 event and its group (`EVENTS`: class alerts, fee alerts or system notices), and leaves out inactive users, users of another institute and users who switched the group off. `notifications.tasks.delete_all_old_notifications` runs nightly at 01:00 UTC.
+- Create `Notification` rows in one place (`notifications.services.notify`). Built in 6.1: `notify(users, event, text, link)` runs in the tenant context, knows every SPEC 7 event and its group (`EVENTS`: class alerts, fee alerts or system notices), and leaves out inactive users, users of another institute and users who switched the group off. `notifications.tasks.delete_all_old_notifications` runs nightly at 01:00 UTC. Built in 6.2: `notify` takes a text or a function of the recipient, run in the recipient's time zone, so a time in the text is their local time. `notifications.audience.send_to_students` sends to the active students of a class and their guardians (the guardian's text starts "For <child>:"); the person who made the change gets nothing. Each app keeps its texts and links in `notices.py` (lectures: `apps/lectures/notices.py`).
 - Show a bell with unread count; HTMX polls or refreshes on navigation. Built in 6.1: the count loads with each page and every 60 seconds (`notifications:count`); the panel loads when the bell opens (`notifications:panel`); both answer 204 to a signed-out user. Open and Mark all as read are POST. The pages live at `/notifications/` for every role but the super admin, in the user's own portal shell.
 - Email and WhatsApp/SMS are later options.
 

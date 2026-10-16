@@ -32,6 +32,7 @@ from apps.assessments.models import (
 from apps.core.roles import Role
 from apps.core.tenancy import tenant_context
 from apps.lectures.models import Lecture, LectureStatus, RecurringSchedule
+from apps.messaging.models import Draft, Thread, ThreadMember
 from apps.notifications.models import Notification
 from apps.notifications.services import notify
 from apps.people.models import StudentProfile, TeacherProfile
@@ -53,9 +54,17 @@ PUBLIC_ALLOWLIST = {
     "root",
 }
 SKIPPED_NAMESPACES = {"developer"}  # /django-admin/, gated by middleware tests.
-# Parts of the bell that HTMX loads: a signed-out user gets an empty 204, so
-# HTMX never shows the sign-in page inside the bell (roadmap 6.1).
-EMPTY_FOR_ANONYMOUS = {"notifications:count", "notifications:panel"}
+# Parts of the bell and the menu's unread badge that HTMX loads: a signed-out
+# user gets an empty 204, so HTMX never shows the sign-in page in them
+# (roadmap 6.1 and 6.3).
+EMPTY_FOR_ANONYMOUS = {
+    "notifications:count",
+    "notifications:panel",
+    *(
+        f"{portal}:message_unread"
+        for portal in ("admin", "teacher", "student", "guardian")
+    ),
+}
 
 
 @dataclass(frozen=True)
@@ -372,6 +381,34 @@ def _notification(institute) -> int:
     return Notification.unscoped.filter(user=user).first().pk
 
 
+def _thread(institute) -> int:
+    """A thread with every user of the institute in it, so each walker role
+    may open it (the role's user exists before the URL is built)."""
+    # unscoped: test setup outside a tenant context.
+    thread = Thread.unscoped.filter(institute=institute, subject="Walker").first()
+    now = timezone.now()
+    if thread is None:
+        thread = Thread.unscoped.create(
+            institute=institute, subject="Walker", created_at=now, last_message_at=now
+        )
+    for user in User.objects.filter(institute=institute):
+        ThreadMember.unscoped.get_or_create(
+            institute=institute, thread=thread, user=user
+        )
+    return thread.pk
+
+
+def _draft(institute) -> int:
+    email = "drafter-walker@example.com"
+    owner = User.objects.filter(email=email).first() or make_user(
+        email=email, role=Role.TEACHER, institute=institute
+    )
+    # unscoped: test setup outside a tenant context.
+    return Draft.unscoped.create(
+        institute=institute, owner=owner, updated_at=timezone.now()
+    ).pk
+
+
 ROUTE_OBJECTS = {
     **{
         f"admin:{prefix}_{action}": _name_row(model)
@@ -414,6 +451,16 @@ ROUTE_OBJECTS = {
     "student:quiz_event": _live_quiz,
     "student:quiz_attempt": _attempt,
     "notifications:open": _notification,
+    **{
+        f"{portal}:message_{action}": _thread
+        for portal in ("admin", "teacher", "student", "guardian")
+        for action in ("thread", "action")
+    },
+    "admin:message_monitor_thread": _thread,
+    **{
+        f"{portal}:message_draft_delete": _draft
+        for portal in ("admin", "teacher", "student", "guardian")
+    },
     **{
         f"{portal}:lecture_schedule_{action}": _schedule
         for portal in ("admin", "teacher")

@@ -175,3 +175,21 @@ def test_layout_forms_show_non_field_errors() -> None:
 
     assert "Passwords do not match." in html
     assert 'role="alert"' in html
+
+
+class HiddenFieldForm(BaseForm):
+    """Phase 6 audit: a hidden field showed its label ("To") on the page."""
+
+    to = forms.IntegerField(label="To", required=False, widget=forms.HiddenInput)
+    body = forms.CharField(label="Message")
+
+    def get_layout(self):
+        return Layout("to", Section(None, "body"))
+
+
+def test_hidden_field_renders_without_a_label() -> None:
+    template = Template("{% load crispy_forms_tags %}{% crispy form %}")
+    html = template.render(Context({"form": HiddenFieldForm(initial={"to": 7})}))
+    assert 'type="hidden" name="to" value="7"' in html
+    assert ">To<" not in html and "To\n" not in html
+    assert "Message" in html

@@ -15,6 +15,7 @@ from apps.core.features import PLAN_CODE_PREMIUM
 from apps.core.roles import Role
 from apps.institutes.models import Institute, Plan
 from apps.lectures.demo import reset_lectures, seed_lectures
+from apps.messaging.demo import reset_messages, seed_messages
 from apps.people.demo import reset_people, seed_people
 
 DEMO_INSTITUTE_NAME = "Demo Institute"
@@ -24,6 +25,11 @@ DEMO_INSTITUTE_USERS: tuple[tuple[str, str], ...] = (
     ("demo-admin@example.com", Role.INSTITUTE_ADMIN),
     ("demo-sub@example.com", Role.SUB_ADMIN),
 )
+# Fake names, so messages and lists show a name, not an email (Phase 6 audit).
+DEMO_NAMES = {
+    "demo-admin@example.com": ("Office", "Admin"),
+    "demo-sub@example.com": ("Office", "Helper"),
+}
 PASSWORD_ENV_VAR = "SEED_DEMO_PASSWORD"
 
 
@@ -54,6 +60,7 @@ class Command(BaseCommand):
         seed_lectures(institute)
         seed_attendance(institute)
         seed_assignments(institute)
+        seed_messages(institute)
         self.stdout.write(self.style.SUCCESS("Demo data ready."))
 
     def _demo_institute(self) -> Institute:
@@ -77,6 +84,7 @@ class Command(BaseCommand):
     ) -> None:
         user = User.objects.filter(email=email).first() or User(email=email)
         user.role = role
+        user.first_name, user.last_name = DEMO_NAMES.get(email, ("", ""))
         user.institute = institute
         user.timezone = institute.timezone if institute else ""
         user.is_active = True
@@ -87,6 +95,7 @@ class Command(BaseCommand):
         deleted = 0
         institute = Institute.objects.filter(name=DEMO_INSTITUTE_NAME).first()
         if institute is not None:
+            deleted += reset_messages(institute)
             deleted += reset_assignments(institute)
             deleted += reset_attendance(institute)
             deleted += reset_lectures(institute)

@@ -7,6 +7,7 @@ from apps.assessments import views as assessments
 from apps.attendance import views as attendance
 from apps.institutes.views import CampusProfilePage, InstituteSettingsPage
 from apps.lectures import views as lectures
+from apps.messaging import views as messaging
 from apps.people import views as people
 
 app_name = "admin"
@@ -163,5 +164,45 @@ urlpatterns = [
         "portal-access/<int:pk>/",
         people.PortalAccessActionView.as_view(),
         name="portal_access_action",
+    ),
+    # Messages (roadmap 6.3)
+    path(
+        "messages/", messaging.PAGES["admin"]["inbox"].as_view(), name="message_inbox"
+    ),
+    path(
+        "messages/new/",
+        messaging.PAGES["admin"]["compose"].as_view(),
+        name="message_compose",
+    ),
+    path(
+        "messages/unread/",
+        messaging.PAGES["admin"]["unread"].as_view(),
+        name="message_unread",
+    ),
+    path(
+        "messages/<int:pk>/",
+        messaging.PAGES["admin"]["thread"].as_view(),
+        name="message_thread",
+    ),
+    path(
+        "messages/<int:pk>/action/",
+        messaging.PAGES["admin"]["action"].as_view(),
+        name="message_action",
+    ),
+    path(
+        "messages/drafts/<int:pk>/delete/",
+        messaging.PAGES["admin"]["draft_delete"].as_view(),
+        name="message_draft_delete",
+    ),
+    path(
+        "messages/broadcast/",
+        messaging.BroadcastPage.as_view(),
+        name="message_broadcast",
+    ),
+    path("messages/monitor/", messaging.MonitorPage.as_view(), name="message_monitor"),
+    path(
+        "messages/monitor/<int:pk>/",
+        messaging.MonitorThreadPage.as_view(),
+        name="message_monitor_thread",
     ),
 ]

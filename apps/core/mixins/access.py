@@ -47,9 +47,10 @@ class FeatureRequiredMixin:
 
     def dispatch(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
         key = getattr(self, "feature_key", None)
-        if key:
-            user = request.user
-            if getattr(user, "is_authenticated", False) and user_is_super_admin(user):
+        user = request.user
+        # Signed out: the role check sends them to sign in (roadmap 6.3).
+        if key and getattr(user, "is_authenticated", False):
+            if user_is_super_admin(user):
                 return super().dispatch(request, *args, **kwargs)
             institute = getattr(request, "institute", None) or getattr(
                 user, "institute", None

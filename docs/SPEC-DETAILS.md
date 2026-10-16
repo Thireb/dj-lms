@@ -237,6 +237,7 @@ From*, To*, Reason*. For teachers, show days used and remaining.
 
 ### 4.19 Message
 To* (search by name, role-limited, see 6.5), Subject, Body*, Attachment (optional). Admin broadcast: pick audience (all, teachers, students, guardians, a batch).
+Built in 6.3 (assumed, check against the demo): no Attachment yet (no file storage, backlog AS1). A broadcast needs a Subject and a Body; "a batch" means its active students and their guardians; each person gets their own thread, so a reply reaches only the sender (owner decision). Broadcasts stay out of the sender's Sent folder and show on the Broadcast page instead. The Message Monitor (admins, and sub-admins with the Messages menu) is read only and does not change anyone's read state.
 
 ### 4.20 Course document
 Title*, Batch*, Subject, File* (PDF, DOC, PPT, images, up to 25 MB), Description.
@@ -275,6 +276,7 @@ Full name*, Institute name*, Phone*, Email, Website, Message*. Saved for Super A
 
 ### 6.2 Portal access
 - A blocked student sees a full-page "Access paused" message with the institute phone number. Guardian portal is never blocked.
+- Owner decision 2026-10-16 (Phase 6 audit P6-8): Messages stay open for a blocked student, so they can write to the office; "Access paused" has a "Message the office" button. Every other student page stays closed.
 - If auto-block is on: a nightly job blocks every student who is a defaulter and not exempt, and unblocks once no challan is overdue beyond grace.
 - Manual block and unblock always win until the next auto run changes them. A student marked Exempt is never auto-blocked.
 
@@ -302,6 +304,7 @@ Full name*, Institute name*, Phone*, Email, Website, Message*. Saved for Super A
 - Teacher: admin, other teachers, students in their batches, guardians of those students.
 - Student: admin, teachers of their batches.
 - Guardian: admin, teachers of their children's batches.
+- Built in 6.3 (assumed, check against the demo): "admin" means the institute admin and the sub-admins. "Their batches" means any batch the teacher teaches (not only the same subject). Only active users can be reached; a reply goes to the others in the thread while at least one of them is active. A new message starts a thread with one person; replies stay in it. Subject is optional ("(No subject)"); the body is required, up to 5,000 characters. Inbox has threads with a message from someone else, Sent threads with a message from the user. Trash keeps a thread until "Delete forever", which removes it only for that user; a new reply brings a thread back to the Inbox for everyone in it.
 
 ### 6.6 Payroll (monthly, per teacher)
 Lectures counted = lectures with status `finished` in the month, taught by the teacher (the lecture's current teacher).
@@ -381,6 +384,7 @@ Lectures counted = lectures with status `finished` in the month, taught by the t
 - Groups (assumed in 6.1): class alerts are the lecture events and "Quiz opens soon"; fee alerts are the challan, receipt and payment events; every other event is a system notice and always goes. Inactive users get nothing. A notification has a short text and a link to a page in the site.
 - Owner decisions 2026-10-16 (Phase 6): a recurring schedule sends one notification per save or edit, not one per lecture; a reply to a broadcast goes only to the sender, in a new private thread; the Messages pages and the compose form say "Institute admins can read all messages."
 - Assumed for 6.2: only the events of built features are hooked (lectures, assignments, quizzes, portal access); each later phase hooks its own. "Lecture changed" means a new start time, duration, teacher or link. "Starts in 15 minutes" and "Quiz opens soon" (1 hour before Opens) come from the 5-minute job. "Submission received" goes for the first answer only. "Quiz graded" goes when the teacher marks the attempt; an MCQ-only quiz is graded at submit and notifies the guardian only. A guardian's notification names the child.
+- Built in 6.2 (assumed, check against the demo): the person who makes a change gets no notification about it. "Graded" goes again when the teacher changes the marks, with the new marks. A portal block or unblock goes to the student only when the state changes (the guardian portal is never blocked, SPEC 6.2). Texts show times in each recipient's own zone.
 
 ## 8. Dashboards (KPI definitions)
 

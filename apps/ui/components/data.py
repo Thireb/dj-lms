@@ -255,3 +255,25 @@ class TextBlock(Component):
 
     def __init__(self, text, empty_text="", **props):
         super().__init__(text=text, empty_text=empty_text, **props)
+
+
+class MessageList(Component):
+    """A conversation, oldest first: each message with its author, time and
+    escaped text (line breaks stay). ``mine`` rows sit on the right in a
+    tinted box. ``rows`` have ``author``, ``when``, ``body`` and ``mine``."""
+
+    template_name = "ui/components/message_list.html"
+
+    def __init__(self, rows, **props):
+        super().__init__(
+            rows=[
+                {
+                    "author": row.author,
+                    "when": row.when,
+                    "body": row.body,
+                    "mine": bool(row.mine),
+                }
+                for row in rows
+            ],
+            **props,
+        )

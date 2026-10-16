@@ -255,7 +255,7 @@ Every item here is a class. Names are fixed.
 | `PublicPostForm` | forms | `<form method="post">` + CSRF wrapper for public pages | `action`, `body` |
 | `PortalPostForm` | forms | Portal `FormPage` POST wrapper (CSRF, multipart, crispy body). `framed` puts the sections in one card with dividers and a footer bar for the buttons; the bulk upload sets `framed=False` because its form sits in a `SectionCard`; `form_id` gives the form an id (the quiz timer submits it) | `action`, `body`, `framed`, `form_id` |
 | `ProfileMenu` | layout | Admin top-bar profile dropdown (C11 items, admin_only hiding) | `items` |
-| `BlockStack` | block_stack | vertical stack of text or nested components | `blocks` |
+| `BlockStack` | block_stack | vertical stack of text or nested components; `inline=True` puts them on one line that wraps (a "New" badge before a subject) | `blocks`, `inline` |
 | `ButtonRow` | block_stack | actions side by side; wraps on phones, right-aligned from md (table action cells) | `items` |
 | `SignOutForm` | actions | POST sign out with CSRF; `variant="light"` on the band | `logout_url`, `variant` |
 | `StatCard` | data | stat tile with an icon tile; `tone="lead"` is the solid royal tile | `value`, `label`, `note`, `icon`, `tone` |
@@ -271,6 +271,7 @@ Every item here is a class. Names are fixed.
 | `ChartCard` | data | Chart.js card | `title`, `chart_id`, `data_url` |
 | `DetailList` | data | label and value pairs for a detail page (`<dl>`); a value may be a component; an empty value shows a dash | `rows` (label, value) |
 | `TextBlock` | data | long text a person wrote (assignment instructions, an answer, feedback): line breaks stay, long words wrap, the text is escaped; `empty_text` shows when there is no text | `text`, `empty_text` |
+| `MessageList` | data | a conversation, oldest first: author, time and the escaped text (line breaks stay); the user's own messages sit on the right in a tinted box (6.3) | `rows` (`author`, `when`, `body`, `mine`) |
 | `EmptyState` | data | icon tile, message and one action; `framed=False` drops the dashed box inside a card | `title`, `text`, `action`, `icon`, `framed` |
 | `IconButton` | actions | icon-only link (with `url`) or button; `label` is the `aria-label` and tooltip; `new_tab=True` adds `target="_blank" rel="noopener noreferrer"` (links to other sites, such as meeting links) | `icon`, `label`, `url`, `new_tab` |
 | `Button` | actions | `primary`, `secondary`, `danger`, `ghost`, `light`, `glass` (the last two on the band); Lucide icon before the label; `disabled=True` is a state that cannot be clicked (never a link), `title` explains it; `new_tab=True` adds `target="_blank" rel="noopener noreferrer"` (meeting links); `submit=True` (no `url`) submits the form it is in | `label`, `variant`, `url`, `icon`, `disabled`, `title`, `new_tab`, `submit` |
@@ -287,6 +288,7 @@ Every item here is a class. Names are fixed.
 | `NotificationBell` | nav | top bar bell (6.1): a link to the Notifications page; with JavaScript a click opens the panel (loaded from `notifications:panel` when opened) and the count loads on each page and every 60 seconds (`notifications:count`, HTMX); empty for the super admin | `user`, `unread_count` |
 | `NotificationCount` | nav | the bell's unread badge ("99+" above 99) and "Notifications, N unread" for screen readers | `unread_count` |
 | `NotificationPanel` | nav | the bell's list: each row a POST button that marks it read and opens its link (unread rows bold, with "Unread:" for screen readers), "Mark all as read" (back to `next_url`), "See all notifications"; unsafe URLs render empty; render with `request` for the CSRF tokens | `rows` (`text`, `when`, `open_url`, `is_read`), `list_url`, `read_all_url`, `next_url` |
+| `MenuBadge` | nav | a menu item's count, loaded by the menu with HTMX (`MenuItem.badge`, a URL name; every 60 seconds); nothing for 0, "99+" above 99, "unread" for screen readers | `count` |
 | `ChildSwitcher` | nav | guardian top bar: a POST form with a "Child" select that sends on change ("Show" button without JavaScript); `options` (value, label), `chosen`, `url`, `next_url`. Pages get it from `GuardianChildMixin.get_child_switcher()` | `options`, `chosen`, `url`, `next_url` |
 | `FilterBar` | nav | search field with an icon + selects and "Apply filters"; "Clear" shows when a filter has a value. Each filter (dict or object) has `name`, `label`, optional `value`, `placeholder`; a filter with `options` (list of value, label) renders a select; a filter with `hidden=True` is a hidden input that keeps a value (such as the chosen tab) and does not count for "Clear"; a select with `kept=True` (a guardian's chosen child) does not count for "Clear", and "Clear" keeps its value; `input_type="date"` renders a date field | `filters` |
 | `Pagination` | nav | "Showing X to Y of N", then previous, page numbers (elided when long) and next; `query` keeps the current filters | `page_obj`, `query` |

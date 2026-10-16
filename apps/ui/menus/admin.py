@@ -222,11 +222,18 @@ class AdminMenu:
                         "admin:message_inbox",
                         "inbox",
                         feature="messaging",
+                        badge="admin:message_unread",
                     ),
                     MenuItem(
                         "Send message",
                         "admin:message_compose",
                         "send",
+                        feature="messaging",
+                    ),
+                    MenuItem(
+                        "Broadcast",
+                        "admin:message_broadcast",
+                        "users",
                         feature="messaging",
                     ),
                     MenuItem(

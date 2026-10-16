@@ -1,6 +1,7 @@
 from apps.ui.components.nav import (
     ChildSwitcher,
     FilterBar,
+    MenuBadge,
     NotificationBell,
     NotificationCount,
     NotificationPanel,
@@ -95,3 +96,8 @@ def test_child_switcher_marks_the_chosen_child_and_escapes() -> None:
 def test_child_switcher_drops_an_unsafe_url() -> None:
     html = str(ChildSwitcher([(1, "A")], chosen=1, url="javascript:x", next_url=""))
     assert "javascript:" not in html
+
+
+def test_menu_badge_shows_a_count_only_above_zero() -> None:
+    assert str(MenuBadge(0)).strip() == ""
+    assert ">3<span" in str(MenuBadge(3)) and ">99+<span" in str(MenuBadge(120))

@@ -12,6 +12,8 @@ class MenuItem:
     feature: str | None = None
     post_only: bool = False
     admin_only: bool = False
+    # A URL name that answers a small count badge (HTMX, every 60 seconds).
+    badge: str | None = None
 
 
 @dataclass(frozen=True)
@@ -30,6 +32,7 @@ class ResolvedMenuItem:
     disabled: bool
     url_name: str
     post_only: bool = False
+    badge_url: str = ""
 
 
 @dataclass(frozen=True)

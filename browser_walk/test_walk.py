@@ -27,6 +27,7 @@ from apps.assessments.models import (
 )
 from apps.institutes.models import Institute
 from apps.lectures.models import Lecture, LectureStatus, RecurringSchedule
+from apps.messaging.models import ThreadMember
 from apps.people.models import StudentProfile, TeacherProfile
 from django.core.management import call_command
 from django.test import Client
@@ -48,6 +49,10 @@ USERS = {
 # Not pages: a file download and the HTMX parts that pages reload.
 SKIPPED = {
     "admin:student_bulk_template",
+    "admin:message_unread",
+    "teacher:message_unread",
+    "student:message_unread",
+    "guardian:message_unread",
     "teacher:up_next",
     "student:up_next",
     "notifications:count",
@@ -122,6 +127,14 @@ def _teacher() -> dict[str, int] | None:
     return _pk(TeacherProfile.unscoped.filter(user__email=DEMO_TEACHER).first())
 
 
+def _demo_thread(email: str) -> Callable[[], dict[str, int] | None]:
+    def build() -> dict[str, int] | None:
+        row = ThreadMember.unscoped.filter(user__email=email).order_by("pk").first()
+        return {"pk": row.thread_id} if row else None
+
+    return build
+
+
 OBJECTS: dict[str, Callable[[], dict[str, int] | None]] = {
     "super:institute_edit": lambda: _pk(Institute.objects.order_by("pk").first()),
     "admin:class_edit": _first(ClassLabel),
@@ -153,6 +166,11 @@ OBJECTS: dict[str, Callable[[], dict[str, int] | None]] = {
     "teacher:quiz_attempt": _quiz_attempt,
     "student:assignment_detail": _student_assignment,
     "student:quiz_detail": _closed_quiz,
+    "admin:message_thread": _demo_thread("demo-admin@example.com"),
+    "admin:message_monitor_thread": _demo_thread(DEMO_STUDENT),
+    "teacher:message_thread": _demo_thread(DEMO_TEACHER),
+    "student:message_thread": _demo_thread(DEMO_STUDENT),
+    "guardian:message_thread": _demo_thread("demo-guardian@example.com"),
 }
 
 

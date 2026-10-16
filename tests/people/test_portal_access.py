@@ -303,3 +303,28 @@ def test_access_paused_page_has_no_empty_header(school) -> None:
 
     assert ">None<" not in page.content.decode()
     assert "None" not in re.sub(r"<[^>]+>", " ", page.content.decode()).split()
+
+
+# Messages stay open while blocked (owner decision 2026-10-16, P6-8)
+
+
+@pytest.mark.django_db
+def test_a_blocked_student_can_still_message(school) -> None:
+    _block(school.student_1)
+    client = _client(school.student_1.user)
+    paused = client.get(reverse("student:home"))
+    assert paused.status_code == 403
+    compose = reverse("student:message_compose")
+    assert f'href="{compose}"' in paused.content.decode()  # "Message the office"
+    assert client.get(reverse("student:message_inbox")).status_code == 200
+    teacher = school.teacher_1.user
+    response = client.post(
+        f"{compose}?to={teacher.pk}",
+        {"to": teacher.pk, "subject": "Fees", "body": "I have paid.", "send": "1"},
+    )
+    assert response.status_code == 302
+    thread = reverse("student:message_thread", kwargs={"pk": 1})[: -len("1/")]
+    assert response["Location"].startswith(thread)
+    assert client.get(response["Location"]).status_code == 200
+    # The other student pages stay closed.
+    assert client.get(reverse("student:assignment_list")).status_code == 403

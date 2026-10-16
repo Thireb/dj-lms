@@ -10,7 +10,11 @@ from django.db import transaction
 from apps.core.tenancy import tenant_context
 from apps.institutes.models import Institute
 from apps.lectures.models import RecurringSchedule, ScheduleStatus
-from apps.lectures.services import finish_ended_lectures, generate_lectures
+from apps.lectures.services import (
+    finish_ended_lectures,
+    generate_lectures,
+    remind_upcoming_lectures,
+)
 from celery import shared_task
 
 logger = logging.getLogger(__name__)
@@ -64,3 +68,19 @@ def finish_all_ended_lectures() -> int:
             except Exception:
                 logger.exception("Finish run: institute %s failed.", institute.pk)
     return closed
+
+
+@shared_task
+def remind_all_lectures() -> int:
+    """Every 5 minutes: "starts soon" for lectures in the next 15 minutes
+    (roadmap 6.2, SPEC 7). One institute that fails is logged and skipped."""
+    sent = 0
+    for institute in Institute.objects.filter(is_active=True):
+        with tenant_context(institute):
+            try:
+                sent += remind_upcoming_lectures(institute)
+            except Exception:
+                logger.exception(
+                    "Lecture reminders: institute %s failed.", institute.pk
+                )
+    return sent

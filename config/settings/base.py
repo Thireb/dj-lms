@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     "apps.core",
     "apps.institutes",
     "apps.lectures",
+    "apps.messaging",
     "apps.notifications",
     "apps.people",
     "apps.superadmin",
@@ -145,6 +146,16 @@ CELERY_BEAT_SCHEDULE = {
     # Lectures past their end become finished (roadmap 3.5, SPEC 6.4).
     "finish-ended-lectures": {
         "task": "apps.lectures.tasks.finish_all_ended_lectures",
+        "schedule": crontab(minute="*/5"),
+    },
+    # "Starts in 15 minutes" for lectures (roadmap 6.2, SPEC 7).
+    "remind-lectures": {
+        "task": "apps.lectures.tasks.remind_all_lectures",
+        "schedule": crontab(minute="*/5"),
+    },
+    # "Quiz opens soon", 1 hour before (roadmap 6.2, SPEC 7).
+    "remind-quizzes": {
+        "task": "apps.assessments.tasks.remind_all_quizzes",
         "schedule": crontab(minute="*/5"),
     },
     # Notifications older than 90 days are deleted (roadmap 6.1, SPEC 7).

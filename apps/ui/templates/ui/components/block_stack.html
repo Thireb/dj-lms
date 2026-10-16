@@ -1,4 +1,4 @@
-<div class="space-y-4">
+{% if inline %}<div class="flex flex-wrap items-center gap-2">{% for item in items %}{% if item.is_component %}{{ item.html }}{% else %}<span class="text-sm text-text">{{ item.html }}</span>{% endif %}{% endfor %}</div>{% else %}<div class="space-y-4">
   {% for item in items %}
     {% if item.is_component %}
       {{ item.html }}
@@ -6,4 +6,4 @@
       <p class="text-sm text-text">{{ item.html }}</p>
     {% endif %}
   {% endfor %}
-</div>
+</div>{% endif %}
