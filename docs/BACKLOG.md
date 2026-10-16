@@ -318,6 +318,7 @@ Full review of roadmap 5.1 to 5.4 on `main` 7631c0f: pytest 2130 passed, ruff cl
 | AS12 | A student who left a batch or subject still saw their old quizzes and assignments in the lists, but the open link gave 404: the lists keep rows with an attempt or answer, the detail scope needed a current enrolment. Fixed: the student and guardian scopes of `Quiz` and `Assignment` also include the rows with the student's own attempt or answer (a draft quiz stays hidden). | Low | [x] |
 | AS13 | The paper's `auto_submit` field marked a normal Submit as "Sent when the time ended" when a student added it by hand. The score did not change. Fixed: the flag counts only within 1 minute of the deadline. | Low | [x] |
 | AS14 | Owner decision: "Your answers" shows the right answers after a quiz closes, even when the teacher uses the same bank question in a later quiz. Real exams have the same risk. Decided 2026-10-16: keep it. | Low | [x] |
+| AS15 | Seen while recording the progress video: the teacher and admin quiz pages of a closed quiz said "Closed. It closes Tue 13 Oct 2026, 3:42 PM PKT." (a past time with "closes"). Fixed: "Closed Tue 13 Oct 2026, 3:42 PM PKT.", like the student page. | Low | [x] |
 
 ## Later (deployment hardening, Phase 12)
 

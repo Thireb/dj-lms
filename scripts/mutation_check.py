@@ -3412,6 +3412,12 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "        timer = auto and now >= locked.deadline - ANSWER_GRACE\n",
         "        timer = auto\n",
     ),
+    (
+        "a closed quiz says when it closed (AS15)",
+        "apps/assessments/ui.py",
+        "        return f\"Closed {when(quiz.closes_at)}.\"\n",
+        "        return f\"Closed. It closes {when(quiz.closes_at)}.\"\n",
+    ),
 ]
 
 
