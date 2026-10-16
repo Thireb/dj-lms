@@ -96,6 +96,8 @@ from apps.assessments.services import (
 from apps.assessments.ui import (
     AdminQuizTable,
     AnswerTable,
+    GuardianAssignmentTable,
+    GuardianQuizTable,
     QuestionTable,
     QuizItemTable,
     QuizResultTable,
@@ -122,6 +124,7 @@ from apps.core.query import id_param, search_param
 from apps.core.responses import forbidden_response
 from apps.core.roles import Role
 from apps.people.models import StudentProfile, TeacherProfile
+from apps.people.views import GuardianChildMixin
 from apps.ui.components.actions import Button, PostButton
 from apps.ui.components.block_stack import BlockStack, ButtonRow
 from apps.ui.components.data import DetailList, EmptyState, TextBlock
@@ -481,6 +484,7 @@ class StudentAssignmentListPage(StudentAssignmentMixin, ListPage):
 
     title = "Assignments"
     filter_keys = ("status", "subject")
+    table_class: type[StudentAssignmentTable] = StudentAssignmentTable
 
     def get_components(self) -> dict[str, Any]:
         if self.student is None:
@@ -499,7 +503,7 @@ class StudentAssignmentListPage(StudentAssignmentMixin, ListPage):
         query = urlencode({key: value for key, value in filters.items() if value})
         return {
             "filters": FilterBar(self.filter_fields(filters)),
-            "table": StudentAssignmentTable(list(page.object_list)),
+            "table": self.table_class(list(page.object_list)),
             "pagination": Pagination(page, query=query),
         }
 
@@ -1347,6 +1351,7 @@ class StudentQuizMixin(StudentAssignmentMixin):
 
 class StudentQuizListPage(StudentQuizMixin, ListPage):
     title = "Quizzes and exams"
+    table_class: type[StudentQuizTable] = StudentQuizTable
 
     def get_subtitle(self) -> str:
         return "Start a quiz while it is live. You have one attempt."
@@ -1357,7 +1362,7 @@ class StudentQuizListPage(StudentQuizMixin, ListPage):
         rows = student_quizzes(self.student)
         page = Paginator(rows, PAGE_SIZE).get_page(self.request.GET.get("page"))
         return {
-            "table": StudentQuizTable(list(page.object_list)),
+            "table": self.table_class(list(page.object_list)),
             "pagination": Pagination(page),
         }
 
@@ -1419,7 +1424,19 @@ class StudentQuizPage(StudentQuizMixin, DetailPage):
             rows.append(("Note", "Sent when the time ended."))
         if attempt.status == AttemptStatus.SUBMITTED:
             rows.append(("Marks", "Your teacher marks the written answers."))
-        return [SectionCard(title="Your attempt", icon="check", body=DetailList(rows))]
+        cards = [SectionCard(title="Your attempt", icon="check", body=DetailList(rows))]
+        closed = self.status == QuizStatus.CLOSED
+        if closed and attempt.status != AttemptStatus.IN_PROGRESS:
+            # Backlog AS8: the right answers only after the quiz closes and
+            # the attempt ends, so no one can still use them to answer.
+            cards.append(
+                SectionCard(
+                    title="Your answers",
+                    icon="list-checks",
+                    body=AnswerTable(attempt_review(attempt)),
+                )
+            )
+        return cards
 
     def get_sidebar_cards(self) -> list[Any]:
         quiz = self.quiz
@@ -1616,3 +1633,40 @@ class AdminQuizPage(AdminQuizMixin, TeacherQuizDetailPage):
         if not has_opened(self.quiz, self.now):
             return [questions]
         return [self.results_card(), questions]
+
+
+# Guardian lists (roadmap 5.4, backlog AS2)
+
+
+class GuardianAssessmentMixin(GuardianChildMixin):
+    """The student pages for the child chosen in the header, read only."""
+
+    portal = "guardian"
+    allowed_roles = [Role.GUARDIAN]
+    no_student = EmptyState(
+        "No children are linked to this account yet.",
+        text="Contact the institute office.",
+        icon="graduation-cap",
+    )
+
+    @property
+    def student(self) -> StudentProfile | None:
+        return self.child
+
+
+class GuardianAssignmentListPage(GuardianAssessmentMixin, StudentAssignmentListPage):
+    table_class = GuardianAssignmentTable
+
+    def get_subtitle(self) -> str:
+        if self.child is None:
+            return ""
+        return f"Assignments of {self.child}. Marks show once the teacher grades."
+
+
+class GuardianQuizListPage(GuardianAssessmentMixin, StudentQuizListPage):
+    table_class = GuardianQuizTable
+
+    def get_subtitle(self) -> str:
+        if self.child is None:
+            return ""
+        return f"Quizzes and exams of {self.child}. Scores show once graded."

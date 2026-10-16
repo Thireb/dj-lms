@@ -3358,6 +3358,36 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         '            *([Column("actions", "", self.open_button)] if self.open_links else []),\n',
         '            Column("actions", "", self.open_button),\n',
     ),
+    (
+        "guardian sees a quiz score only once graded (5.4)",
+        "apps/assessments/ui.py",
+        '    if attempt is None or attempt.status != AttemptStatus.GRADED:\n        return "-"\n',
+        '    if attempt is None:\n        return "-"\n',
+    ),
+    (
+        "guardian lists have no open button (5.4)",
+        "apps/assessments/ui.py",
+        '    return [column for column in columns if column.key != "actions"]\n',
+        "    return columns\n",
+    ),
+    (
+        "guardian lists follow the chosen child (5.4)",
+        "apps/assessments/views.py",
+        "    @property\n    def student(self) -> StudentProfile | None:\n        return self.child\n",
+        "    @property\n    def student(self) -> StudentProfile | None:\n        return StudentProfile.objects.first()\n",
+    ),
+    (
+        "student answers wait for the quiz to close (5.4)",
+        "apps/assessments/views.py",
+        "        closed = self.status == QuizStatus.CLOSED\n",
+        "        closed = True\n",
+    ),
+    (
+        "student answers wait for the attempt to end (5.4)",
+        "apps/assessments/views.py",
+        "        if closed and attempt.status != AttemptStatus.IN_PROGRESS:\n",
+        "        if closed:\n",
+    ),
 ]
 
 

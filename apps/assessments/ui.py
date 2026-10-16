@@ -691,3 +691,44 @@ class AdminQuizTable(TeacherQuizTable):
         return IconButton(
             "eye", f"View results: {quiz.title}", url=admin_quiz_url(quiz)
         )
+
+
+# Guardian lists (roadmap 5.4)
+
+
+def without_actions(columns: list[Column]) -> list[Column]:
+    """Guardian lists are read only: no open button."""
+    return [column for column in columns if column.key != "actions"]
+
+
+class GuardianAssignmentTable(StudentAssignmentTable):
+    """Guardian "Assignments": the child's list, without the open button.
+    Marks show once the teacher grades the answer."""
+
+    @property
+    def columns(self) -> list[Column]:  # type: ignore[override]
+        return without_actions(super().columns)
+
+
+def graded_score_text(row: StudentQuiz) -> str:
+    """SPEC 6.8: a guardian sees the score only after the attempt is
+    graded."""
+    attempt = row.attempt
+    if attempt is None or attempt.status != AttemptStatus.GRADED:
+        return "-"
+    return score_text(attempt, row.quiz.total_marks)
+
+
+class GuardianQuizTable(StudentQuizTable):
+    """Guardian "Quizzes and exams": the child's list, without the open
+    button; the score only once graded."""
+
+    @property
+    def columns(self) -> list[Column]:  # type: ignore[override]
+        columns = without_actions(super().columns)
+        return [
+            Column("score", "Score", graded_score_text)
+            if column.key == "score"
+            else column
+            for column in columns
+        ]
