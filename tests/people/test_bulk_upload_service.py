@@ -87,6 +87,9 @@ def test_read_accepts_header_in_any_case() -> None:
         (xlsx([]), "no student rows"),
         (b"0" * (1024 * 1024 + 1), "larger than 1 MB"),
     ],
+    # Fixed ids: an .xlsx holds the time it was made, so ids from the bytes
+    # differ between pytest-xdist workers and break the parallel run.
+    ids=["not-a-zip", "missing-columns", "no-rows", "too-large"],
 )
 def test_read_rejects_bad_files(data, message) -> None:
     with pytest.raises(UploadError) as error:
