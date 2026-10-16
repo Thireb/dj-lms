@@ -910,8 +910,8 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
     (
         "block only the student portal",
         "apps/people/middleware.py",
-        "return resolve(request.path_info).namespace == STUDENT_NAMESPACE",
-        "return True",
+        "        if match.namespace != STUDENT_NAMESPACE:\n            return False\n",
+        "",
     ),
     (
         "access middleware installed",
