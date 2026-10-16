@@ -2743,8 +2743,8 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
     (
         "assignment enrolment is one row: batch and subject (5.1)",
         "apps/assessments/models.py",
-        '            **{lookup: user_id, f"{_ENROLMENT}batch_id": F("batch_id")}\n',
-        "            **{lookup: user_id}\n",
+        '    enrolled = Q(**{lookup: user_id, f"{_ENROLMENT}batch_id": F("batch_id")})\n',
+        "    enrolled = Q(**{lookup: user_id})\n",
     ),
     (
         "assignment rows stay in one institute (5.1)",
@@ -2965,8 +2965,8 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
     (
         "students see only published quizzes (5.3)",
         "apps/assessments/models.py",
-        "            is_published=True,\n",
-        "",
+        "            _enrolled_or_own(lookup, own, user_id), is_published=True\n",
+        "            _enrolled_or_own(lookup, own, user_id)\n",
     ),
     (
         "quiz questions are for staff only (5.3)",
