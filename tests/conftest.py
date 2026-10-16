@@ -49,6 +49,14 @@ class FakeUser:
 
 
 @pytest.fixture(autouse=True)
+def _private_media(settings, tmp_path):
+    """Private uploads (fee receipts) go to a temporary folder in every test,
+    never into the repo."""
+    settings.PRIVATE_MEDIA_ROOT = tmp_path / "private"
+    return settings.PRIVATE_MEDIA_ROOT
+
+
+@pytest.fixture(autouse=True)
 def _clear_cache() -> None:
     # Sign-in limits live in the cache; counts must not leak between tests.
     cache.clear()

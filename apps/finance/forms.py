@@ -168,3 +168,78 @@ class PaymentForm(BaseForm):
             ),
             FormActions(self.save_label, self.cancel_url),
         )
+
+
+class ReceiptForm(BaseForm):
+    """SPEC 4.17 Fee pay: the child's open challans, Amount* (default = their
+    balance), Paid on*, Reference, Receipt file*. The child is the one chosen
+    in the header."""
+
+    save_label = "Send receipt"
+
+    challans = forms.TypedMultipleChoiceField(
+        label="Challans",
+        coerce=int,
+        widget=GroupedCheckboxes(empty_text="No open challans."),
+        error_messages={"required": "Choose at least one challan."},
+    )
+    amount = forms.DecimalField(
+        label="Amount paid",
+        min_value=Decimal("0.01"),
+        decimal_places=2,
+        widget=MoneyInput,
+    )
+    paid_on = forms.DateField(label="Paid on", widget=DatePicker())
+    reference = forms.CharField(
+        label="Reference",
+        max_length=100,
+        required=False,
+        help_text="The bank or transfer reference, if any.",
+    )
+    file = forms.FileField(
+        label="Receipt file",
+        help_text="A photo or scan: JPG, PNG, WEBP or PDF, up to 5 MB.",
+        widget=forms.ClearableFileInput(attrs={"accept": ".jpg,.jpeg,.png,.webp,.pdf"}),
+    )
+
+    def __init__(self, *args, choices, cancel_url, **kwargs):
+        self.cancel_url = cancel_url
+        super().__init__(*args, **kwargs)
+        self.fields["challans"].choices = choices
+
+    def get_layout(self) -> Layout:
+        return Layout(
+            Section(
+                "What you paid for",
+                "challans",
+                description="Tick the challans this payment covers.",
+            ),
+            Section(
+                "Payment",
+                "amount",
+                "paid_on",
+                "reference",
+                "file",
+                description="The office checks it and marks the challans paid.",
+                columns=2,
+            ),
+            FormActions(self.save_label, self.cancel_url),
+        )
+
+
+class RejectReceiptForm(BaseForm):
+    """SPEC 4.9: Reason* (short text, shown to the guardian)."""
+
+    save_label = "Reject receipt"
+
+    reason = forms.CharField(label="Reason", max_length=200)
+
+    def __init__(self, *args, cancel_url=None, **kwargs):
+        self.cancel_url = cancel_url
+        super().__init__(*args, **kwargs)
+
+    def get_layout(self) -> Layout:
+        return Layout(
+            Section(None, "reason"),
+            FormActions(self.save_label, self.cancel_url),
+        )

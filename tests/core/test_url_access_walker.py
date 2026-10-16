@@ -32,13 +32,18 @@ from apps.assessments.models import (
 from apps.core.features import ALL_FEATURE_KEYS
 from apps.core.roles import Role
 from apps.core.tenancy import tenant_context
-from apps.finance.models import Challan, FeePlan, Payment
+from apps.finance.models import Challan, FeePlan, Payment, ReceiptSubmission
 from apps.institutes.models import Plan
 from apps.lectures.models import Lecture, LectureStatus, RecurringSchedule
 from apps.messaging.models import Draft, Thread, ThreadMember
 from apps.notifications.models import Notification
 from apps.notifications.services import notify
-from apps.people.models import StudentProfile, TeacherProfile
+from apps.people.models import (
+    GuardianProfile,
+    GuardianStudentLink,
+    StudentProfile,
+    TeacherProfile,
+)
 from apps.people.services import create_student_profile, create_teacher_profile
 from apps.ui.views.pages import PortalPageView
 from django.test import Client
@@ -435,6 +440,36 @@ def _payment(institute) -> int:
     return payment.pk
 
 
+def _receipt(institute) -> int:
+    """A receipt with a file, for a student linked to the walker guardian
+    when that user exists (the guardian route shows only their children)."""
+    from django.core.files.base import ContentFile
+
+    # unscoped: test setup outside a tenant context.
+    existing = ReceiptSubmission.unscoped.filter(institute=institute).first()
+    student_pk = _student(institute)
+    guardian = User.objects.filter(email="guardian-walker@example.com").first()
+    if guardian is not None:
+        profile, _ = GuardianProfile.unscoped.get_or_create(
+            institute=institute, user=guardian
+        )
+        GuardianStudentLink.unscoped.get_or_create(
+            institute=institute, guardian=profile, student_id=student_pk
+        )
+    if existing is not None:
+        return existing.pk
+    receipt = ReceiptSubmission(
+        institute=institute,
+        student_id=student_pk,
+        number="RCP-WALKER",
+        amount=100,
+        paid_on=timezone.localdate(),
+    )
+    receipt.file.save("walker.pdf", ContentFile(b"%PDF-1.4\n"), save=False)
+    receipt.save()
+    return receipt.pk
+
+
 def _fee_plan(institute) -> int:
     # unscoped: test setup outside a tenant context.
     plan, _ = FeePlan.unscoped.get_or_create(
@@ -502,6 +537,11 @@ ROUTE_OBJECTS = {
     "admin:challan_pay": _challan,
     "admin:payment_receipt": _payment,
     "admin:student_fee_history": _student,
+    **{
+        f"admin:receipt_{action}": _receipt
+        for action in ("detail", "approve", "reject", "file")
+    },
+    "guardian:receipt_file": _receipt,
     **{
         f"{portal}:message_{action}": _thread
         for portal in ("admin", "teacher", "student", "guardian")

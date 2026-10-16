@@ -18,6 +18,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.core.tenancy import require_tenant_context
+from apps.finance import notices
 from apps.finance.models import (
     Challan,
     ChallanStatus,
@@ -130,6 +131,7 @@ def submit_receipt(
         receipt.challans.set(challans)
     if student.institute.settings.auto_approve_guardian_receipts:
         receipt = approve_receipt(receipt, by=None)
+    notices.receipt_submitted(receipt)
     return receipt
 
 
@@ -177,6 +179,7 @@ def approve_receipt(receipt: ReceiptSubmission, *, by: Any) -> ReceiptSubmission
         locked.reviewed_by = by
         locked.reviewed_at = timezone.now()
         locked.save(update_fields=["status", "reviewed_by", "reviewed_at"])
+        notices.receipt_result(locked)
     return locked
 
 
@@ -196,4 +199,5 @@ def reject_receipt(
         locked.reviewed_by = by
         locked.reviewed_at = timezone.now()
         locked.save(update_fields=["status", "reason", "reviewed_by", "reviewed_at"])
+        notices.receipt_result(locked)
     return locked
