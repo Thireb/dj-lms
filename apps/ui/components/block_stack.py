@@ -6,12 +6,14 @@ from apps.ui.components.base import (
 
 
 class BlockStack(Component):
-    """Vertical stack of rendered components or plain text blocks."""
+    """Vertical stack of rendered components or plain text blocks.
+    ``inline=True`` puts them on one line instead (wraps when narrow), for
+    example a "New" badge before a subject."""
 
     template_name = "ui/components/block_stack.html"
 
-    def __init__(self, blocks=None, **props):
-        super().__init__(blocks=blocks or [], **props)
+    def __init__(self, blocks=None, inline=False, **props):
+        super().__init__(blocks=blocks or [], inline=inline, **props)
 
     def render(self, request=None):
         ctx = self.get_context()

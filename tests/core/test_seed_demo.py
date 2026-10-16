@@ -38,6 +38,7 @@ def test_seed_demo_creates_demo_institute_and_role_users(demo_env) -> None:
     admin = User.objects.get(email="demo-admin@example.com")
     assert admin.institute == institute
     assert admin.check_password(DEMO_PASSWORD)
+    assert admin.get_full_name() == "Office Admin"  # names, not emails, in lists
     assert User.objects.filter(email="demo-super@example.com", role=Role.SUPER_ADMIN)
 
 

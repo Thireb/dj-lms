@@ -255,7 +255,7 @@ Every item here is a class. Names are fixed.
 | `PublicPostForm` | forms | `<form method="post">` + CSRF wrapper for public pages | `action`, `body` |
 | `PortalPostForm` | forms | Portal `FormPage` POST wrapper (CSRF, multipart, crispy body). `framed` puts the sections in one card with dividers and a footer bar for the buttons; the bulk upload sets `framed=False` because its form sits in a `SectionCard`; `form_id` gives the form an id (the quiz timer submits it) | `action`, `body`, `framed`, `form_id` |
 | `ProfileMenu` | layout | Admin top-bar profile dropdown (C11 items, admin_only hiding) | `items` |
-| `BlockStack` | block_stack | vertical stack of text or nested components | `blocks` |
+| `BlockStack` | block_stack | vertical stack of text or nested components; `inline=True` puts them on one line that wraps (a "New" badge before a subject) | `blocks`, `inline` |
 | `ButtonRow` | block_stack | actions side by side; wraps on phones, right-aligned from md (table action cells) | `items` |
 | `SignOutForm` | actions | POST sign out with CSRF; `variant="light"` on the band | `logout_url`, `variant` |
 | `StatCard` | data | stat tile with an icon tile; `tone="lead"` is the solid royal tile | `value`, `label`, `note`, `icon`, `tone` |

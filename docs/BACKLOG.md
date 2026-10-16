@@ -320,6 +320,22 @@ Full review of roadmap 5.1 to 5.4 on `main` 7631c0f: pytest 2130 passed, ruff cl
 | AS14 | Owner decision: "Your answers" shows the right answers after a quiz closes, even when the teacher uses the same bank question in a later quiz. Real exams have the same risk. Decided 2026-10-16: keep it. | Low | [x] |
 | AS15 | Seen while recording the progress video: the teacher and admin quiz pages of a closed quiz said "Closed. It closes Tue 13 Oct 2026, 3:42 PM PKT." (a past time with "closes"). Fixed: "Closed Tue 13 Oct 2026, 3:42 PM PKT.", like the student page. | Low | [x] |
 
+## Phase 6 audit (2026-10-16, on `phase/6`)
+
+Full review of roadmap 6.1 to 6.3 on the local `phase/6` branch (one PR for the phase): pytest 2391+ passed, ruff clean, makemigrations clean, mutation check 608 caught before the audit fixes; 204 pages opened by `./scripts/browser-walk.sh` as `demo-super`, `demo-admin`, `demo-teacher`, `demo-student` and `demo-guardian` at 360px and 1440px (all 200, no sideways scroll, no console errors, no axe WCAG A/AA findings); the bell, Messages, a thread, New message, Message monitor and Broadcast looked at in screenshots at both widths. Security pass: `unscoped` only in the demo reset; every view declares `allowed_roles`; the admin Broadcast and Monitor use the Messages menu key; no `|safe`; Open, Mark all as read, the thread actions and Draft delete are POST with CSRF; the bell and menu badge parts answer 204 to a signed-out user; "Mark all as read" goes back only to a path on this site; notification and message text is escaped. The inbox makes 7 queries for 3 or 12 threads (no N+1).
+
+| # | Item | Priority | Status |
+|---|---|---|---|
+| P6-1 | The shared form field template showed the label of a hidden field, so New message had an empty "To" above Subject. Hidden fields now render only the input (every form). | Low | [x] |
+| P6-2 | The lecture reminder job locked the joined teacher and user rows too (`select_for_update` with `select_related`), so a profile save could wait for it. It now locks the lecture rows only (`of=("self",)`). | Low | [x] |
+| P6-3 | The "New" badge in the Messages list sat above the subject and made the rows tall. `BlockStack(inline=True)` puts it on the same line. | Low | [x] |
+| P6-4 | New message listed up to 20 people for a search, each with a full-size "Choose" button (very long at 360px). Now 10, each with an icon button. | Low | [x] |
+| P6-5 | The demo admin and sub-admin had no names, so messages and the monitor showed their emails. `seed_demo` names them "Office Admin" and "Office Helper". | Low | [x] |
+| P6-6 | A signed-out user on a feature-gated page (the first ones are Messages) got 403, not the sign-in page: the feature check ran before the role check. Fixed in 6.3 part 2. | Low | [x] |
+| P6-7 | Polling: each portal page now loads 2 small HTMX parts (the bell count and the Messages badge) and refreshes both every 60 seconds, on top of "Up next" every 30 seconds (P3-8). Join them into one request, or use a longer interval, before large institutes. | Low | [ ] |
+| P6-8 | A blocked student (portal access paused) cannot open Messages, because every `/student/` page shows "Access paused". The page shows the institute phone (SPEC 6.2). Decide if a blocked student may still message the office. | Low | [ ] |
+| P6-9 | A notification text keeps the time in the zone the recipient had when it was made; a later time zone change does not rewrite old notifications. Accepted: the zone name is in the text. | Low | [x] |
+
 ## Later (deployment hardening, Phase 12)
 
 | # | Item | Priority | Status |

@@ -60,12 +60,14 @@ from apps.ui.components import (
     PostButton,
     SectionCard,
 )
+from apps.ui.components.actions import IconButton
 from apps.ui.components.block_stack import BlockStack
 from apps.ui.components.data import DetailList
 from apps.ui.components.forms import CrispyForm, PortalPostForm
 from apps.ui.views.pages import DetailPage, ListPage, PortalPageView
 
 PAGE_SIZE = 25
+SEARCH_LIMIT = 10  # people shown for one search on New message
 MONITOR_ROLES = {
     Role.INSTITUTE_ADMIN: "Admin",
     Role.SUB_ADMIN: "Sub-admin",
@@ -436,11 +438,17 @@ class ComposePage(MessagingMixin, DetailPage):
                 ),
             ]
         )
-        found = search_people(self.request.user, self.query) if self.query else []
+        found = (
+            search_people(self.request.user, self.query, limit=SEARCH_LIMIT)
+            if self.query
+            else []
+        )
         rows = [
             (
                 f"{person(user)} ({user.get_role_display()})",
-                Button("Choose", url=self.link(to=user.pk), variant="secondary"),
+                IconButton(
+                    "user-plus", f"Choose {person(user)}", url=self.link(to=user.pk)
+                ),
             )
             for user in found
         ]

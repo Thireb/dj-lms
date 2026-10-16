@@ -515,7 +515,9 @@ def remind_upcoming_lectures(institute: Institute, now: datetime | None = None) 
     locked row is left for the run that holds it."""
     require_tenant_context(institute)
     now = now or timezone.now()
-    due = Lecture.objects.select_for_update(skip_locked=True).filter(
+    # of=("self",): lock the lecture rows only, not the joined teacher and
+    # user rows, so a profile save never waits for this job (Phase 6 audit).
+    due = Lecture.objects.select_for_update(skip_locked=True, of=("self",)).filter(
         status=LectureStatus.SCHEDULED,
         reminded_at__isnull=True,
         starts_at__gt=now,
