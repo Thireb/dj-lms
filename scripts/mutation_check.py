@@ -3784,6 +3784,18 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "        elif choice.discount_type == DiscountType.PERCENT and not 0 <= value <= 100:\n",
         "        elif False:\n",
     ),
+    (
+        "the upload reads fee plans only with fees (7.1)",
+        "apps/people/bulk_upload.py",
+        "    if not lookups.fees:\n        return\n    names",
+        "    names",
+    ),
+    (
+        "an upload percent applies to every plan (7.1)",
+        "apps/people/bulk_upload.py",
+        "            FeeChoice(plan, DiscountType.PERCENT, value) for plan in plans\n",
+        "            FeeChoice(plan, DiscountType.PERCENT, value) for plan in plans[:1]\n",
+    ),
 ]
 
 
