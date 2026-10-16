@@ -3,6 +3,7 @@ from django.urls import path
 from apps.assessments import views as assessments
 from apps.attendance import views as attendance
 from apps.lectures import views as lectures
+from apps.messaging import views as messaging
 from apps.people import views as people
 from apps.ui.views import portal_home
 
@@ -23,4 +24,35 @@ urlpatterns = [
         name="assignment_list",
     ),
     path("quizzes/", assessments.GuardianQuizListPage.as_view(), name="quiz_list"),
+    # Messages (roadmap 6.3)
+    path(
+        "messages/",
+        messaging.PAGES["guardian"]["inbox"].as_view(),
+        name="message_inbox",
+    ),
+    path(
+        "messages/new/",
+        messaging.PAGES["guardian"]["compose"].as_view(),
+        name="message_compose",
+    ),
+    path(
+        "messages/unread/",
+        messaging.PAGES["guardian"]["unread"].as_view(),
+        name="message_unread",
+    ),
+    path(
+        "messages/<int:pk>/",
+        messaging.PAGES["guardian"]["thread"].as_view(),
+        name="message_thread",
+    ),
+    path(
+        "messages/<int:pk>/action/",
+        messaging.PAGES["guardian"]["action"].as_view(),
+        name="message_action",
+    ),
+    path(
+        "messages/drafts/<int:pk>/delete/",
+        messaging.PAGES["guardian"]["draft_delete"].as_view(),
+        name="message_draft_delete",
+    ),
 ]

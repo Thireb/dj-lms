@@ -27,6 +27,7 @@ from apps.academics.models import StudentBatchSubject, TeacherBatchSubject
 from apps.accounts.models import User
 from apps.core.roles import Role
 from apps.core.tenancy import require_tenant_context
+from apps.messaging import notices
 from apps.messaging.models import (
     MAX_BODY,
     MAX_SUBJECT,
@@ -181,7 +182,9 @@ def send_message(
         errors["recipient"] = NOT_REACHABLE
     if errors:
         raise ValidationError(errors)
-    return _start_thread(sender, recipient, subject, body, now or timezone.now())
+    thread = _start_thread(sender, recipient, subject, body, now or timezone.now())
+    notices.new_message(thread, sender, [recipient])
+    return thread
 
 
 @transaction.atomic
@@ -213,6 +216,8 @@ def reply(
     locked.last_message_at = now
     locked.save(update_fields=["last_message_at"])
     others.update(trashed_at=None, deleted=False)
+    active = [row.user for row in others.select_related("user") if row.user.is_active]
+    notices.new_message(locked, sender, active)
     member.last_read_at = now
     member.trashed_at = None
     member.deleted = False

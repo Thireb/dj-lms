@@ -13,6 +13,7 @@ from apps.ui.components.data import (
     Column,
     DataTable,
     EmptyState,
+    MessageList,
     ProgressBar,
     StatCard,
 )
@@ -32,6 +33,7 @@ from apps.ui.components.layout import (
 from apps.ui.components.lectures import Calendar, CountdownCard, LectureRow
 from apps.ui.components.nav import (
     FilterBar,
+    MenuBadge,
     NotificationBell,
     NotificationCount,
     NotificationPanel,
@@ -57,6 +59,8 @@ __all__ = [
     "Icon",
     "LectureRow",
     "Modal",
+    "MenuBadge",
+    "MessageList",
     "NotificationBell",
     "NotificationCount",
     "NotificationPanel",

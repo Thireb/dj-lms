@@ -96,3 +96,17 @@ def test_text_block_keeps_lines_and_escapes() -> None:
     assert "break-words" in html
     assert str(TextBlock("", empty_text="No feedback.")).count("No feedback.") == 1
     assert str(TextBlock("")).strip() == ""
+
+
+def test_message_list_escapes_and_marks_my_messages() -> None:
+    from types import SimpleNamespace
+
+    from apps.ui.components import MessageList
+
+    rows = [
+        SimpleNamespace(author="Sam", when="Fri", body="<b>Hi</b>\nthere", mine=False),
+        SimpleNamespace(author="You", when="Fri", body="Hello", mine=True),
+    ]
+    html = str(MessageList(rows))
+    assert "&lt;b&gt;Hi&lt;/b&gt;" in html and "whitespace-pre-line" in html
+    assert html.count("justify-end") == 1
