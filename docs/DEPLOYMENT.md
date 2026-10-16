@@ -26,7 +26,7 @@ All run as Docker containers.
 
 - One `Dockerfile` for the app image, shared by web, worker and beat.
 - One production compose file in the repo root that defines all services.
-- Image build: install dependencies, build Tailwind CSS, collect static files.
+- Image build: install the WeasyPrint system libraries (`libpango-1.0-0`, `libpangoft2-1.0-0`, `libharfbuzz-subset0` on Debian or Ubuntu), install dependencies, build Tailwind CSS, collect static files.
 - Start command (web): `gunicorn config.wsgi --timeout 120`. Keep the 120 s timeout until the bulk upload runs in Celery (backlog S8): a 15-row import hashes up to 30 passwords in one request.
 - Start command (worker): `celery -A config worker -l info`.
 - Start command (beat): `celery -A config beat -l info`.

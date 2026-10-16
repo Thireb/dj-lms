@@ -3736,6 +3736,36 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         '        return not (match.url_name or "").startswith(OPEN_PAGE_PREFIX)\n',
         "        return True\n",
     ),
+    (
+        "fee plans are for admins only (7.1)",
+        "apps/finance/models.py",
+        "        return scoped if user_role(user) in INSTITUTE_WIDE_ROLES else scoped.none()\n",
+        "        return scoped\n",
+    ),
+    (
+        "students see only their own fee rows (7.1)",
+        "apps/finance/models.py",
+        '        return scoped.filter(**{lookup: getattr(user, "pk", None)}).distinct()\n',
+        "        return scoped\n",
+    ),
+    (
+        "a discount never makes a line negative (7.1)",
+        "apps/finance/services.py",
+        "    return to_money(min(max(off, Decimal(0)), amount))\n",
+        "    return to_money(off)\n",
+    ),
+    (
+        "fee plan names are unique (7.1)",
+        "apps/finance/services.py",
+        "        if same.exists():\n",
+        "        if False:\n",
+    ),
+    (
+        "the late fee setting has a range (7.1)",
+        "apps/institutes/services.py",
+        "    if not 0 <= settings.late_fee <= MAX_LATE_FEE:\n",
+        "    if False:\n",
+    ),
 ]
 
 
