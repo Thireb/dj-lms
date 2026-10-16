@@ -6,15 +6,19 @@ what exists now: batches and subjects, and a guardian's children.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from functools import cached_property
 from typing import Any
 
+from django.urls import reverse
 from django.utils import timezone
 
 from apps.assessments.services import answers_to_grade
 from apps.attendance.services import lectures_to_mark, student_summaries
 from apps.attendance.ui import attendance_value, classes_note
 from apps.core.roles import Role
+from apps.finance.reports import FeeTotals, academic_year_start, fee_totals
+from apps.finance.ui import money
 from apps.lectures.services import lectures_today_count, upcoming_lectures
 from apps.lectures.ui import lecture_status_badge, lecture_summary, lecture_when
 from apps.lectures.views import up_next_body
@@ -23,10 +27,34 @@ from apps.people.ui import profile_status_badge
 from apps.people.views import GuardianChildMixin
 from apps.ui.brand import initials
 from apps.ui.components.block_stack import BlockStack
-from apps.ui.components.data import EmptyState, PersonCell, PersonList, StatCard
+from apps.ui.components.data import (
+    Badge,
+    EmptyState,
+    PersonCell,
+    PersonList,
+    StatCard,
+)
 from apps.ui.components.layout import HeroBanner, SectionCard
 from apps.ui.components.lectures import LectureRow
 from apps.ui.views.pages import DashboardPage
+
+
+def has_fees(institute: Any) -> bool:
+    return "fees" in (getattr(institute, "features", None) or ())
+
+
+@dataclass(frozen=True)
+class YearFees:
+    """A student's fee numbers for a dashboard: this academic year's
+    billed and paid, and what is due now (every month)."""
+
+    year: FeeTotals
+    now: FeeTotals
+
+
+def year_fees(student: Any, institute: Any) -> YearFees:
+    since = academic_year_start(institute, timezone.localdate())
+    return YearFees(year=fee_totals(student, since), now=fee_totals(student))
 
 
 class PortalHomePage(DashboardPage):
@@ -168,6 +196,31 @@ class StudentPortalHomePage(PortalHomePage):
             StatCard(
                 lectures_today_count(self.request.user), "Lectures today", icon="video"
             ),
+            *self.fee_cards(profile),
+        ]
+
+    def fee_cards(self, profile: Any) -> list[Any]:
+        """SPEC 8: fee paid % this academic year, and what is due."""
+        institute = self.get_institute()
+        if not has_fees(institute):
+            return []
+        fees = year_fees(profile, institute)
+        percent = fees.year.paid_percent
+        billed = money(fees.year.billed, institute)
+        pending = fees.now.pending
+        return [
+            StatCard(
+                "-" if percent is None else f"{percent}%",
+                "Fee paid this year",
+                note=f"{money(fees.year.paid, institute)} of {billed}",
+                icon="banknote",
+            ),
+            StatCard(
+                money(fees.now.due, institute),
+                "Fee due",
+                note=f"{pending} pending challan{'' if pending == 1 else 's'}",
+                icon="coins",
+            ),
         ]
 
 
@@ -233,7 +286,36 @@ class GuardianPortalHomePage(GuardianChildMixin, PortalHomePage):
                 "Contact the institute office.",
             ),
         )
-        return [children, self.up_next()]
+        return [children, self.up_next(), *self.fee_sections()]
+
+    def fee_sections(self) -> list[Any]:
+        """SPEC 8: per child, billed and paid this academic year, and what
+        is due now."""
+        institute = self.get_institute()
+        if not has_fees(institute) or not self.data.children:
+            return []
+        rows = []
+        for child in self.data.children:
+            fees = year_fees(child, institute)
+            detail = (
+                f"This year: billed {money(fees.year.billed, institute)}, "
+                f"paid {money(fees.year.paid, institute)}"
+            )
+            due = fees.now.due
+            badge = (
+                Badge(f"{money(due, institute)} due", tone="warning")
+                if due
+                else Badge("Nothing due", tone="success")
+            )
+            rows.append((PersonCell(str(child), detail=detail), badge))
+        return [
+            SectionCard(
+                title="Fees",
+                icon="coins",
+                body=PersonList(rows),
+                link_url=reverse("guardian:fee_list"),
+            )
+        ]
 
     def get_feature(self) -> None:
         return None  # "Upcoming classes" sits next to the children instead

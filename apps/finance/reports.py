@@ -281,21 +281,22 @@ def defaulters_csv(rows: list[DefaulterRow]) -> str:
     return out.getvalue()
 
 
-# Challan dashboard (SPEC 8)
+# Challan dashboard (SPEC 8) and the admin fee strip
 
 
 @dataclass(frozen=True)
-class ChallanNumbers:
+class MonthMoney:
+    """This month's challans (cancelled left out) and the payments made
+    from the 1st to today."""
+
     month: date
     billed: Decimal
     collected: Decimal
     outstanding: Decimal
-    by_status: list[tuple[str, int]]
     waiting_receipts: int
-    defaulters: int
 
 
-def challan_dashboard(user: Any, institute: Any, today: date) -> ChallanNumbers:
+def month_money(user: Any, today: date) -> MonthMoney:
     from apps.finance.models import ReceiptStatus, ReceiptSubmission
 
     month = today.replace(day=1)
@@ -310,8 +311,29 @@ def challan_dashboard(user: Any, institute: Any, today: date) -> ChallanNumbers:
         .filter(paid_on__gte=month, paid_on__lte=today)
         .aggregate(total=Sum("amount"))["total"]
     )
+    return MonthMoney(
+        month=month,
+        billed=totals["billed"] or ZERO,
+        collected=collected or ZERO,
+        outstanding=totals["owed"] or ZERO,
+        waiting_receipts=ReceiptSubmission.objects.for_user(user)
+        .filter(status=ReceiptStatus.WAITING)
+        .count(),
+    )
+
+
+@dataclass(frozen=True)
+class ChallanNumbers:
+    money: MonthMoney
+    by_status: list[tuple[str, int]]
+    defaulters: int
+
+
+def challan_dashboard(user: Any, institute: Any, today: date) -> ChallanNumbers:
+    numbers = month_money(user, today)
+    this_month = Challan.objects.for_user(user).filter(month=numbers.month)
     counts = dict(this_month.values_list("status").annotate(n=Count("pk")))
-    overdue = live.filter(
+    overdue = this_month.filter(
         status__in=[ChallanStatus.PENDING, ChallanStatus.PARTIAL], due_date__lt=today
     ).count()
     by_status = [
@@ -319,13 +341,49 @@ def challan_dashboard(user: Any, institute: Any, today: date) -> ChallanNumbers:
     ]
     by_status.append(("Overdue", overdue))
     return ChallanNumbers(
-        month=month,
-        billed=totals["billed"] or ZERO,
-        collected=collected or ZERO,
-        outstanding=totals["owed"] or ZERO,
+        money=numbers,
         by_status=by_status,
-        waiting_receipts=ReceiptSubmission.objects.for_user(user)
-        .filter(status=ReceiptStatus.WAITING)
-        .count(),
         defaulters=len(defaulters(user, institute, today)),
     )
+
+
+# Student and guardian fee totals (roadmap 7.5, SPEC 3 and 8)
+
+
+def academic_year_start(institute: Any, today: date) -> date:
+    """The first day of the current academic year (owner decision: a
+    setting, April by default)."""
+    month = institute.settings.academic_year_start_month
+    year = today.year if today.month >= month else today.year - 1
+    return date(year, month, 1)
+
+
+@dataclass(frozen=True)
+class FeeTotals:
+    billed: Decimal
+    paid: Decimal
+    due: Decimal
+    pending: int  # pending or partly paid challans
+
+    @property
+    def paid_percent(self) -> int | None:
+        """Paid of billed, rounded down; None when nothing is billed."""
+        if not self.billed:
+            return None
+        return int(self.paid * 100 // self.billed)
+
+
+def fee_totals(student: Any, since: date | None = None) -> FeeTotals:
+    """The student's challans (cancelled left out), from the month
+    ``since`` when given."""
+    rows = Challan.objects.filter(student=student).exclude(
+        status=ChallanStatus.CANCELLED
+    )
+    if since is not None:
+        rows = rows.filter(month__gte=since)
+    totals = rows.aggregate(billed=Sum(F("amount") + F("late_fee")), paid=Sum("paid"))
+    billed, paid = totals["billed"] or ZERO, totals["paid"] or ZERO
+    pending = rows.filter(
+        status__in=[ChallanStatus.PENDING, ChallanStatus.PARTIAL]
+    ).count()
+    return FeeTotals(billed=billed, paid=paid, due=billed - paid, pending=pending)

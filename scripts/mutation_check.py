@@ -4030,6 +4030,72 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         'return wanted if ok and "\\\\" not in wanted else reverse("admin:portal_access")',
         'return wanted if ok else reverse("admin:portal_access")',
     ),
+    (
+        "fee totals leave out cancelled (7.5)",
+        "apps/finance/reports.py",
+        "    rows = Challan.objects.filter(student=student).exclude(\n        status=ChallanStatus.CANCELLED\n    )\n",
+        "    rows = Challan.objects.filter(student=student)\n",
+    ),
+    (
+        "fee totals from the year start (7.5)",
+        "apps/finance/reports.py",
+        "        rows = rows.filter(month__gte=since)\n",
+        "        pass\n",
+    ),
+    (
+        "paid percent rounds down (7.5)",
+        "apps/finance/reports.py",
+        "        return int(self.paid * 100 // self.billed)\n",
+        "        return round(self.paid * 100 / self.billed)\n",
+    ),
+    (
+        "own fee list leaves out cancelled (7.5)",
+        "apps/finance/views.py",
+        "            .filter(student=self.student)\n            .exclude(status=ChallanStatus.CANCELLED)\n",
+        "            .filter(student=self.student)\n",
+    ),
+    (
+        "own fee list is newest first (7.5)",
+        "apps/finance/views.py",
+        '            .order_by("-month", "-pk")\n        )\n        page = Paginator(rows, PAGE_SIZE)',
+        '            .order_by("month", "pk")\n        )\n        page = Paginator(rows, PAGE_SIZE)',
+    ),
+    (
+        "print only on the guardian list (7.5)",
+        "apps/finance/views.py",
+        "        if self.print_name:\n",
+        "        if True:\n            name = 'guardian:challan_pdf'\n        if self.print_name:\n",
+    ),
+    (
+        "guardian pdf skips cancelled (7.5)",
+        "apps/finance/views.py",
+        '            Challan.objects.for_user(request.user)\n            .exclude(status=ChallanStatus.CANCELLED)\n            .filter(pk=kwargs["pk"])\n',
+        '            Challan.objects.for_user(request.user)\n            .filter(pk=kwargs["pk"])\n',
+    ),
+    (
+        "guardian pdf is scoped (7.5)",
+        "apps/finance/views.py",
+        "            Challan.objects.for_user(request.user)\n            .exclude(status=ChallanStatus.CANCELLED)\n",
+        "            Challan.objects\n            .exclude(status=ChallanStatus.CANCELLED)\n",
+    ),
+    (
+        "dashboard fees need the feature (7.5)",
+        "apps/ui/views/portal_home.py",
+        "        if not has_fees(institute):\n",
+        "        if False:\n",
+    ),
+    (
+        "student year fees start at the year (7.5)",
+        "apps/ui/views/portal_home.py",
+        "    return YearFees(year=fee_totals(student, since), now=fee_totals(student))\n",
+        "    return YearFees(year=fee_totals(student), now=fee_totals(student))\n",
+    ),
+    (
+        "fee strip needs Finance (7.5)",
+        "apps/people/views.py",
+        '        if "fees" not in features or not self.can_open(menu_keys.FINANCE):\n',
+        '        if "fees" not in features:\n',
+    ),
 ]
 
 

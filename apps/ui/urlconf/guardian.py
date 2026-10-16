@@ -57,6 +57,12 @@ urlpatterns = [
         name="message_draft_delete",
     ),
     # Fees (Phase 7)
+    path("fees/", finance.GuardianFeesPage.as_view(), name="fee_list"),
+    path(
+        "fees/challans/<int:pk>/pdf/",
+        finance.GuardianChallanPdfView.as_view(),
+        name="challan_pdf",
+    ),
     path("fees/pay/", finance.GuardianFeePayPage.as_view(), name="fee_pay"),
     path(
         "fees/receipts/<int:pk>/file/",

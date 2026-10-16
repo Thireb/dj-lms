@@ -398,3 +398,36 @@ class DefaulterTable(DataTable):
                 )
             )
         return ButtonRow(items=items)
+
+
+# Student Fee details and guardian Fee and challans (roadmap 7.5)
+
+
+class OwnChallanTable(DataTable):
+    """SPEC 3: Challan no., Month, Amount, Paid, Due date, Status; the
+    guardian list adds Print."""
+
+    empty_title = "No challans yet."
+
+    def __init__(self, rows, institute, print_url=None, **props):
+        self.institute, self.print_url = institute, print_url
+        super().__init__(rows=rows, **props)
+
+    @property
+    def columns(self) -> list[Column]:  # type: ignore[override]
+        columns = [
+            Column("number", "Challan no.", lambda c: c.number),
+            Column("month", "Month", lambda c: month_text(c.month)),
+            Column("amount", "Amount", lambda c: money(c.total, self.institute)),
+            Column("paid", "Paid", lambda c: money(c.paid, self.institute)),
+            Column("due_date", "Due date", lambda c: date_text(c.due_date)),
+            Column("status", "Status", challan_badge),
+        ]
+        if self.print_url is not None:
+            columns.append(Column("actions", "", self.print_button))
+        return columns
+
+    def print_button(self, challan) -> IconButton:
+        return IconButton(
+            "download", f"Print {challan.number}", url=self.print_url(challan)
+        )

@@ -16,6 +16,7 @@ from django.db.models import Q
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.cache import patch_cache_control
 
 from apps.academics.models import Batch, ClassLabel
@@ -74,7 +75,7 @@ from apps.ui.components.actions import (
     SignOutForm,
 )
 from apps.ui.components.block_stack import BlockStack
-from apps.ui.components.data import EmptyState
+from apps.ui.components.data import EmptyState, StatCard
 from apps.ui.components.forms import CrispyForm, PortalPostForm
 from apps.ui.components.layout import (
     HeroBanner,
@@ -687,6 +688,37 @@ class AdminDashboardPage(DashboardPage):
                 icon=icon,
             )
             for index, (label, icon, url_name) in enumerate(allowed)
+        ]
+
+    def get_stat_cards(self) -> list[Any]:
+        """SPEC 8 fee strip: billed, collected and outstanding this month,
+        and the receipts waiting (fees feature and Finance menu)."""
+        from apps.finance.reports import month_money
+        from apps.finance.ui import money, month_text
+
+        institute = self.get_institute()
+        features = getattr(institute, "features", None) or ()
+        if "fees" not in features or not self.can_open(menu_keys.FINANCE):
+            return []
+        numbers = month_money(self.request.user, timezone.localdate())
+        month = month_text(numbers.month)
+        return [
+            StatCard(
+                money(numbers.billed, institute),
+                f"Billed in {month}",
+                icon="receipt-text",
+            ),
+            StatCard(
+                money(numbers.collected, institute),
+                f"Collected in {month}",
+                icon="banknote",
+            ),
+            StatCard(
+                money(numbers.outstanding, institute),
+                f"Outstanding for {month}",
+                icon="coins",
+            ),
+            StatCard(str(numbers.waiting_receipts), "Receipts waiting", icon="inbox"),
         ]
 
     def get_sections(self) -> list[Any]:

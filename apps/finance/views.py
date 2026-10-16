@@ -11,10 +11,17 @@ from urllib.parse import urlencode
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
-from django.http import FileResponse, HttpRequest, HttpResponse, HttpResponseRedirect
+from django.http import (
+    FileResponse,
+    Http404,
+    HttpRequest,
+    HttpResponse,
+    HttpResponseRedirect,
+)
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.functional import cached_property
 
 from apps.academics.models import Batch
 from apps.core import menus as menu_keys
@@ -46,10 +53,12 @@ from apps.finance.receipts import (
     submit_receipt,
 )
 from apps.finance.reports import (
+    academic_year_start,
     challan_dashboard,
     defaulters,
     defaulters_csv,
     fee_report,
+    fee_totals,
     report_csv,
 )
 from apps.finance.services import (
@@ -75,6 +84,7 @@ from apps.finance.ui import (
     DefaulterTable,
     FeePlanTable,
     GuardianReceiptTable,
+    OwnChallanTable,
     PaymentTable,
     PayTable,
     ReceiptImage,
@@ -1181,14 +1191,6 @@ class AdminReceiptFileView(ReceiptMixin, PortalPageView):
 # Reports (Finance menu, roadmap 7.3c, SPEC 3 and 9.4)
 
 
-def academic_year_start(institute: Any, today: date) -> date:
-    """The first day of the current academic year (owner decision: a
-    setting, April by default)."""
-    month = institute.settings.academic_year_start_month
-    year = today.year if today.month >= month else today.year - 1
-    return date(year, month, 1)
-
-
 class FeeReportPage(ChallanMixin, ListPage):
     kind = "daily"
     titles = {
@@ -1480,25 +1482,27 @@ class ChallanDashboardPage(ChallanMixin, DashboardPage):
 
     def get_stat_cards(self) -> list[Any]:
         numbers, institute = self.numbers, self.get_institute()
-        month = month_text(numbers.month)
+        month = month_text(numbers.money.month)
         return [
             StatCard(
-                money(numbers.billed, institute),
+                money(numbers.money.billed, institute),
                 f"Billed in {month}",
                 icon="receipt-text",
                 tone="lead",
             ),
             StatCard(
-                money(numbers.collected, institute),
+                money(numbers.money.collected, institute),
                 f"Collected in {month}",
                 icon="banknote",
             ),
             StatCard(
-                money(numbers.outstanding, institute),
+                money(numbers.money.outstanding, institute),
                 f"Outstanding for {month}",
                 icon="coins",
             ),
-            StatCard(str(numbers.waiting_receipts), "Receipts waiting", icon="inbox"),
+            StatCard(
+                str(numbers.money.waiting_receipts), "Receipts waiting", icon="inbox"
+            ),
         ]
 
     def get_sections(self) -> list[Any]:
@@ -1521,8 +1525,131 @@ class ChallanDashboardPage(ChallanMixin, DashboardPage):
             )
         return [
             SectionCard(
-                title=f"Challans for {month_text(numbers.month)}",
+                title=f"Challans for {month_text(numbers.money.month)}",
                 icon="list",
                 body=BlockStack(blocks=blocks),
             )
         ]
+
+
+# Student Fee details and guardian Fee and challans (roadmap 7.5, SPEC 3)
+
+
+class OwnFeesPage(DashboardPage):
+    """The KPIs (total billed, paid, due, pending challans) and the
+    challans of one student, newest first; cancelled ones are left out."""
+
+    feature_key = "fees"
+    title = "Fee details"
+    print_name = ""
+
+    @property
+    def student(self) -> StudentProfile | None:
+        raise NotImplementedError
+
+    def get_stat_cards(self) -> list[Any]:
+        if self.student is None:
+            return []
+        totals, institute = fee_totals(self.student), self.get_institute()
+        return [
+            StatCard(
+                money(totals.billed, institute),
+                "Total billed",
+                icon="receipt-text",
+                tone="lead",
+            ),
+            StatCard(money(totals.paid, institute), "Paid", icon="banknote"),
+            StatCard(money(totals.due, institute), "Due", icon="coins"),
+            StatCard(str(totals.pending), "Pending challans", icon="clock"),
+        ]
+
+    def get_sections(self) -> list[Any]:
+        if self.student is None:
+            return [self.no_student]
+        rows = (
+            Challan.objects.for_user(self.request.user)
+            .filter(student=self.student)
+            .exclude(status=ChallanStatus.CANCELLED)
+            .order_by("-month", "-pk")
+        )
+        page = Paginator(rows, PAGE_SIZE).get_page(self.request.GET.get("page"))
+        print_url = None
+        if self.print_name:
+            name = self.print_name
+
+            def print_url(challan: Challan) -> str:
+                return reverse(name, kwargs={"pk": challan.pk})
+
+        table = OwnChallanTable(
+            list(page.object_list), self.get_institute(), print_url=print_url
+        )
+        return [
+            SectionCard(
+                title="Challans",
+                icon="receipt-text",
+                body=BlockStack(blocks=[table, Pagination(page)]),
+            )
+        ]
+
+
+class StudentFeesPage(OwnFeesPage):
+    """Student "Fee details": view only; the guardian pays (FEATURES)."""
+
+    portal = "student"
+    allowed_roles = [Role.STUDENT]
+    active_item = "fee_details"
+    no_student = EmptyState(
+        "No student profile.", text="Contact the institute office.", icon="user"
+    )
+
+    @cached_property
+    def student(self) -> StudentProfile | None:  # type: ignore[override]
+        return StudentProfile.objects.for_user(self.request.user).first()
+
+    def get_subtitle(self) -> str:
+        return "Your challans. Your guardian pays them in the guardian portal."
+
+
+class GuardianFeesPage(GuardianFeeMixin, OwnFeesPage):
+    """Guardian "Fee and challans" for the child chosen in the header, with
+    Print."""
+
+    title = "Fee and challans"
+    active_item = "fee_list"
+    print_name = "guardian:challan_pdf"
+    no_student = EmptyState(
+        "No children are linked to this account yet.",
+        text="Contact the institute office.",
+        icon="graduation-cap",
+    )
+
+    @property
+    def student(self) -> StudentProfile | None:  # type: ignore[override]
+        return self.child
+
+    def get_subtitle(self) -> str:
+        return f"Challans of {self.child}." if self.child else ""
+
+    def get_actions(self) -> list[Any]:
+        if self.child is None:
+            return []
+        return [Button("Fee pay", url=reverse("guardian:fee_pay"), icon="upload")]
+
+
+class GuardianChallanPdfView(GuardianFeeMixin, PortalPageView):
+    """One challan of the guardian's children as a PDF; cancelled ones are
+    not printed."""
+
+    http_method_names = ["get"]
+
+    def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        rows = (
+            Challan.objects.for_user(request.user)
+            .exclude(status=ChallanStatus.CANCELLED)
+            .filter(pk=kwargs["pk"])
+        )
+        challans = printable(rows)
+        if not challans:
+            raise Http404
+        content = challans_pdf(challans, self.get_institute())
+        return pdf_response(content, f"{challans[0].number}.pdf")
