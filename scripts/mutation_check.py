@@ -1,6 +1,10 @@
 """Undo each access or validation fix, run pytest, and expect a failure.
 
 Usage: uv run python scripts/mutation_check.py [name-filter] [--jobs N]
+       [--changed [BASE]]
+
+--changed runs only the entries whose file this branch changed since BASE
+(default origin/main): use it while building, and the full run at handover.
 
 Prints CAUGHT, MISSED or STALE per entry and exits 1 if any entry is MISSED
 or STALE. Commit first: the entries run against HEAD, each worker in its own
@@ -8,7 +12,7 @@ git worktree with its own test database, so the working tree is never touched.
 
 To be fast without changing the result, each entry runs in up to 3 stages and
 stops at the first failure: the test that caught it last time (cached in
-.mutation_cache.json, gitignored), then the tests of the app that owns the
+mutation_cache.json in the shared .git folder), then the tests of the app that owns the
 file, then the full suite. An entry is MISSED only when the full suite passes.
 """
 
@@ -3421,7 +3425,21 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
 ]
 
 
-CACHE = ROOT / ".mutation_cache.json"
+def _git_dir() -> Path:
+    """The repository's shared .git folder, the same for every worktree."""
+    common = subprocess.run(
+        ["git", "rev-parse", "--git-common-dir"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+    return (ROOT / common).resolve()
+
+
+# In the shared .git folder, so every worktree uses one cache.
+CACHE = _git_dir() / "mutation_cache.json"
+OLD_CACHE = ROOT / ".mutation_cache.json"  # before worktrees; read once
 # pytest exit codes that say nothing about the mutation: 4 = a cached test no
 # longer exists, 5 = no tests collected. Move on to the next stage.
 NO_VERDICT = {4, 5}
@@ -3502,19 +3520,39 @@ def check(entry, worker: Worker, cache: dict[str, str]) -> tuple[str, str, str]:
         worker.restore(path)
 
 
+def changed(base: str) -> set[str]:
+    """The files this branch changed since it left ``base``."""
+    names = subprocess.run(
+        ["git", "diff", "--name-only", f"{base}...HEAD"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    return set(names.split())
+
+
 def load_cache() -> dict[str, str]:
-    try:
-        return json.loads(CACHE.read_text())
-    except (OSError, ValueError):
-        return {}
+    for path in (CACHE, OLD_CACHE):
+        try:
+            return json.loads(path.read_text())
+        except (OSError, ValueError):
+            continue
+    return {}
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("name_filter", nargs="?", default="")
     parser.add_argument("--jobs", type=int, default=4)
+    parser.add_argument("--changed", nargs="?", const="origin/main", metavar="BASE")
     args = parser.parse_args()
     entries = [entry for entry in MUTATIONS if args.name_filter in entry[0]]
+    if args.changed:
+        entries = [entry for entry in entries if entry[1] in changed(args.changed)]
+        if not entries:
+            print(f"No entries for the files changed since {args.changed}.")
+            return 0
     dirty = subprocess.run(
         ["git", "status", "--porcelain", "--untracked-files=no"],
         cwd=ROOT,
