@@ -126,7 +126,7 @@ class TeacherPortalHomePage(PortalHomePage):
             StatCard(
                 answers_to_grade(self.request.user),
                 "Answers to grade",
-                note="Assignment answers with no marks",
+                note="Assignment answers and quiz attempts with no marks",
                 icon="list-checks",
             ),
             StatCard(data.student_count, "My students", icon="users"),
