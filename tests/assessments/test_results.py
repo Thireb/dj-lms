@@ -10,6 +10,7 @@ import pytest
 from apps.assessments.models import AttemptAnswer, AttemptStatus, QuizAttempt
 from apps.assessments.services import (
     MARK_OPEN_MESSAGE,
+    answers_to_grade,
     mark_attempt,
     quiz_counts,
     quiz_results,
@@ -283,3 +284,18 @@ def test_other_teachers_and_quizzes_get_404(school) -> None:
     other = opened(add_quiz(school, title="Other"))
     client = signed_in(school.teacher_1.user)
     assert client.get(_attempt_url(other, attempt)).status_code == 404
+
+
+@pytest.mark.django_db
+def test_dashboard_counts_attempts_to_mark(school) -> None:
+    """Backlog AS10: "Answers to grade" adds the submitted attempts."""
+    _quiz, attempt = _submitted(school)
+    user = school.teacher_1.user
+    with tenant_context(attempt.institute):
+        assert answers_to_grade(user) == 1
+        assert answers_to_grade(school.teacher_2.user) == 0
+    _mark(attempt, {_items(attempt)["Explain zero."]: Decimal(1)})
+    with tenant_context(attempt.institute):
+        assert answers_to_grade(user) == 0
+    html = signed_in(user).get(reverse("teacher:home")).content.decode()
+    assert "Assignment answers and quiz attempts with no marks" in html

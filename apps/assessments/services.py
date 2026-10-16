@@ -262,9 +262,17 @@ def assignment_counts(assignments: list[Assignment]) -> dict[int, AssignmentCoun
 
 
 def answers_to_grade(user: Any) -> int:
-    """Answers to the viewer's assignments with no marks yet (teacher
-    dashboard, SPEC 8 "pending reviews")."""
-    return Submission.objects.for_user(user).filter(marks__isnull=True).count()
+    """Answers to the viewer's assignments with no marks yet, and submitted
+    quiz attempts with written answers to mark (teacher dashboard, SPEC 8
+    "pending reviews"; backlog AS10). An expired attempt that no page has
+    submitted yet is not counted (backlog AS9)."""
+    answers = Submission.objects.for_user(user).filter(marks__isnull=True).count()
+    attempts = (
+        QuizAttempt.objects.for_user(user)
+        .filter(status=AttemptStatus.SUBMITTED)
+        .count()
+    )
+    return answers + attempts
 
 
 # Student side

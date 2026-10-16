@@ -2815,8 +2815,8 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
     (
         "answers to grade count only ungraded answers (5.1)",
         "apps/assessments/services.py",
-        "    return Submission.objects.for_user(user).filter(marks__isnull=True).count()\n",
-        "    return Submission.objects.for_user(user).count()\n",
+        "    answers = Submission.objects.for_user(user).filter(marks__isnull=True).count()\n",
+        "    answers = Submission.objects.for_user(user).count()\n",
     ),
     (
         "student list needs the enrolment's subject (5.1)",
@@ -3387,6 +3387,18 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "apps/assessments/views.py",
         "        if closed and attempt.status != AttemptStatus.IN_PROGRESS:\n",
         "        if closed:\n",
+    ),
+    (
+        "answers to grade counts quiz attempts (5.4)",
+        "apps/assessments/services.py",
+        "    return answers + attempts\n",
+        "    return answers\n",
+    ),
+    (
+        "answers to grade counts only submitted attempts (5.4)",
+        "apps/assessments/services.py",
+        "        .filter(status=AttemptStatus.SUBMITTED)\n        .count()\n",
+        "        .count()\n",
     ),
 ]
 
