@@ -152,6 +152,11 @@ CELERY_BEAT_SCHEDULE = {
         "task": "apps.lectures.tasks.remind_all_lectures",
         "schedule": crontab(minute="*/5"),
     },
+    # "Quiz opens soon", 1 hour before (roadmap 6.2, SPEC 7).
+    "remind-quizzes": {
+        "task": "apps.assessments.tasks.remind_all_quizzes",
+        "schedule": crontab(minute="*/5"),
+    },
     # Notifications older than 90 days are deleted (roadmap 6.1, SPEC 7).
     "delete-old-notifications": {
         "task": "apps.notifications.tasks.delete_all_old_notifications",

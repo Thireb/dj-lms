@@ -307,7 +307,7 @@ Left out of 5.1 on purpose, or found while building.
 | AS9 | An attempt left open (the student closed the page) is submitted when a page next shows it; the student's pages and the teacher results (5.3 part 2b) do that. If reports read attempts directly later, add a job that submits expired attempts (like `finish_all_ended_lectures`). Until then the teacher list's "N to mark" leaves out an expired attempt that no page has submitted yet. | Low | [ ] |
 | AS10 | The teacher dashboard card "Answers to grade" (5.1) counts assignment answers only, not quiz attempts with written answers to mark. Add them when the dashboard is next changed (5.4). Fixed in 5.4 part 2: the card adds the submitted attempts. | Low | [x] |
 | AS11 | Exam flags come from the student's browser (5.3 part 2c). A student who turns off JavaScript, or blocks the request, sends no flags; the server cannot see a page leave. The paper still works without JavaScript (the server ends the attempt at the deadline). If an institute needs proof, show "no flag data" when the paper's guard never reported in (for example a start ping). | Low | [ ] |
-| AS4 | Notifications for "assignment published", "submission received" and "graded" (SPEC 7) wait for the notification service (roadmap 6.1 and 6.2). | Low | [ ] |
+| AS4 | Notifications for "assignment published", "submission received" and "graded" (SPEC 7) wait for the notification service (roadmap 6.1 and 6.2). Fixed in 6.2: "published" to the class and guardians, "answer received" to the teacher (first answer only), "graded" to the student and guardians with the marks. | Low | [x] |
 
 ## Phase 5 audit (2026-10-16, after PR #64)
 

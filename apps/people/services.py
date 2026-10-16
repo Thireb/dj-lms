@@ -21,6 +21,7 @@ from apps.accounts.models import User
 from apps.core.roles import Role
 from apps.core.tenancy import require_tenant_context
 from apps.institutes.models import Institute
+from apps.notifications.services import notify
 from apps.people.models import (
     CodeSequence,
     GuardianProfile,
@@ -462,8 +463,16 @@ def _access_rule(student: StudentProfile) -> PortalAccessRule:
 def set_portal_blocked(student: StudentProfile, *, blocked: bool) -> PortalAccessRule:
     """Manual block or unblock; it wins until the next automatic run (7.6)."""
     rule = _access_rule(student)
+    changed = rule.blocked != blocked
     rule.blocked = blocked
     rule.save(update_fields=["blocked", "changed_at"])
+    if changed:
+        text = (
+            "Your student portal is paused. Contact the institute office."
+            if blocked
+            else "Your student portal is open again."
+        )
+        notify([student.user], "portal_access", text)
     return rule
 
 

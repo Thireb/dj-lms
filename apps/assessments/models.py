@@ -409,6 +409,8 @@ class Quiz(SameInstituteMixin, TenantModel):
     require_full_screen = models.BooleanField(default=False)
     flag_tab_leaving = models.BooleanField(default=False)
     is_published = models.BooleanField(default=False)
+    # When "opens soon" went out (roadmap 6.2); cleared on a new time.
+    reminded_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -40,14 +40,17 @@ def send_to_students(
     students: list[StudentProfile],
     text: Text,
     *,
-    student_url: str,
+    student_url: str = "",
     guardian_url: str = "",
     actor: Any = None,
+    to_students: bool = True,
 ) -> int:
-    """Notify the students, and their guardians when ``guardian_url`` is set."""
-    made = notify(
-        without(actor, [student.user for student in students]), event, text, student_url
-    )
+    """Notify the students, and their guardians when ``guardian_url`` is set.
+    ``to_students=False`` sends to the guardians only."""
+    made = 0
+    if to_students:
+        users = without(actor, [student.user for student in students])
+        made = notify(users, event, text, student_url)
     if not guardian_url or not students:
         return made
     guardians: dict[int, Any] = {}
