@@ -20,6 +20,7 @@ from apps.academics.services import (
 from apps.accounts.models import User
 from apps.core.roles import Role
 from apps.core.tenancy import require_tenant_context
+from apps.finance.services import set_student_fee_plans
 from apps.institutes.models import Institute
 from apps.notifications.services import notify
 from apps.people.models import (
@@ -386,6 +387,7 @@ def enrol_student(
     guardian_name: str,
     guardian_email: str,
     guardian_password: str,
+    fee_plans: list | None = None,
 ) -> StudentProfile:
     """Create the student account, profile, links and guardian in one step.
 
@@ -408,6 +410,8 @@ def enrol_student(
     student.student_code = next_code(institute, STUDENT_CODE_PREFIX)
     student.save()
     _set_pairs(student, selections)
+    if fee_plans is not None:  # None: the institute has no fees feature
+        set_student_fee_plans(student, fee_plans)
     first_name, last_name = split_full_name(guardian_name)
     enrol_guardian(
         student,
@@ -427,8 +431,10 @@ def update_student(
     *,
     email: str,
     selections: Selections,
+    fee_plans: list | None = None,
 ) -> StudentProfile:
-    """Edit details, sign-in email and batches. The guardian link stays."""
+    """Edit details, sign-in email, batches and (with fees) the fee plans.
+    The guardian link stays."""
     require_tenant_context(student.institute)
     user = student.user
     user.email = _check_email_free(email, "email", user=user)
@@ -438,6 +444,8 @@ def update_student(
     _apply_details(student, details)
     student.save()
     _set_pairs(student, selections)
+    if fee_plans is not None:
+        set_student_fee_plans(student, fee_plans)
     return student
 
 

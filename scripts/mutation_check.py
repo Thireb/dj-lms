@@ -3766,6 +3766,24 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "    if not 0 <= settings.late_fee <= MAX_LATE_FEE:\n",
         "    if False:\n",
     ),
+    (
+        "a student needs at least one fee plan (7.1)",
+        "apps/finance/services.py",
+        '        errors[""] = NO_PLAN\n',
+        "        pass\n",
+    ),
+    (
+        "an inactive plan stays only where it is (7.1)",
+        "apps/finance/services.py",
+        "        if not plan.is_active and plan.pk not in current:\n",
+        "        if not plan.is_active:\n",
+    ),
+    (
+        "a percent discount is 0 to 100 (7.1)",
+        "apps/finance/services.py",
+        "        elif choice.discount_type == DiscountType.PERCENT and not 0 <= value <= 100:\n",
+        "        elif False:\n",
+    ),
 ]
 
 

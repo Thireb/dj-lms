@@ -121,3 +121,74 @@ def fee_lines(student: Any) -> list[FeeLine]:
 def monthly_fee(student: Any) -> Decimal:
     """Monthly fee = the plans minus their discounts (SPEC 6.1)."""
     return sum((line.net for line in fee_lines(student)), Decimal("0.00"))
+
+
+@dataclass(frozen=True)
+class FeeChoice:
+    """One plan chosen on Enrol or Edit, with its discount."""
+
+    plan: FeePlan
+    discount_type: str = DiscountType.NONE
+    discount: Decimal = Decimal("0")
+
+
+NO_PLAN = "Choose at least one fee plan."
+
+
+def check_fee_choices(choices: list[FeeChoice], current: set[int]) -> dict[str, str]:
+    """Errors by plan pk (and "" for the whole list). An inactive plan may
+    stay on a student who has it (``current``); it is not offered anew."""
+    errors: dict[str, str] = {}
+    if not choices:
+        errors[""] = NO_PLAN
+    for choice in choices:
+        plan, value = choice.plan, choice.discount
+        key = str(plan.pk)
+        if not plan.is_active and plan.pk not in current:
+            errors[key] = f"{plan.name} is inactive."
+        elif choice.discount_type == DiscountType.PERCENT and not 0 <= value <= 100:
+            errors[key] = "A percent discount is 0 to 100."
+        elif (
+            choice.discount_type == DiscountType.AMOUNT
+            and not 0 <= value <= plan.amount
+        ):
+            errors[key] = f"An amount discount is 0 to {plan.amount}."
+        elif choice.discount_type not in DiscountType.values:
+            errors[key] = "Choose a discount type."
+    return errors
+
+
+def set_student_fee_plans(student: Any, choices: list[FeeChoice]) -> None:
+    """Replace the student's fee plans (SPEC 4.1: at least one plan). Runs
+    inside the caller's transaction."""
+    require_tenant_context(student.institute)
+    rows = StudentFeePlan.objects.filter(student=student)
+    current = set(rows.values_list("fee_plan_id", flat=True))
+    errors = check_fee_choices(choices, current)
+    if errors:
+        raise ValidationError({"fee_plans": list(errors.values())})
+    rows.exclude(fee_plan__in=[choice.plan for choice in choices]).delete()
+    for choice in choices:
+        no_discount = choice.discount_type == DiscountType.NONE
+        StudentFeePlan.objects.update_or_create(
+            institute=student.institute,
+            student=student,
+            fee_plan=choice.plan,
+            defaults={
+                "discount_type": choice.discount_type,
+                "discount": Decimal("0") if no_discount else to_money(choice.discount),
+            },
+        )
+
+
+def monthly_fees(students: list[Any]) -> dict[int, Decimal]:
+    """The monthly fee of each student on a page, in one query."""
+    totals = {student.pk: Decimal("0.00") for student in students}
+    rows = StudentFeePlan.objects.filter(student__in=students).select_related(
+        "fee_plan"
+    )
+    for row in rows:
+        amount = row.fee_plan.amount
+        off = discount_amount(amount, row.discount_type, row.discount)
+        totals[row.student_id] += amount - off
+    return totals

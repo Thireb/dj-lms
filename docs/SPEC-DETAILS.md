@@ -156,6 +156,7 @@ Same lists as the student for the chosen child, plus:
 - Logins: Student email* + password*, Guardian email* + password*. Emails must be different and unique in the system.
 - Existing guardian: if the guardian email already belongs to a guardian of this institute, the new student is linked to that guardian (one guardian, many children). The password, name and phone typed are ignored. If the email belongs to any other account, show "This email is already used by another account." and do not say which role or institute uses it.
 - Validation: at least one batch, each batch has at least one subject, at least one fee plan.
+- Built in 7.1 (assumed, check against the demo): with the fees feature, Enrol and Edit show one row per active fee plan (and any inactive plan the student already has): a tick, Discount (no discount, amount or percent) and its value. A percent is 0 to 100; an amount is at most the plan amount. The monthly fee is shown on All Students ("Monthly fee"), not as a live total on the form. Institutes without fees see no fee rows.
 
 ### 4.2 Add / edit teacher
 Full name*, Phone*, Email (login)*, Password*, CNIC (optional), Address, Joining date, Status. Batches* (multi) with subjects* per batch.
