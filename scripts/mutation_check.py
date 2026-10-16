@@ -3928,6 +3928,30 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "    return [user for user in users if user_has_menu(user, FINANCE)]\n",
         "    return []\n",
     ),
+    (
+        "reports leave out cancelled challans (7.3c)",
+        "apps/finance/reports.py",
+        "    challans = Challan.objects.for_user(user).exclude(status=ChallanStatus.CANCELLED)\n",
+        "    challans = Challan.objects.for_user(user)\n",
+    ),
+    (
+        "outstanding is what is still owed (7.3c)",
+        "apps/finance/reports.py",
+        'owed=Sum(billed - F("paid"))',
+        "owed=Sum(billed)",
+    ),
+    (
+        "the batch filter covers payments (7.3c)",
+        "apps/finance/reports.py",
+        "        payments = payments.filter(in_batch).distinct()\n",
+        "",
+    ),
+    (
+        "CSV cells are never formulas (7.3c)",
+        "apps/finance/reports.py",
+        '    return f"\'{text}" if text[:1] in ("=", "+", "-", "@", "\\t", "\\r") else text\n',
+        "    return text\n",
+    ),
 ]
 
 

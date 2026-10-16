@@ -427,6 +427,7 @@ Header, receipt no., date, student, challan no., amount, method, balance after, 
 
 ### 9.4 Report prints
 Collection and defaulter reports: header, date range, table, totals row, page numbers.
+Built in 7.3c (assumed, check against the demo): Challans, Billed and Discounts count the challans of each row (daily rows by issue date, monthly and yearly rows by the challan month); Collected counts the payments made in the row's dates; Outstanding is what those challans still owe today; cancelled challans are left out. Default dates: Daily this month, Monthly the academic year so far, Yearly the last 5 years. Export CSV puts a quote before any cell that a spreadsheet would run as a formula.
 
 ### 9.5 Certificate (optional, build last)
 Landscape. Institute logo, "Certificate of Completion", student name, batch and subjects, date, unique code and verify link, signature lines. Issued by admin per student on request. Rules for when to issue are manual in v1.
