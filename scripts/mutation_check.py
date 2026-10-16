@@ -3400,6 +3400,18 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "        .filter(status=AttemptStatus.SUBMITTED)\n        .count()\n",
         "        .count()\n",
     ),
+    (
+        "a student who left keeps their own work (AS12)",
+        "apps/assessments/models.py",
+        "    return enrolled | Q(**{own: user_id})\n",
+        "    return enrolled\n",
+    ),
+    (
+        "the timer flag counts only near the deadline (AS13)",
+        "apps/assessments/services.py",
+        "        timer = auto and now >= locked.deadline - ANSWER_GRACE\n",
+        "        timer = auto\n",
+    ),
 ]
 
 

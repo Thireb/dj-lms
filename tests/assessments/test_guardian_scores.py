@@ -8,8 +8,10 @@ from datetime import timedelta
 from decimal import Decimal
 
 import pytest
-from apps.assessments.models import AttemptStatus, QuizAttempt
+from apps.academics.models import StudentBatchSubject
+from apps.assessments.models import Assignment, AttemptStatus, Quiz, QuizAttempt
 from apps.core.roles import Role
+from apps.core.tenancy import tenant_context
 from django.urls import reverse
 from django.utils import timezone
 
@@ -167,3 +169,59 @@ def test_no_answers_without_an_attempt(school) -> None:
     quiz, _ = live_quiz(school)
     opened(quiz, minutes_ago=60)
     assert "cell-right" not in _quiz_page(school, quiz)
+
+
+# A student who left the batch (AS12)
+
+
+def _leave_the_batch(profile) -> None:
+    # unscoped: test set-up outside a tenant context.
+    StudentBatchSubject.unscoped.filter(student=profile).delete()
+
+
+@pytest.mark.django_db
+def test_a_student_who_left_still_opens_their_work(school) -> None:
+    quiz, _ = _submitted(school)
+    sheet = add_assignment(school, title="Sheet")
+    answer(sheet, school.student_1)
+    unanswered = add_assignment(school, title="Unanswered")
+    _leave_the_batch(school.student_1)
+    client = signed_in(school.student_1.user)
+    for url, title in (
+        (reverse("student:quiz_detail", kwargs={"pk": quiz.pk}), "Fractions quiz"),
+        (reverse("student:assignment_detail", kwargs={"pk": sheet.pk}), "Sheet"),
+    ):
+        response = client.get(url)
+        assert response.status_code == 200, url
+        assert title in response.content.decode()
+    gone = reverse("student:assignment_detail", kwargs={"pk": unanswered.pk})
+    assert client.get(gone).status_code == 404
+
+
+@pytest.mark.django_db
+def test_own_work_scopes(school) -> None:
+    """The answer or attempt opens the row for its student and their
+    guardian only."""
+    quiz, _ = _submitted(school)
+    sheet = add_assignment(school, title="Sheet")
+    answer(sheet, school.student_1)
+    _leave_the_batch(school.student_1)
+    for user, seen in (
+        (school.student_1.user, 1),
+        (school.guardian_1.user, 1),
+        (school.student_2.user, 0),
+        (school.guardian_2.user, 0),
+    ):
+        with tenant_context(user.institute):
+            assert Quiz.objects.for_user(user).count() == seen, user
+            assert Assignment.objects.for_user(user).count() == seen, user
+
+
+@pytest.mark.django_db
+def test_an_attempt_does_not_open_a_draft(school) -> None:
+    quiz, _ = _submitted(school)
+    _leave_the_batch(school.student_1)
+    # unscoped: test set-up outside a tenant context.
+    Quiz.unscoped.filter(pk=quiz.pk).update(is_published=False)
+    with tenant_context(quiz.institute):
+        assert not Quiz.objects.for_user(school.student_1.user).exists()
