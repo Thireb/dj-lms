@@ -276,6 +276,7 @@ Full name*, Institute name*, Phone*, Email, Website, Message*. Saved for Super A
 
 ### 6.2 Portal access
 - A blocked student sees a full-page "Access paused" message with the institute phone number. Guardian portal is never blocked.
+- Owner decision 2026-10-16 (Phase 6 audit P6-8): Messages stay open for a blocked student, so they can write to the office; "Access paused" has a "Message the office" button. Every other student page stays closed.
 - If auto-block is on: a nightly job blocks every student who is a defaulter and not exempt, and unblocks once no challan is overdue beyond grace.
 - Manual block and unblock always win until the next auto run changes them. A student marked Exempt is never auto-blocked.
 
