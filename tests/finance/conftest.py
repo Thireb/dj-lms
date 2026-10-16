@@ -49,3 +49,27 @@ def give_plan(student, plan, discount_type="none", discount="0") -> StudentFeePl
             discount_type=discount_type,
             discount=Decimal(discount),
         )
+
+
+@pytest.fixture(autouse=True)
+def private_media(settings, tmp_path):
+    """Receipt files go to a temporary folder in every finance test."""
+    settings.PRIVATE_MEDIA_ROOT = tmp_path / "private"
+    return settings.PRIVATE_MEDIA_ROOT
+
+
+def png_upload(name="receipt.png"):
+    import io
+
+    from django.core.files.uploadedfile import SimpleUploadedFile
+    from PIL import Image
+
+    out = io.BytesIO()
+    Image.new("RGB", (4, 4), "white").save(out, format="PNG")
+    return SimpleUploadedFile(name, out.getvalue(), content_type="image/png")
+
+
+def pdf_upload(name="receipt.pdf", body=b"%PDF-1.4\n%fake\n"):
+    from django.core.files.uploadedfile import SimpleUploadedFile
+
+    return SimpleUploadedFile(name, body, content_type="application/pdf")

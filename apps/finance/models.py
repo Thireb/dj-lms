@@ -5,9 +5,12 @@ Money is ``Decimal`` with 2 places (AGENTS.md 4).
 
 from __future__ import annotations
 
+import os
 from decimal import Decimal
 from typing import Any
 
+from django.conf import settings
+from django.core.files.storage import FileSystemStorage
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models.functions import Lower
@@ -230,6 +233,14 @@ class Payment(TenantModel):
         blank=True,
         related_name="+",
     )
+    # Set when the payment comes from an approved guardian receipt (7.3b).
+    receipt = models.ForeignKey(
+        "finance.ReceiptSubmission",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="payments",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     objects = TenantManager.from_queryset(StudentRowQuerySet)()
@@ -243,6 +254,90 @@ class Payment(TenantModel):
             )
         ]
         indexes = [models.Index(fields=["institute", "paid_on"])]
+
+    def __str__(self) -> str:
+        return self.number
+
+
+class PrivateStorage(FileSystemStorage):
+    """Private files: saved outside static, read only through a checked
+    view. The folder is read from the setting each time (tests change it)."""
+
+    def __init__(self) -> None:
+        super().__init__(base_url=None)
+
+    @property
+    def base_location(self) -> str:  # type: ignore[override]
+        return str(settings.PRIVATE_MEDIA_ROOT)
+
+    @property
+    def location(self) -> str:  # type: ignore[override]
+        return os.path.abspath(self.base_location)
+
+
+def receipt_storage() -> PrivateStorage:
+    return PrivateStorage()
+
+
+def receipt_path(instance: Any, filename: str) -> str:
+    """A random name: the guardian's file name is never used on disk."""
+    import uuid
+    from pathlib import Path
+
+    suffix = Path(filename).suffix.lower()
+    return f"receipts/{instance.institute_id}/{uuid.uuid4().hex}{suffix}"
+
+
+class ReceiptStatus(models.TextChoices):
+    WAITING = "waiting", "Waiting"
+    APPROVED = "approved", "Approved"
+    REJECTED = "rejected", "Rejected"
+
+
+class ReceiptSubmission(TenantModel):
+    """A guardian's proof of payment (SPEC 4.17). Approving it records the
+    payments, oldest challan first (SPEC 6.1)."""
+
+    student = models.ForeignKey(
+        "people.StudentProfile", on_delete=models.PROTECT, related_name="receipts"
+    )
+    submitted_by = models.ForeignKey(
+        "accounts.User", on_delete=models.SET_NULL, null=True, related_name="+"
+    )
+    number = models.CharField(max_length=20)
+    challans = models.ManyToManyField(Challan, related_name="receipts")
+    amount = models.DecimalField(
+        **MONEY, validators=[MinValueValidator(Decimal("0.01"))]
+    )
+    paid_on = models.DateField()
+    reference = models.CharField(max_length=100, blank=True)
+    file = models.FileField(
+        storage=receipt_storage, upload_to=receipt_path, max_length=200
+    )
+    status = models.CharField(
+        max_length=10, choices=ReceiptStatus.choices, default=ReceiptStatus.WAITING
+    )
+    reason = models.CharField(max_length=200, blank=True)
+    reviewed_by = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    objects = TenantManager.from_queryset(StudentRowQuerySet)()
+    unscoped = UnscopedTenantManager.from_queryset(StudentRowQuerySet)()
+
+    class Meta:
+        ordering = ["-created_at", "-pk"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["institute", "number"], name="finance_receipt_number_unique"
+            )
+        ]
 
     def __str__(self) -> str:
         return self.number
