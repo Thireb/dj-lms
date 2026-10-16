@@ -7,9 +7,10 @@ from typing import Any
 
 from django.urls import reverse
 
-from apps.ui.components import Badge, Column, DataTable
+from apps.ui.components import Badge, Column, ConfirmDialog, DataTable
 from apps.ui.components.actions import IconButton
 from apps.ui.components.base import Component
+from apps.ui.components.block_stack import ButtonRow
 from apps.ui.safe_url import safe_url
 
 
@@ -328,3 +329,72 @@ class ReportTable(DataTable):
                 "outstanding", "Outstanding", lambda item: cash(item[1].outstanding)
             ),
         ]
+
+
+# Fee defaulters (roadmap 7.3c)
+
+
+class DefaulterTable(DataTable):
+    """SPEC 3: Student, Guardian, Phone, Unpaid months, Total due, Oldest
+    due date, Portal blocked; Message guardian and Block / Unblock."""
+
+    empty_title = "No defaulters. Every challan is paid or within its grace days."
+
+    def __init__(self, rows, institute, back_url, can_message, can_block, **props):
+        self.institute, self.back_url = institute, back_url
+        self.can_message, self.can_block = can_message, can_block
+        super().__init__(rows=rows, **props)
+
+    @property
+    def columns(self) -> list[Column]:  # type: ignore[override]
+        return [
+            Column(
+                "student",
+                "Student",
+                lambda r: f"{r.student} ({r.student.student_code})",
+            ),
+            Column("guardian", "Guardian", self.guardian),
+            Column("phone", "Phone", lambda r: r.phone or "-"),
+            Column("months", "Unpaid months", lambda r: str(r.unpaid_months)),
+            Column("due", "Total due", lambda r: money(r.total_due, self.institute)),
+            Column("oldest", "Oldest due date", lambda r: date_text(r.oldest_due)),
+            Column("blocked", "Portal blocked", self.blocked),
+            Column("actions", "", self.actions),
+        ]
+
+    def guardian(self, row) -> str:
+        return (
+            (row.guardian.get_full_name() or row.guardian.email)
+            if row.guardian
+            else "-"
+        )
+
+    def blocked(self, row) -> Badge:
+        return (
+            Badge("Blocked", tone="danger")
+            if row.blocked
+            else Badge("No", tone="neutral")
+        )
+
+    def actions(self, row) -> Any:
+        items: list[Any] = []
+        if self.can_message and row.guardian is not None:
+            url = f"{reverse('admin:message_compose')}?to={row.guardian.pk}"
+            items.append(
+                IconButton("mail", f"Message the guardian of {row.student}", url=url)
+            )
+        if self.can_block:
+            action = "unblock" if row.blocked else "block"
+            items.append(
+                ConfirmDialog(
+                    f"{action.capitalize()} the student portal of {row.student}?",
+                    action.capitalize(),
+                    url=reverse(
+                        "admin:portal_access_action", kwargs={"pk": row.student.pk}
+                    ),
+                    trigger_label=action.capitalize(),
+                    variant="danger" if action == "block" else "primary",
+                    fields=[("action", action), ("next", self.back_url)],
+                )
+            )
+        return ButtonRow(items=items)

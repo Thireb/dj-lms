@@ -17,10 +17,11 @@ from datetime import date
 from decimal import Decimal
 from typing import Any
 
-from django.db.models import Count, F, Q, Sum
+from django.db.models import Count, F, Min, Q, Sum
 from django.db.models.functions import TruncDay, TruncMonth, TruncYear
 
 from apps.finance.models import Challan, ChallanLine, ChallanStatus, Payment
+from apps.people.models import StudentProfile
 
 KINDS = ("daily", "monthly", "yearly")
 ZERO = Decimal("0")
@@ -157,3 +158,174 @@ def report_csv(report: Report) -> str:
         ]
     )
     return out.getvalue()
+
+
+# Fee defaulters (SPEC 3: Student, Guardian, Phone, Unpaid months, Total
+# due, Oldest due date, Portal blocked; SPEC 6.1: overdue longer than the
+# grace days)
+
+
+@dataclass(frozen=True)
+class DefaulterRow:
+    student: Any
+    guardian: Any  # the first linked guardian's user, or None
+    phone: str
+    unpaid_months: int
+    total_due: Decimal
+    oldest_due: date
+    blocked: bool
+
+
+def defaulter_cutoff(institute: Any, today: date) -> date:
+    """A challan due before this date is a defaulter's (overdue longer than
+    the grace days)."""
+    from datetime import timedelta
+
+    return today - timedelta(days=institute.settings.grace_days_after_due)
+
+
+def defaulters(
+    user: Any,
+    institute: Any,
+    today: date,
+    *,
+    batch_id: int | None = None,
+    min_amount: Decimal | None = None,
+) -> list[DefaulterRow]:
+    from apps.people.models import GuardianStudentLink, PortalAccessRule
+
+    challans = Challan.objects.for_user(user).filter(
+        status__in=[ChallanStatus.PENDING, ChallanStatus.PARTIAL],
+        due_date__lt=defaulter_cutoff(institute, today),
+    )
+    if batch_id:
+        challans = challans.filter(student__batch_subjects__batch_id=batch_id)
+    groups = (
+        Challan.objects.filter(pk__in=challans.values("pk"))
+        .values("student_id")
+        .annotate(
+            months=Count("pk"),
+            due=Sum(F("amount") + F("late_fee") - F("paid")),
+            oldest=Min("due_date"),
+        )
+    )
+    if min_amount:
+        groups = groups.filter(due__gte=min_amount)
+    groups = list(groups)
+    ids = [group["student_id"] for group in groups]
+    students = {
+        student.pk: student
+        for student in StudentProfile.objects.filter(pk__in=ids).select_related("user")
+    }
+    guardians: dict[int, Any] = {}
+    for link in (
+        GuardianStudentLink.objects.filter(student_id__in=ids)
+        .select_related("guardian__user")
+        .order_by("pk")
+    ):
+        guardians.setdefault(link.student_id, link.guardian.user)
+    blocked = set(
+        PortalAccessRule.objects.filter(student_id__in=ids, blocked=True).values_list(
+            "student_id", flat=True
+        )
+    )
+    rows = []
+    for group in groups:
+        student = students[group["student_id"]]
+        guardian = guardians.get(student.pk)
+        rows.append(
+            DefaulterRow(
+                student=student,
+                guardian=guardian,
+                phone=student.guardian_phone or (guardian.phone if guardian else ""),
+                unpaid_months=group["months"],
+                total_due=group["due"],
+                oldest_due=group["oldest"],
+                blocked=student.pk in blocked,
+            )
+        )
+    return sorted(rows, key=lambda row: (-row.total_due, row.oldest_due))
+
+
+def defaulters_csv(rows: list[DefaulterRow]) -> str:
+    out = io.StringIO()
+    writer = csv.writer(out)
+    writer.writerow(
+        [
+            "Student",
+            "Student ID",
+            "Guardian",
+            "Phone",
+            "Unpaid months",
+            "Total due",
+            "Oldest due date",
+            "Portal blocked",
+        ]
+    )
+    for row in rows:
+        guardian = row.guardian
+        writer.writerow(
+            [
+                csv_cell(str(row.student)),
+                csv_cell(row.student.student_code),
+                csv_cell(
+                    (guardian.get_full_name() or guardian.email) if guardian else ""
+                ),
+                csv_cell(row.phone),
+                row.unpaid_months,
+                row.total_due,
+                row.oldest_due.isoformat(),
+                "Yes" if row.blocked else "No",
+            ]
+        )
+    return out.getvalue()
+
+
+# Challan dashboard (SPEC 8)
+
+
+@dataclass(frozen=True)
+class ChallanNumbers:
+    month: date
+    billed: Decimal
+    collected: Decimal
+    outstanding: Decimal
+    by_status: list[tuple[str, int]]
+    waiting_receipts: int
+    defaulters: int
+
+
+def challan_dashboard(user: Any, institute: Any, today: date) -> ChallanNumbers:
+    from apps.finance.models import ReceiptStatus, ReceiptSubmission
+
+    month = today.replace(day=1)
+    this_month = Challan.objects.for_user(user).filter(month=month)
+    live = this_month.exclude(status=ChallanStatus.CANCELLED)
+    totals = live.aggregate(
+        billed=Sum(F("amount") + F("late_fee")),
+        owed=Sum(F("amount") + F("late_fee") - F("paid")),
+    )
+    collected = (
+        Payment.objects.for_user(user)
+        .filter(paid_on__gte=month, paid_on__lte=today)
+        .aggregate(total=Sum("amount"))["total"]
+    )
+    counts = dict(this_month.values_list("status").annotate(n=Count("pk")))
+    overdue = live.filter(
+        status__in=[ChallanStatus.PENDING, ChallanStatus.PARTIAL], due_date__lt=today
+    ).count()
+    by_status = [
+        (label, counts.get(value, 0)) for value, label in ChallanStatus.choices
+    ]
+    by_status.append(("Overdue", overdue))
+    return ChallanNumbers(
+        month=month,
+        billed=totals["billed"] or ZERO,
+        collected=collected or ZERO,
+        outstanding=totals["owed"] or ZERO,
+        by_status=by_status,
+        waiting_receipts=ReceiptSubmission.objects.for_user(user)
+        .filter(status=ReceiptStatus.WAITING)
+        .count(),
+        defaulters=len(defaulters(user, institute, today)),
+    )

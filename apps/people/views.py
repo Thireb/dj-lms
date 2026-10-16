@@ -816,7 +816,15 @@ class PortalAccessActionView(ProfileObjectMixin, PortalPageView):
             setter, values, done = action
             setter(student, **values)
             messages.success(request, done.format(name=student))
-        return HttpResponseRedirect(reverse("admin:portal_access"))
+        return HttpResponseRedirect(admin_back_url(request.POST.get("next", "")))
+
+
+def admin_back_url(wanted: str) -> str:
+    """Back to the admin page the action came from (the Fee defaulters list),
+    only a path under /admin/; else Portal access."""
+    home = reverse("admin:home")
+    ok = wanted.startswith(home) and "//" not in wanted and wanted.isprintable()
+    return wanted if ok and "\\" not in wanted else reverse("admin:portal_access")
 
 
 # Guardian child switcher (backlog LC7, UI-GUIDELINES: guardian top bar)

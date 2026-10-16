@@ -15,7 +15,12 @@ class AdminMenu:
                     MenuItem("Main", "admin:dashboard_main", "gauge"),
                     MenuItem("Salary", "admin:dashboard_salary", "banknote"),
                     MenuItem("Lectures", "admin:dashboard_lectures", "video"),
-                    MenuItem("Challan", "admin:dashboard_challan", "receipt"),
+                    MenuItem(
+                        "Challan",
+                        "admin:dashboard_challan",
+                        "receipt",
+                        feature="fees",
+                    ),
                 ),
             ),
             MenuGroup(
