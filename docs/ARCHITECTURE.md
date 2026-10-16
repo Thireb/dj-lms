@@ -12,7 +12,7 @@ How the Django project is organised. Keep it simple: one Django project, many sm
 - WeasyPrint for PDFs (challans, salary receipts, certificates).
 - S3-compatible object storage for uploads (Cloudflare R2 or S3).
 - WhiteNoise for static files, Gunicorn as the server.
-- pytest + pytest-django for tests, ruff for lint and format.
+- pytest + pytest-django for tests (pytest-xdist runs them in parallel), ruff for lint and format.
 
 UI rule: components are Python classes in `apps/ui`; domain apps subclass them in their own `ui.py`. Apps import from `apps.ui`, never the other way round.
 
@@ -160,7 +160,7 @@ Operations:
 - `PortalAccessRule` (student, blocked, exempt) plus an institute setting for automatic defaulter blocking.
 - `SalaryPlan` (type: fixed / per_lecture / per_student / hourly / percent / hybrid, rates), `PlanAssignment`, `PayrollRun`, `SalaryPayment`, `Advance`.
 - `Thread`, `Message` (folders: inbox, sent, starred, drafts, trash; admin broadcast and monitor).
-- `Notification` (user, type, text, link, read_at).
+- `Notification` (user, type, text, link, read_at). Built in 6.1: `Notification` (user, event, text up to 300 characters, link: a path in this site, `created_at`, `read_at`) in the `notifications` app; `for_user` gives every role only their own rows, admins too. `User.fee_alerts` and `User.class_alerts` switch the two alert groups off (SPEC 4.22).
 - `CourseDocument` (batch, subject, file, download_locked).
 - `Certificate` (student, code, issued_on): rules unknown, build last.
 
@@ -194,8 +194,8 @@ Set up in 3.2: `config/celery.py`, broker `REDIS_URL`, no result backend. Tests 
 
 ## 10. Notifications
 
-- Create `Notification` rows in one place (`notifications.services.notify`).
-- Show a bell with unread count; HTMX polls or refreshes on navigation.
+- Create `Notification` rows in one place (`notifications.services.notify`). Built in 6.1: `notify(users, event, text, link)` runs in the tenant context, knows every SPEC 7 event and its group (`EVENTS`: class alerts, fee alerts or system notices), and leaves out inactive users, users of another institute and users who switched the group off. `notifications.tasks.delete_all_old_notifications` runs nightly at 01:00 UTC.
+- Show a bell with unread count; HTMX polls or refreshes on navigation. Built in 6.1: the count loads with each page and every 60 seconds (`notifications:count`); the panel loads when the bell opens (`notifications:panel`); both answer 204 to a signed-out user. Open and Mark all as read are POST. The pages live at `/notifications/` for every role but the super admin, in the user's own portal shell.
 - Email and WhatsApp/SMS are later options.
 
 ## 11. PDFs

@@ -21,7 +21,7 @@ Plan: **B** = Basic, **P** = Premium. Plan split is from the reference pricing p
 - [x] One campus per institute. (verify)
 - [x] Per-institute plan flags switch modules on or off. (verify)
 - [ ] Installable web app (PWA). (B)
-- [ ] In-app notification bell on every screen; fee and class alerts can be switched off per user.
+- [x] In-app notification bell on every screen; fee and class alerts can be switched off per user. Built in 6.1: the bell, the Notifications page and the switches on My profile; the events come with 6.2 and the later phases.
 - [ ] Badge counts on menus (messages, approvals, receipts).
 - [ ] Dark / light / auto appearance setting.
 - [x] Currency setting per institute. (verify)
@@ -130,7 +130,9 @@ Setup order the reference teaches: Campus, Classes, Batches, Subjects, Fee Plans
 - [ ] On approving teacher leave, clashing lectures are listed with three actions: Reschedule, Reassign (to another teacher), Cancel.
 - [ ] Admin screens: Student Leave Approval, Teacher Leave Approval.
 
-## 11. Messages (P)
+## 11. Messages (B)
+
+Owner decision 2026-10-16: Messages are in the Basic plan, as the `messaging` feature key already is (ARCHITECTURE 5, backlog G4). Before, this heading said (P).
 
 - [ ] Mailbox between admin, teachers, students, and guardians.
 - [ ] Folders: Inbox, Sent, Starred, Drafts, Trash.

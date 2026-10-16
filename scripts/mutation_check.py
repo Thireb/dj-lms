@@ -1,15 +1,21 @@
 """Undo each access or validation fix, run pytest, and expect a failure.
 
 Usage: uv run python scripts/mutation_check.py [name-filter] [--jobs N]
+       [--changed [BASE]]
+
+--changed runs only the entries whose file this branch changed since BASE
+(default origin/main): use it while building, and the full run at handover.
 
 Prints CAUGHT, MISSED or STALE per entry and exits 1 if any entry is MISSED
-or STALE. Commit first: the entries run against HEAD, each worker in its own
-git worktree with its own test database, so the working tree is never touched.
+or STALE. Commit first: the entries run against HEAD, one worker per core
+minus 2, each in its own git worktree with its own test database, so the
+working tree is never touched.
 
 To be fast without changing the result, each entry runs in up to 3 stages and
 stops at the first failure: the test that caught it last time (cached in
-.mutation_cache.json, gitignored), then the tests of the app that owns the
-file, then the full suite. An entry is MISSED only when the full suite passes.
+mutation_cache.json in the shared .git folder), then the tests of the app
+that owns the file, then the full suite. An entry is MISSED only when the
+full suite passes.
 """
 
 from __future__ import annotations
@@ -3418,10 +3424,90 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         '        return f"Closed {when(quiz.closes_at)}."\n',
         '        return f"Closed. It closes {when(quiz.closes_at)}."\n',
     ),
+    (
+        "notify leaves out inactive users (6.1)",
+        "apps/notifications/services.py",
+        "        if user.pk in seen or not user.is_active or user.institute_id != institute.pk:\n",
+        "        if user.pk in seen or user.institute_id != institute.pk:\n",
+    ),
+    (
+        "notify leaves out other institutes (6.1)",
+        "apps/notifications/services.py",
+        "        if user.pk in seen or not user.is_active or user.institute_id != institute.pk:\n",
+        "        if user.pk in seen or not user.is_active:\n",
+    ),
+    (
+        "notify respects the alert switches (6.1)",
+        "apps/notifications/services.py",
+        "        if switch and not getattr(user, switch):\n",
+        "        if False:\n",
+    ),
+    (
+        "notification links stay in the site (6.1)",
+        "apps/notifications/services.py",
+        '_LINK = re.compile(r"^/(?!/)[^\\s\\\\]*$")\n',
+        '_LINK = re.compile(r".*")\n',
+    ),
+    (
+        "a user sees only their own notifications (6.1)",
+        "apps/notifications/models.py",
+        '        return scoped.filter(user_id=getattr(user, "pk", None))\n',
+        "        return scoped\n",
+    ),
+    (
+        "notifications are kept for 90 days (6.1)",
+        "apps/notifications/services.py",
+        "Notification.objects.filter(created_at__lt=cutoff)",
+        "Notification.objects.filter(created_at__lte=cutoff)",
+    ),
+    (
+        "bell parts give a signed-out user 204 (6.1)",
+        "apps/notifications/views.py",
+        "        if not request.user.is_authenticated:\n            return HttpResponse(status=204)\n",
+        "",
+    ),
+    (
+        "the back path refuses a backslash (6.1)",
+        "apps/notifications/views.py",
+        '    bad = "\\\\" in path or not value.isprintable()',
+        "    bad = not value.isprintable()",
+    ),
+    (
+        "the super admin has no bell (6.1)",
+        "apps/ui/components/nav.py",
+        '        ctx["enabled"] = getattr(self.props["user"], "role", "") in BELL_ROLES\n',
+        '        ctx["enabled"] = True\n',
+    ),
+    (
+        "teachers get no fee alert switch (6.1)",
+        "apps/accounts/forms.py",
+        '        return ["class_alerts"]\n',
+        "        return list(ALERT_FIELDS)\n",
+    ),
+    (
+        "profile service changes only the switches (6.1)",
+        "apps/accounts/services.py",
+        '        if name in ("class_alerts", "fee_alerts"):\n',
+        "        if True:\n",
+    ),
 ]
 
 
-CACHE = ROOT / ".mutation_cache.json"
+def _git_dir() -> Path:
+    """The repository's shared .git folder, the same for every worktree."""
+    common = subprocess.run(
+        ["git", "rev-parse", "--git-common-dir"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+    return (ROOT / common).resolve()
+
+
+# In the shared .git folder, so every worktree uses one cache.
+CACHE = _git_dir() / "mutation_cache.json"
+OLD_CACHE = ROOT / ".mutation_cache.json"  # before worktrees; read once
 # pytest exit codes that say nothing about the mutation: 4 = a cached test no
 # longer exists, 5 = no tests collected. Move on to the next stage.
 NO_VERDICT = {4, 5}
@@ -3502,19 +3588,40 @@ def check(entry, worker: Worker, cache: dict[str, str]) -> tuple[str, str, str]:
         worker.restore(path)
 
 
+def changed(base: str) -> set[str]:
+    """The files this branch changed since it left ``base``."""
+    names = subprocess.run(
+        ["git", "diff", "--name-only", f"{base}...HEAD"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    return set(names.split())
+
+
 def load_cache() -> dict[str, str]:
-    try:
-        return json.loads(CACHE.read_text())
-    except (OSError, ValueError):
-        return {}
+    for path in (CACHE, OLD_CACHE):
+        try:
+            return json.loads(path.read_text())
+        except (OSError, ValueError):
+            continue
+    return {}
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("name_filter", nargs="?", default="")
-    parser.add_argument("--jobs", type=int, default=4)
+    # Leave 2 cores for the rest of the machine.
+    parser.add_argument("--jobs", type=int, default=max(1, (os.cpu_count() or 4) - 2))
+    parser.add_argument("--changed", nargs="?", const="origin/main", metavar="BASE")
     args = parser.parse_args()
     entries = [entry for entry in MUTATIONS if args.name_filter in entry[0]]
+    if args.changed:
+        entries = [entry for entry in entries if entry[1] in changed(args.changed)]
+        if not entries:
+            print(f"No entries for the files changed since {args.changed}.")
+            return 0
     dirty = subprocess.run(
         ["git", "status", "--porcelain", "--untracked-files=no"],
         cwd=ROOT,

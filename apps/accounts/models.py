@@ -98,6 +98,9 @@ class User(AbstractUser):
     )
     phone = models.CharField(max_length=32, blank=True, default="")
     timezone = models.CharField(max_length=63, blank=True, default="")
+    # SPEC 7 and 4.22: the user can switch these notification groups off.
+    fee_alerts = models.BooleanField(default=True)
+    class_alerts = models.BooleanField(default=True)
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS: list[str] = []
