@@ -22,7 +22,7 @@ Plan: **B** = Basic, **P** = Premium. Plan split is from the reference pricing p
 - [x] Per-institute plan flags switch modules on or off. (verify)
 - [ ] Installable web app (PWA). (B)
 - [x] In-app notification bell on every screen; fee and class alerts can be switched off per user. Built in 6.1: the bell, the Notifications page and the switches on My profile; the events come with 6.2 and the later phases.
-- [ ] Badge counts on menus (messages, approvals, receipts).
+- [ ] Badge counts on menus (messages, approvals, receipts). Built in 6.3: the unread messages count on Messages (`MenuBadge`); approvals and receipts come with their phases.
 - [ ] Dark / light / auto appearance setting.
 - [x] Currency setting per institute. (verify)
 - [ ] Currency symbol shown on all amounts (with fees, Phase 7).
@@ -134,11 +134,11 @@ Setup order the reference teaches: Campus, Classes, Batches, Subjects, Fee Plans
 
 Owner decision 2026-10-16: Messages are in the Basic plan, as the `messaging` feature key already is (ARCHITECTURE 5, backlog G4). Before, this heading said (P).
 
-- [ ] Mailbox between admin, teachers, students, and guardians.
-- [ ] Folders: Inbox, Sent, Starred, Drafts, Trash.
-- [ ] Admin extras: Broadcast and Message Monitor (admin can read all threads).
-- [ ] Compose with search; attachments optional.
-- [ ] Unread badge in the menu.
+- [x] Mailbox between admin, teachers, students, and guardians. Built in 6.3: Messages in every portal; who can message whom follows SPEC 6.5.
+- [x] Folders: Inbox, Sent, Starred, Drafts, Trash. Built in 6.3.
+- [x] Admin extras: Broadcast and Message Monitor (admin can read all threads). Built in 6.3: a broadcast is one private thread per person (a reply reaches only the sender); the monitor is read only; every Messages page says that admins can read all messages.
+- [x] Compose with search; attachments optional. Built in 6.3: a search for the person; no attachments yet (no file storage, backlog AS1).
+- [x] Unread badge in the menu. Built in 6.3.
 
 ## 12. Sub-admin (helper) (P)
 

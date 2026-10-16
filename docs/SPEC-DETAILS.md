@@ -237,6 +237,7 @@ From*, To*, Reason*. For teachers, show days used and remaining.
 
 ### 4.19 Message
 To* (search by name, role-limited, see 6.5), Subject, Body*, Attachment (optional). Admin broadcast: pick audience (all, teachers, students, guardians, a batch).
+Built in 6.3 (assumed, check against the demo): no Attachment yet (no file storage, backlog AS1). A broadcast needs a Subject and a Body; "a batch" means its active students and their guardians; each person gets their own thread, so a reply reaches only the sender (owner decision). Broadcasts stay out of the sender's Sent folder and show on the Broadcast page instead. The Message Monitor (admins, and sub-admins with the Messages menu) is read only and does not change anyone's read state.
 
 ### 4.20 Course document
 Title*, Batch*, Subject, File* (PDF, DOC, PPT, images, up to 25 MB), Description.

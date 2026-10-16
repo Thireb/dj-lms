@@ -31,6 +31,8 @@ from apps.messaging import notices
 from apps.messaging.models import (
     MAX_BODY,
     MAX_SUBJECT,
+    Audience,
+    Broadcast,
     Draft,
     Message,
     Thread,
@@ -385,3 +387,173 @@ def send_draft(
     thread = send_message(draft.owner, recipient, subject, body, now=now)
     draft.delete()
     return thread
+
+
+# Broadcast (FEATURES 11, SPEC 4.19: all, teachers, students, guardians, a batch)
+
+
+def broadcast_audience(sender: Any, audience: str, batch: Any = None) -> QuerySet[User]:
+    """The active people of the institute a broadcast goes to. "A batch" is
+    its active students and their guardians (assumed)."""
+    people = User.objects.filter(
+        institute_id=sender.institute_id, is_active=True
+    ).exclude(pk=sender.pk)
+    if audience == Audience.ALL:
+        return people
+    roles = {
+        Audience.TEACHERS: Role.TEACHER,
+        Audience.STUDENTS: Role.STUDENT,
+        Audience.GUARDIANS: Role.GUARDIAN,
+    }
+    if audience in roles:
+        return people.filter(role=roles[audience])
+    if audience == Audience.BATCH and batch is not None:
+        students = StudentBatchSubject.objects.filter(
+            batch=batch, student__status=ProfileStatus.ACTIVE
+        ).values("student_id")
+        return people.filter(
+            Q(student_profile__in=students)
+            | Q(guardian_profile__student_links__student__in=students)
+        ).distinct()
+    return people.none()
+
+
+@transaction.atomic
+def send_broadcast(
+    sender: Any,
+    audience: str,
+    subject: str,
+    body: str,
+    *,
+    batch: Any = None,
+    now: datetime | None = None,
+) -> Broadcast:
+    """One private thread per recipient, so a reply reaches only the sender
+    (owner decision 2026-10-16). Admins and sub-admins only."""
+    require_tenant_context(sender.institute)
+    if sender.role not in ADMIN_ROLES:
+        raise ValidationError("Only the institute office can send a broadcast.")
+    errors: dict[str, str] = {}
+    subject, body = _clean(subject, body, errors)
+    if not subject:
+        errors["subject"] = "Write a subject."
+    if audience not in Audience.values:
+        errors["audience"] = "Choose who gets it."
+    elif audience == Audience.BATCH and batch is None:
+        errors["batch"] = "Choose the batch."
+    if errors:
+        raise ValidationError(errors)
+    now = now or timezone.now()
+    recipients = list(broadcast_audience(sender, audience, batch))
+    if not recipients:
+        raise ValidationError("No one active matches this choice.")
+    broadcast = Broadcast.objects.create(
+        institute_id=sender.institute_id,
+        sender=sender,
+        audience=audience,
+        batch=batch if audience == Audience.BATCH else None,
+        subject=subject,
+        body=body,
+        recipients=len(recipients),
+        created_at=now,
+    )
+    institute_id = sender.institute_id
+    threads = Thread.objects.bulk_create(
+        [
+            Thread(
+                institute_id=institute_id,
+                subject=subject,
+                broadcast=broadcast,
+                created_at=now,
+                last_message_at=now,
+            )
+            for _ in recipients
+        ]
+    )
+    members, messages = [], []
+    for thread, user in zip(threads, recipients, strict=True):
+        members += [
+            ThreadMember(
+                institute_id=institute_id, thread=thread, user=sender, last_read_at=now
+            ),
+            ThreadMember(institute_id=institute_id, thread=thread, user=user),
+        ]
+        messages.append(
+            Message(
+                institute_id=institute_id,
+                thread=thread,
+                sender=sender,
+                body=body,
+                created_at=now,
+            )
+        )
+    ThreadMember.objects.bulk_create(members)
+    Message.objects.bulk_create(messages)
+    notices.broadcast_sent(broadcast, dict(zip(recipients, threads, strict=True)))
+    return broadcast
+
+
+# Message Monitor (FEATURES 11: the admin can read all threads)
+
+
+@dataclass(frozen=True)
+class MonitorRow:
+    thread: Thread
+    sender: str  # who wrote the first message
+    to: str  # everyone else in the thread
+    last_body: str
+
+
+def monitor_threads(user: Any, *, query: str = "", role: str = "") -> QuerySet[Thread]:
+    """Every thread of the institute, newest first. ``query`` looks in the
+    subject, the messages and the names; ``role`` keeps threads with
+    someone of that role."""
+    rows = Thread.objects.for_user(user)
+    for word in query.split()[:3]:
+        rows = rows.filter(
+            Q(subject__icontains=word)
+            | Q(messages__body__icontains=word)
+            | Q(members__user__first_name__icontains=word)
+            | Q(members__user__last_name__icontains=word)
+            | Q(members__user__email__icontains=word)
+        )
+    if role:
+        rows = rows.filter(members__user__role=role)
+    last = Message.objects.filter(thread=OuterRef("pk")).order_by("-created_at", "-pk")
+    return (
+        rows.annotate(last_body=Subquery(last.values("body")[:1]))
+        .distinct()
+        .order_by("-last_message_at", "-pk")
+    )
+
+
+def monitor_rows(threads: list[Thread]) -> list[MonitorRow]:
+    """From and To for a page of threads (2 more queries)."""
+    ids = [thread.pk for thread in threads]
+    first: dict[int, Any] = {}
+    for message in (
+        Message.objects.filter(thread_id__in=ids)
+        .select_related("sender")
+        .order_by("created_at", "pk")
+    ):
+        first.setdefault(message.thread_id, message.sender)
+    people: dict[int, list[Any]] = {}
+    for row in ThreadMember.objects.filter(thread_id__in=ids).select_related("user"):
+        people.setdefault(row.thread_id, []).append(row.user)
+
+    def name(user: Any) -> str:
+        return user.get_full_name() or user.email
+
+    rows = []
+    for thread in threads:
+        sender = first.get(thread.pk)
+        others = [user for user in people.get(thread.pk, []) if user != sender]
+        rows.append(
+            MonitorRow(
+                thread=thread,
+                sender=name(sender) if sender else "-",
+                to=", ".join(sorted(name(user) for user in others)) or "-",
+                last_body=thread.last_body or "",
+            )
+        )
+    return rows
