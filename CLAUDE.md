@@ -9,10 +9,13 @@ This project's coding rules live in `AGENTS.md` (imported above). Everything bel
 ## Role
 
 - Claude Code **builds features and audits them**.
-- Build one roadmap item per branch, started from the latest `main`. Commit, but do not push. The user pushes and opens the PR.
+- Build one whole roadmap item per branch (for example 6.1), started from the latest `main`. Commit, but do not push. The user pushes and opens the PR.
+- Do not wait for a merge. Start the next item on a new branch on top of the branch that waits (a stacked branch). If an item is bigger than about 10 files, split it into stacked branches in roadmap order; the owner approved this on 2026-10-16, so do not stop to ask which part comes first (AGENTS.md 8). If a lower branch changes in review, rebase the branches above it.
+- At the start of a phase, read its docs and send the owner one list of the doc gaps and decisions, so the build does not stop for questions later.
 - Before handing over a branch, run the PR review procedure below on your own diff.
 - With every branch, write the PR description from `.github/pull_request_template.md`. Always fill "Deviations from docs": each "(assumed)" choice, each doc gap, and each part left out on purpose. Write "None" only when there is none.
 - A self-review is not independent. For larger PRs, the user also asks for a review in a fresh session.
+- End every handover with the `gh` commands that push the branches and open the PRs, in stack order, each PR based on the branch below it (see "Handover commands").
 
 ## Read first
 
@@ -28,7 +31,10 @@ This project's coding rules live in `AGENTS.md` (imported above). Everything bel
 
 ## Commands
 
-- Tests: `uv run pytest`
+- Tests, full suite: `uv run pytest -n auto` (parallel, about 40 s). While building, run only the files you changed: `uv run pytest tests/<app>/test_x.py`.
+- The test database is kept between runs (`--reuse-db` in `pyproject.toml`). After switching to a branch with other migrations, add `--create-db` once.
+- Mutation check while building: `uv run python scripts/mutation_check.py --changed` (only the entries for files changed since `origin/main`). Run the full check once at handover.
+- Browser walk: `./scripts/browser-walk.sh` opens every portal page as its demo role at 360px and 1440px (status, sideways scroll, console errors, axe). `WALK_ONLY=teacher:quiz` walks some routes; `WALK_SHOTS=<dir>` saves screenshots. Add new pk routes to `OBJECTS` in `browser_walk/test_walk.py`.
 - Lint: `uv run ruff check .`
 - Format check: `uv run ruff format --check .`
 - Build CSS (needed before UI tests): `./scripts/build-app-css.sh`
@@ -62,6 +68,25 @@ When asked to review a PR (use `gh pr view <n>` and `gh pr diff <n>`, or check o
 
 - Short, plain sentences. One-line bullets. No filler.
 - Lead with the decision: merge, fix first, or blocked.
+
+## Parallel sessions
+
+- Each Claude Code session works in its own git worktree under `.claude/worktrees/<name>` (gitignored), never in another session's tree. Copy `static/css/app.css` into a new worktree (it is built, not in git).
+- Each worktree uses its own test database: set `TEST_DB_NAME=lms_test_<name>` for every pytest run there. The mutation check and the browser walk already use their own.
+- Do not use bare `git stash`: the stash is shared by all worktrees.
+
+## Handover commands
+
+Give the owner commands like these, one block per stack, lowest branch first:
+
+```bash
+git push -u origin feat/a
+gh pr create --base main --head feat/a --title "feat(app): ..." --body-file <path to PR body>
+git push -u origin feat/b
+gh pr create --base feat/a --head feat/b --title "feat(app): ..." --body-file <path>
+```
+
+Merge in order with a merge commit (not squash, not rebase), so the commits of the next branch stay the same. When `feat/a` is merged and its branch is deleted, GitHub moves the next PR's base to `main`.
 
 ## Out of scope for now
 
