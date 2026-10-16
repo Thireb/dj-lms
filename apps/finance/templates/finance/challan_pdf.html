@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Fee challans</title>
+<style>
+{% include "ui/print/tokens.css" %}
+  @page { size: A4 landscape; margin: 10mm; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "DejaVu Sans", Arial, sans-serif; font-size: 8.5pt; color: var(--text); }
+  .sheet { display: flex; gap: 6mm; page-break-after: always; }
+  .sheet:last-child { page-break-after: auto; }
+  .copy { flex: 1; border: 1px solid var(--border-strong); border-radius: 6px; padding: 4mm; }
+  .copy + .copy { border-left: 1px dashed var(--muted); }
+  .label { font-size: 7pt; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); text-align: right; }
+  h1 { font-size: 11pt; margin: 1mm 0 0; color: var(--primary); }
+  .institute { font-size: 7.5pt; color: var(--ink-2); margin-bottom: 2mm; }
+  h2 { font-size: 10pt; margin: 2mm 0; text-align: center; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 1mm 0; }
+  table { width: 100%; border-collapse: collapse; margin: 1.5mm 0; }
+  th, td { padding: 1mm 0.5mm; text-align: left; vertical-align: top; }
+  th { color: var(--muted); font-weight: normal; width: 34%; }
+  .fees th, .fees td { border-bottom: 1px solid var(--border); }
+  .fees thead th { width: auto; font-weight: bold; color: var(--text); }
+  .num { text-align: right; }
+  .total td { font-weight: bold; border-top: 1.5px solid var(--text); }
+  .words { font-style: italic; margin: 1mm 0 2mm; }
+  .note { font-size: 7pt; color: var(--ink-2); margin: 1mm 0; }
+  .sign { margin-top: 8mm; border-top: 1px solid var(--text); width: 55%; padding-top: 1mm; font-size: 7pt; }
+</style>
+</head>
+<body>
+{% for p in prints %}
+<div class="sheet">
+  {% for copy in copies %}
+  <section class="copy">
+    <div class="label">{{ copy }}</div>
+    <h1>{{ institute.name }}</h1>
+    <div class="institute">{{ institute.address }}{% if institute.phone %} · {{ institute.phone }}{% endif %}</div>
+    <h2>Fee Challan</h2>
+    <table>
+      <tr><th>Challan no.</th><td>{{ p.challan.number }}</td></tr>
+      <tr><th>Month</th><td>{{ p.month }}</td></tr>
+      <tr><th>Issue date</th><td>{{ p.issued }}</td></tr>
+      <tr><th>Due date</th><td><strong>{{ p.due }}</strong></td></tr>
+      <tr><th>Student</th><td>{{ p.student_line }}</td></tr>
+      <tr><th>Batches</th><td>{{ p.batches|default:"-" }}</td></tr>
+      <tr><th>Guardian</th><td>{{ p.guardians }}</td></tr>
+    </table>
+    <table class="fees">
+      <thead><tr><th>Fee</th><th class="num">Amount</th><th class="num">Discount</th><th class="num">Payable</th></tr></thead>
+      <tbody>
+        {% for name, amount, discount, net in p.lines %}<tr><td>{{ name }}</td><td class="num">{{ amount }}</td><td class="num">{{ discount }}</td><td class="num">{{ net }}</td></tr>{% endfor %}
+        {% if p.late_fee %}<tr><td colspan="3">Late fee</td><td class="num">{{ p.late_fee }}</td></tr>{% endif %}
+        {% if p.paid %}<tr><td colspan="3">Paid so far</td><td class="num">-{{ p.paid }}</td></tr>{% endif %}
+        <tr class="total"><td colspan="3">Total payable</td><td class="num">{{ p.balance }}</td></tr>
+      </tbody>
+    </table>
+    <div class="words">{{ p.words }}</div>
+    {% if p.previous %}<div class="note">Previous balance (not included above): {{ p.previous }}</div>{% endif %}
+    {% if late_fee %}<div class="note">A late fee of {{ late_fee }} is added if this challan is not paid in full by the due date.</div>{% endif %}
+    <div class="note">{{ payment_text }}</div>
+    <div class="sign">Received by (signature and stamp)</div>
+  </section>
+  {% endfor %}
+</div>
+{% endfor %}
+</body>
+</html>

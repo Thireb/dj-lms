@@ -233,4 +233,8 @@ urlpatterns = [
         finance.ChallanCancelView.as_view(),
         name="challan_cancel",
     ),
+    path("challans/print/", finance.ChallanPrintView.as_view(), name="challan_print"),
+    path(
+        "challans/<int:pk>/pdf/", finance.ChallanPdfView.as_view(), name="challan_pdf"
+    ),
 ]

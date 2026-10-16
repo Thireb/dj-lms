@@ -480,7 +480,8 @@ ROUTE_OBJECTS = {
     "student:quiz_attempt": _attempt,
     "notifications:open": _notification,
     **{f"admin:fee_plan_{action}": _fee_plan for action in ("edit", "status")},
-    **{f"admin:challan_{action}": _challan for action in ("detail", "cancel")},
+    **{f"admin:challan_{action}": _challan for action in ("detail", "cancel", "pdf")},
+    "admin:challan_print": _challan,  # no pk: makes a challan to print
     **{
         f"{portal}:message_{action}": _thread
         for portal in ("admin", "teacher", "student", "guardian")
