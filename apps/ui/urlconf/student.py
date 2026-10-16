@@ -2,6 +2,7 @@ from django.urls import path
 
 from apps.assessments import views as assessments
 from apps.attendance import views as attendance
+from apps.finance import views as finance
 from apps.lectures import views as lectures
 from apps.messaging import views as messaging
 from apps.ui.views import portal_home
@@ -78,4 +79,6 @@ urlpatterns = [
         messaging.PAGES["student"]["draft_delete"].as_view(),
         name="message_draft_delete",
     ),
+    # Fees (Phase 7)
+    path("fees/", finance.StudentFeesPage.as_view(), name="fee_details"),
 ]

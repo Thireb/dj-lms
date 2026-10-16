@@ -243,14 +243,14 @@ def test_other_roles_get_403(owing) -> None:
 def test_dashboard_numbers(owing, admin) -> None:
     with tenant_context(admin.institute):
         numbers = challan_dashboard(admin, admin.institute, TODAY)
-    assert numbers.month == OCT
-    assert numbers.billed == Decimal("5850.00")
-    assert numbers.collected == Decimal("2000.00")  # the September payment
-    assert numbers.outstanding == Decimal("5850.00")
+    assert numbers.money.month == OCT
+    assert numbers.money.billed == Decimal("5850.00")
+    assert numbers.money.collected == Decimal("2000.00")  # the September payment
+    assert numbers.money.outstanding == Decimal("5850.00")
     statuses = dict(numbers.by_status)
     assert statuses["Pending"] == 2 and statuses["Paid"] == 0
     assert statuses["Overdue"] == 2
-    assert numbers.waiting_receipts == 0 and numbers.defaulters == 2
+    assert numbers.money.waiting_receipts == 0 and numbers.defaulters == 2
 
 
 @pytest.mark.django_db
@@ -263,11 +263,11 @@ def test_dashboard_leaves_out_cancelled_and_later_payments(owing, admin) -> None
             october, amount=Decimal("1000"), paid_on=later, method="cash", today=later
         )
         numbers = challan_dashboard(admin, admin.institute, TODAY)
-    assert (numbers.billed, numbers.outstanding) == (
+    assert (numbers.money.billed, numbers.money.outstanding) == (
         Decimal("5050.00"),
         Decimal("4050.00"),
     )
-    assert numbers.collected == Decimal("2000.00")
+    assert numbers.money.collected == Decimal("2000.00")
     assert dict(numbers.by_status)["Cancelled"] == 1
 
 

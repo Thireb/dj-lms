@@ -440,6 +440,27 @@ def _payment(institute) -> int:
     return payment.pk
 
 
+def _link_walker_guardian(institute, student_pk: int) -> None:
+    """Link the student to the walker guardian when that user exists (the
+    guardian routes show only their children)."""
+    guardian = User.objects.filter(email="guardian-walker@example.com").first()
+    if guardian is not None:
+        # unscoped: test setup outside a tenant context.
+        profile, _ = GuardianProfile.unscoped.get_or_create(
+            institute=institute, user=guardian
+        )
+        GuardianStudentLink.unscoped.get_or_create(
+            institute=institute, guardian=profile, student_id=student_pk
+        )
+
+
+def _guardian_challan(institute) -> int:
+    pk = _challan(institute)
+    # unscoped: test setup outside a tenant context.
+    _link_walker_guardian(institute, Challan.unscoped.get(pk=pk).student_id)
+    return pk
+
+
 def _receipt(institute) -> int:
     """A receipt with a file, for a student linked to the walker guardian
     when that user exists (the guardian route shows only their children)."""
@@ -448,14 +469,7 @@ def _receipt(institute) -> int:
     # unscoped: test setup outside a tenant context.
     existing = ReceiptSubmission.unscoped.filter(institute=institute).first()
     student_pk = _student(institute)
-    guardian = User.objects.filter(email="guardian-walker@example.com").first()
-    if guardian is not None:
-        profile, _ = GuardianProfile.unscoped.get_or_create(
-            institute=institute, user=guardian
-        )
-        GuardianStudentLink.unscoped.get_or_create(
-            institute=institute, guardian=profile, student_id=student_pk
-        )
+    _link_walker_guardian(institute, student_pk)
     if existing is not None:
         return existing.pk
     receipt = ReceiptSubmission(
@@ -542,6 +556,7 @@ ROUTE_OBJECTS = {
         for action in ("detail", "approve", "reject", "file")
     },
     "guardian:receipt_file": _receipt,
+    "guardian:challan_pdf": _guardian_challan,
     **{
         f"{portal}:message_{action}": _thread
         for portal in ("admin", "teacher", "student", "guardian")

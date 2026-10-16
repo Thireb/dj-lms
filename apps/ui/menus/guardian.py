@@ -66,6 +66,7 @@ class GuardianMenu:
                         "Fee and challans",
                         "guardian:fee_list",
                         "receipt",
+                        menu_key="fee_list",
                         feature="fees",
                     ),
                     MenuItem(
