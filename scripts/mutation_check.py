@@ -3490,6 +3490,60 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         '        if name in ("class_alerts", "fee_alerts"):\n',
         "        if True:\n",
     ),
+    (
+        "the person who saves gets no notification (6.2)",
+        "apps/notifications/audience.py",
+        "    return [user for user in users if user.pk != actor_id]\n",
+        "    return list(users)\n",
+    ),
+    (
+        "guardians hear about their child's class (6.2)",
+        "apps/notifications/audience.py",
+        "    if not guardian_url or not students:\n",
+        "    if True:\n",
+    ),
+    (
+        "inactive students get no class notification (6.2)",
+        "apps/notifications/audience.py",
+        "        student__status=ProfileStatus.ACTIVE,\n",
+        "",
+    ),
+    (
+        "notification times are the recipient's (6.2)",
+        "apps/notifications/services.py",
+        "        with timezone.override(zone):\n",
+        "        with timezone.override(timezone.get_current_timezone()):\n",
+    ),
+    (
+        "only a new lecture plan is notified (6.2)",
+        "apps/lectures/services.py",
+        "    if _plan_of(saved.lecture) != before:\n",
+        "    if True:\n",
+    ),
+    (
+        "a new lecture time is reminded again (6.2)",
+        "apps/lectures/services.py",
+        "        lecture.reminded_at = None  # remind again before the new time\n",
+        "        pass\n",
+    ),
+    (
+        "reminders cover the next 15 minutes only (6.2)",
+        "apps/lectures/services.py",
+        "        starts_at__lte=now + REMIND_BEFORE,\n",
+        "",
+    ),
+    (
+        "a lecture is reminded once (6.2)",
+        "apps/lectures/services.py",
+        "        reminded_at__isnull=True,\n",
+        "",
+    ),
+    (
+        "the lecture page passes the person who saves (6.2)",
+        "apps/lectures/views.py",
+        "        return create_lecture(self.get_institute(), details, actor=self.request.user)\n",
+        "        return create_lecture(self.get_institute(), details)\n",
+    ),
 ]
 
 

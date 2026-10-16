@@ -210,6 +210,8 @@ class Lecture(TenantModel):
     # or the planned end when it finished on its own).
     started_at = models.DateTimeField(null=True, blank=True)
     ended_at = models.DateTimeField(null=True, blank=True)
+    # When "starts in 15 minutes" went out (roadmap 6.2); cleared on a new time.
+    reminded_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

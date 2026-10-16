@@ -179,6 +179,7 @@ Set up in 3.2: `config/celery.py`, broker `REDIS_URL`, no result backend. Tests 
 
 - Generate recurring lectures. Built in 3.2: `lectures.tasks.generate_schedule_lectures` after a save, and `extend_all_schedules` nightly at 00:30 UTC (Celery beat).
 - Finish lectures past their end. Built in 3.5: `lectures.tasks.finish_all_ended_lectures` every 5 minutes (Celery beat): live lectures become finished and never-started ones not held, for active institutes.
+- Lecture reminders. Built in 6.2: `lectures.tasks.remind_all_lectures` every 5 minutes sends "starts soon" once for each scheduled lecture in the next 15 minutes (`Lecture.reminded_at`; a new start time clears it).
 - Bulk challan generation.
 - Challan and lecture reminders.
 - Monthly payroll run.
@@ -194,7 +195,7 @@ Set up in 3.2: `config/celery.py`, broker `REDIS_URL`, no result backend. Tests 
 
 ## 10. Notifications
 
-- Create `Notification` rows in one place (`notifications.services.notify`). Built in 6.1: `notify(users, event, text, link)` runs in the tenant context, knows every SPEC 7 event and its group (`EVENTS`: class alerts, fee alerts or system notices), and leaves out inactive users, users of another institute and users who switched the group off. `notifications.tasks.delete_all_old_notifications` runs nightly at 01:00 UTC.
+- Create `Notification` rows in one place (`notifications.services.notify`). Built in 6.1: `notify(users, event, text, link)` runs in the tenant context, knows every SPEC 7 event and its group (`EVENTS`: class alerts, fee alerts or system notices), and leaves out inactive users, users of another institute and users who switched the group off. `notifications.tasks.delete_all_old_notifications` runs nightly at 01:00 UTC. Built in 6.2: `notify` takes a text or a function of the recipient, run in the recipient's time zone, so a time in the text is their local time. `notifications.audience.send_to_students` sends to the active students of a class and their guardians (the guardian's text starts "For <child>:"); the person who made the change gets nothing. Each app keeps its texts and links in `notices.py` (lectures: `apps/lectures/notices.py`).
 - Show a bell with unread count; HTMX polls or refreshes on navigation. Built in 6.1: the count loads with each page and every 60 seconds (`notifications:count`); the panel loads when the bell opens (`notifications:panel`); both answer 204 to a signed-out user. Open and Mark all as read are POST. The pages live at `/notifications/` for every role but the super admin, in the user's own portal shell.
 - Email and WhatsApp/SMS are later options.
 

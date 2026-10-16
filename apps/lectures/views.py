@@ -478,7 +478,7 @@ class LectureCancelView(AdminLectureMixin, LectureStateView):
     success_message = "{title} cancelled."
 
     def change(self, lecture: Lecture) -> None:
-        cancel_lecture(lecture)
+        cancel_lecture(lecture, actor=self.request.user)
 
 
 class TeacherLectureStartView(TeacherLectureMixin, LectureStateView):
@@ -775,7 +775,7 @@ class LectureFormPage(AdminLectureMixin, FormPage):
             )
 
     def save(self, details: LectureDetails) -> SavedLecture:
-        return create_lecture(self.get_institute(), details)
+        return create_lecture(self.get_institute(), details, actor=self.request.user)
 
 
 class LectureCreatePage(LectureFormPage):
@@ -830,7 +830,7 @@ class LectureEditPage(LectureFormPage):
         )
 
     def save(self, details: LectureDetails) -> SavedLecture:
-        return update_lecture(self.lecture, details)
+        return update_lecture(self.lecture, details, actor=self.request.user)
 
 
 class TeacherLectureCreatePage(TeacherLectureMixin, LectureCreatePage):
@@ -1028,7 +1028,7 @@ class ScheduleFormPage(AdminScheduleMixin, LectureFormPage):
         )
 
     def save_schedule(self, details: ScheduleDetails) -> str:
-        create_schedule(self.get_institute(), details)
+        create_schedule(self.get_institute(), details, actor=self.request.user)
         return self.success_message
 
 
@@ -1096,7 +1096,7 @@ class ScheduleEditPage(ScheduleObjectMixin, ScheduleFormPage):
         }
 
     def save_schedule(self, details: ScheduleDetails) -> str:
-        removed = update_schedule(self.schedule, details)
+        removed = update_schedule(self.schedule, details, actor=self.request.user)
         if removed:
             return f"Schedule saved. {removed} upcoming lectures are being remade."
         return "Schedule saved."
@@ -1141,7 +1141,7 @@ class ScheduleStopView(ScheduleObjectMixin, AdminScheduleMixin, PortalPageView):
 
     def post(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
         schedule = self.get_schedule()
-        cancelled = stop_schedule(schedule)
+        cancelled = stop_schedule(schedule, actor=request.user)
         messages.success(
             request, f"{schedule.title} stopped. {cancelled} lectures cancelled."
         )

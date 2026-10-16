@@ -25,6 +25,7 @@ from kombu.exceptions import OperationalError as KombuOperationalError
 from apps.academics.models import Batch, Subject, TeacherBatchSubject
 from apps.core.tenancy import require_tenant_context
 from apps.institutes.models import Institute, InstituteSettings
+from apps.lectures import notices
 from apps.lectures.models import (
     MAX_DURATION,
     MIN_DURATION,
@@ -241,24 +242,50 @@ def _apply(lecture: Lecture, details: LectureDetails) -> SavedLecture:
 
 
 @transaction.atomic
-def create_lecture(institute: Institute, details: LectureDetails) -> SavedLecture:
+def create_lecture(
+    institute: Institute, details: LectureDetails, *, actor: Any = None
+) -> SavedLecture:
+    """``actor`` (the user who saves) gets no notification about it."""
     require_tenant_context(institute)
     _lock_teacher(details.teacher)
     _check(institute, details, None)
-    return _apply(Lecture(institute=institute), details)
+    saved = _apply(Lecture(institute=institute), details)
+    notices.lecture_saved(saved.lecture, created=True, actor=actor)
+    return saved
+
+
+def _plan_of(lecture: Lecture) -> tuple:
+    """What students must hear about when it changes (roadmap 6.2)."""
+    return (
+        lecture.starts_at,
+        lecture.duration_minutes,
+        lecture.teacher_id,
+        lecture.meeting_url,
+    )
 
 
 @transaction.atomic
-def update_lecture(lecture: Lecture, details: LectureDetails) -> SavedLecture:
+def update_lecture(
+    lecture: Lecture, details: LectureDetails, *, actor: Any = None
+) -> SavedLecture:
     """Edit one lecture. A schedule's lecture edited here ("this one") keeps
-    its changes when the schedule is edited later."""
+    its changes when the schedule is edited later. A new time, length,
+    teacher or link is notified; a new title or description is not."""
     require_tenant_context(lecture.institute)
     _lock_teacher(details.teacher)
     _lock_and_reload(lecture)
     _check(lecture.institute, details, lecture)
     if lecture.schedule_id is not None:
         lecture.follows_schedule = False
-    return _apply(lecture, details)
+    before, old_teacher = _plan_of(lecture), lecture.teacher
+    if details.starts_at != lecture.starts_at:
+        lecture.reminded_at = None  # remind again before the new time
+    saved = _apply(lecture, details)
+    if _plan_of(saved.lecture) != before:
+        notices.lecture_saved(
+            saved.lecture, created=False, actor=actor, old_teacher=old_teacher
+        )
+    return saved
 
 
 def list_lectures(
@@ -425,6 +452,7 @@ def start_lecture(
         lecture.status = LectureStatus.LIVE
         lecture.started_at = now
         lecture.save(update_fields=["status", "started_at", "updated_at"])
+        notices.lecture_started(lecture)
     return lecture
 
 
@@ -440,7 +468,9 @@ def end_lecture(lecture: Lecture, *, now: datetime | None = None) -> Lecture:
     return lecture
 
 
-def cancel_lecture(lecture: Lecture, *, now: datetime | None = None) -> Lecture:
+def cancel_lecture(
+    lecture: Lecture, *, now: datetime | None = None, actor: Any = None
+) -> Lecture:
     """Cancel a scheduled lecture that has not ended. A schedule edit or the
     nightly job does not bring it back."""
     now = now or timezone.now()
@@ -453,6 +483,7 @@ def cancel_lecture(lecture: Lecture, *, now: datetime | None = None) -> Lecture:
         lecture.status = LectureStatus.CANCELLED
         lecture.follows_schedule = False
         lecture.save(update_fields=["status", "follows_schedule", "updated_at"])
+        notices.lecture_cancelled(lecture, actor=actor)
     return lecture
 
 
@@ -473,6 +504,31 @@ def finish_ended_lectures(institute: Institute, now: datetime | None = None) -> 
         pk__in=ended.filter(status=LectureStatus.SCHEDULED).values("pk")
     ).update(status=LectureStatus.NOT_HELD, updated_at=now)
     return finished + not_held
+
+
+REMIND_BEFORE = timedelta(minutes=15)  # SPEC 7 "starts in 15 minutes"
+
+
+def remind_upcoming_lectures(institute: Institute, now: datetime | None = None) -> int:
+    """Send "starts soon" once for each scheduled lecture that starts in the
+    next 15 minutes. The 5-minute job calls it in the tenant context; a
+    locked row is left for the run that holds it."""
+    require_tenant_context(institute)
+    now = now or timezone.now()
+    due = Lecture.objects.select_for_update(skip_locked=True).filter(
+        status=LectureStatus.SCHEDULED,
+        reminded_at__isnull=True,
+        starts_at__gt=now,
+        starts_at__lte=now + REMIND_BEFORE,
+    )
+    sent = 0
+    with transaction.atomic():
+        for lecture in due.select_related("teacher__user"):
+            notices.lecture_soon(lecture)
+            lecture.reminded_at = now
+            lecture.save(update_fields=["reminded_at"])
+            sent += 1
+    return sent
 
 
 def taught_minutes(lecture: Lecture) -> int:
@@ -878,7 +934,7 @@ def preview_schedule(
 
 @transaction.atomic
 def create_schedule(
-    institute: Institute, details: ScheduleDetails
+    institute: Institute, details: ScheduleDetails, *, actor: Any = None
 ) -> RecurringSchedule:
     """Save the schedule; a task then makes its lectures up to the horizon."""
     require_tenant_context(institute)
@@ -887,11 +943,14 @@ def create_schedule(
     schedule = RecurringSchedule(institute=institute)
     _apply_schedule(schedule, details)
     _enqueue(schedule)
+    notices.schedule_saved(schedule, created=True, actor=actor)
     return schedule
 
 
 @transaction.atomic
-def update_schedule(schedule: RecurringSchedule, details: ScheduleDetails) -> int:
+def update_schedule(
+    schedule: RecurringSchedule, details: ScheduleDetails, *, actor: Any = None
+) -> int:
     """ "This and all future": lectures not started yet are made again from the
     new details. Lectures edited on their own stay. Returns how many lectures
     were removed for remaking."""
@@ -904,8 +963,12 @@ def update_schedule(schedule: RecurringSchedule, details: ScheduleDetails) -> in
     _, deleted = _future_lectures(schedule, now).delete()
     removed = deleted.get(Lecture._meta.label, 0)
     schedule.generated_until = None
+    old_teacher = schedule.teacher
     _apply_schedule(schedule, details)
     _enqueue(schedule)
+    notices.schedule_saved(
+        schedule, created=False, actor=actor, old_teacher=old_teacher
+    )
     return removed
 
 
@@ -927,18 +990,20 @@ def extend_schedule(schedule: RecurringSchedule, end_date: date) -> None:
 
 
 @transaction.atomic
-def stop_schedule(schedule: RecurringSchedule) -> int:
+def stop_schedule(schedule: RecurringSchedule, *, actor: Any = None) -> int:
     """No more lectures; the ones not started yet are cancelled (they stay in
     the lists as Cancelled). Returns how many were cancelled."""
     require_tenant_context(schedule.institute)
     _lock_and_reload(schedule)
     schedule.status = ScheduleStatus.STOPPED
     schedule.save(update_fields=["status", "updated_at"])
-    return Lecture.objects.filter(
+    cancelled = Lecture.objects.filter(
         schedule=schedule,
         status=LectureStatus.SCHEDULED,
         starts_at__gt=timezone.now(),
     ).update(status=LectureStatus.CANCELLED)
+    notices.schedule_stopped(schedule, cancelled=cancelled, actor=actor)
+    return cancelled
 
 
 def taught_pairs(teacher_ids: set[int]) -> set[tuple[int, int, int]]:
