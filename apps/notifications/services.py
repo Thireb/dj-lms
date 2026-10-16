@@ -9,14 +9,16 @@ notices always go.
 from __future__ import annotations
 
 import re
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from datetime import datetime, timedelta
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from django.db import models
 from django.utils import timezone
 
 from apps.core.tenancy import get_current_institute
+from apps.core.timezone_utils import resolve_user_timezone
 from apps.notifications.models import Notification
 
 RETENTION = timedelta(days=90)  # SPEC 7
@@ -69,13 +71,15 @@ _LINK = re.compile(r"^/(?!/)[^\s\\]*$")
 def notify(
     users: Iterable[Any],
     event: str,
-    text: str,
+    text: str | Callable[[Any], str],
     link: str = "",
     *,
     now: datetime | None = None,
 ) -> int:
     """Make one notification per recipient; returns how many were made.
-    Runs in the institute's tenant context."""
+    Runs in the institute's tenant context. ``text`` may be a function of
+    the recipient; it runs in the recipient's time zone, so a time in the
+    text is their local time."""
     if event not in EVENTS:
         raise ValueError(f"Unknown notification event: {event!r}")
     if link and not _LINK.match(link):
@@ -85,7 +89,6 @@ def notify(
         raise RuntimeError("notify needs the institute's tenant context.")
     switch = SWITCHES.get(EVENTS[event])
     now = now or timezone.now()
-    text = text.strip()[:TEXT_LENGTH]
     rows, seen = [], set()
     for user in users:
         if user.pk in seen or not user.is_active or user.institute_id != institute.pk:
@@ -98,13 +101,21 @@ def notify(
                 institute=institute,
                 user=user,
                 event=event,
-                text=text,
+                text=_text_for(text, user, institute),
                 link=link,
                 created_at=now,
             )
         )
     Notification.objects.bulk_create(rows)
     return len(rows)
+
+
+def _text_for(text: str | Callable[[Any], str], user: Any, institute: Any) -> str:
+    if callable(text):
+        zone = ZoneInfo(resolve_user_timezone(user, institute=institute))
+        with timezone.override(zone):
+            text = text(user)
+    return text.strip()[:TEXT_LENGTH]
 
 
 def unread_count(user: Any) -> int:
