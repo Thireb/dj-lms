@@ -1843,8 +1843,8 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
     (
         "schedule save queues the task",
         "apps/lectures/services.py",
-        "    _enqueue(schedule)\n    return schedule\n",
-        "    return schedule\n",
+        "    _enqueue(schedule)\n    notices.schedule_saved(schedule, created=True, actor=actor)\n",
+        "    notices.schedule_saved(schedule, created=True, actor=actor)\n",
     ),
     (
         "generate task skips inactive institutes",
