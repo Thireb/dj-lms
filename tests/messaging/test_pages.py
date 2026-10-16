@@ -85,9 +85,10 @@ def test_people_outside_the_thread_get_404(school) -> None:
 def test_admin_reads_threads_only_through_the_monitor(school, admin) -> None:
     """The admin is not in the thread: the inbox page cannot open it."""
     thread = _send(school, school.student_1.user, school.teacher_1.user)
-    assert (
-        signed_in(admin).get(_url("admin", "thread", pk=thread.pk)).status_code == 404
-    )
+    client = signed_in(admin)
+    assert client.get(_url("admin", "thread", pk=thread.pk)).status_code == 404
+    action = _url("admin", "action", pk=thread.pk) + "?do=trash"
+    assert client.post(action).status_code == 404
 
 
 @pytest.mark.django_db
