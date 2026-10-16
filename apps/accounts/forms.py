@@ -91,24 +91,52 @@ class SetPasswordForm(BaseForm):
         )
 
 
+# SPEC 4.22 and 7: the notification groups a user can switch off.
+ALERT_FIELDS = ["class_alerts", "fee_alerts"]
+
+
+def alert_fields(user: User) -> list[str]:
+    """Teachers get no fee events; the super admin gets no notifications."""
+    if user.role == User.Role.SUPER_ADMIN:
+        return []
+    if user.role == User.Role.TEACHER:
+        return ["class_alerts"]
+    return list(ALERT_FIELDS)
+
+
 class ProfileForm(BaseForm, forms.ModelForm):
     save_label = "Save profile"
 
     class Meta:
         model = User
-        fields = ["first_name", "last_name", "phone", "timezone"]
+        fields = ["first_name", "last_name", "phone", "timezone"] + ALERT_FIELDS
+        labels = {"class_alerts": "Class alerts", "fee_alerts": "Fee alerts"}
+        help_texts = {
+            "class_alerts": "Lecture changes, reminders, and quizzes that open soon.",
+            "fee_alerts": "Challans, receipts and payments.",
+        }
 
     def __init__(self, *args, user: User, cancel_url=None, **kwargs):
         self.user = user
         self.cancel_url = cancel_url
         kwargs.setdefault("instance", user)
         super().__init__(*args, **kwargs)
+        for name in ALERT_FIELDS:
+            if name not in alert_fields(user):
+                del self.fields[name]
 
     def clean_timezone(self) -> str:
         timezone_value = (self.cleaned_data.get("timezone") or "").strip()
         if timezone_value and timezone_value not in available_timezones():
             raise ValidationError("Select a valid time zone.")
         return timezone_value
+
+    def alert_section(self) -> list[Section]:
+        names = [name for name in ALERT_FIELDS if name in self.fields]
+        if not names:
+            return []
+        note = "System notices, such as new messages and grades, always show."
+        return [Section("Notifications", *names, description=note)]
 
     def get_layout(self):
         return Layout(
@@ -120,6 +148,7 @@ class ProfileForm(BaseForm, forms.ModelForm):
                 "timezone",
                 description="Times on every page use this time zone.",
             ),
+            *self.alert_section(),
             FormActions(self.save_label, self.cancel_url),
         )
 

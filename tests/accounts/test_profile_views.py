@@ -361,4 +361,6 @@ def test_mutation_profile_form_must_not_include_role_field() -> None:
         "last_name",
         "phone",
         "timezone",
+        "class_alerts",
+        "fee_alerts",
     }

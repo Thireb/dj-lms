@@ -94,7 +94,7 @@ The product owner did not accept the current look (navigation, tables, forms, si
 
 ## Phase 6: Notifications and messaging
 
-- [ ] 6.1 Notification service and bell. Part 1 built (service): the `notifications` app (`Notification`), `notify` with every SPEC 7 event and its group, the fee and class alert switches on `User`, and the nightly delete after 90 days. Part 2: the bell, the Notifications page and the switches on My profile.
+- [x] 6.1 Notification service and bell. Part 1 built (service): the `notifications` app (`Notification`), `notify` with every SPEC 7 event and its group, the fee and class alert switches on `User`, and the nightly delete after 90 days. Part 2 built (pages): the bell in every portal (the latest 8 in a panel, the unread count every 60 seconds), the Notifications page with Open and Mark all as read, and the switches on My profile. The events are hooked in 6.2.
 - [ ] 6.2 Hook notifications into lectures, assignments, challans.
 - [ ] 6.3 Messaging: inbox, sent, starred, drafts, trash; admin broadcast and monitor.
 
