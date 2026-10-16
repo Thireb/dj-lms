@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{{ title }}</title>
+<style>
+{% include "ui/print/tokens.css" %}
+  @page { size: A4; margin: 14mm 12mm 16mm; @bottom-center { content: "Page " counter(page) " of " counter(pages); font-size: 8pt; color: var(--muted); } }
+  body { margin: 0; font-family: "DejaVu Sans", Arial, sans-serif; font-size: 9pt; color: var(--text); }
+  h1 { font-size: 13pt; margin: 0; color: var(--primary); }
+  .institute { font-size: 8pt; color: var(--ink-2); }
+  h2 { font-size: 11pt; margin: 5mm 0 1mm; }
+  .range { color: var(--muted); margin-bottom: 3mm; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 1.5mm 1.5mm; border-bottom: 1px solid var(--border); text-align: right; }
+  th:first-child, td:first-child { text-align: left; }
+  thead th { color: var(--muted); font-weight: normal; border-bottom: 1.5px solid var(--border-strong); }
+  tr.total td { font-weight: bold; border-top: 1.5px solid var(--text); }
+</style>
+</head>
+<body>
+  <h1>{{ institute.name }}</h1>
+  <div class="institute">{{ institute.address }}{% if institute.phone %} · {{ institute.phone }}{% endif %}</div>
+  <h2>{{ title }}</h2>
+  <div class="range">{{ range }}{% if batch %} · Batch: {{ batch }}{% endif %} · Printed {{ printed }}</div>
+  <table>
+    <thead><tr>{% for heading in headings %}<th>{{ heading }}</th>{% endfor %}</tr></thead>
+    <tbody>
+      {% for row in rows %}<tr{% if forloop.last and has_total %} class="total"{% endif %}>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>{% empty %}<tr><td colspan="{{ headings|length }}">Nothing in these dates.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>

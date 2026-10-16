@@ -184,3 +184,34 @@ def receipt_context(payment: Any, institute: Any) -> dict[str, Any]:
         "received_by": (by.get_full_name() or by.email) if by else "-",
         "month": month_text(challan.month),
     }
+
+
+# Report prints (SPEC 9.4: header, date range, table, totals row, page numbers)
+
+
+def table_pdf(
+    institute: Any,
+    *,
+    title: str,
+    range_text: str,
+    headings: list[str],
+    rows: list[list[str]],
+    has_total: bool,
+    batch: str = "",
+) -> bytes:
+    from weasyprint import HTML
+
+    html = render_to_string(
+        "finance/report_pdf.html",
+        {
+            "institute": institute,
+            "title": title,
+            "range": range_text,
+            "batch": batch,
+            "headings": headings,
+            "rows": rows,
+            "has_total": has_total,
+            "printed": date_text(timezone.localdate()),
+        },
+    )
+    return HTML(string=html).write_pdf()

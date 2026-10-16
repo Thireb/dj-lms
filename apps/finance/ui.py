@@ -295,3 +295,36 @@ class ReceiptImage(Component):
 
     def __init__(self, url, alt, **props):
         super().__init__(url=safe_url(url), alt=alt, **props)
+
+
+# Reports (roadmap 7.3c)
+
+
+class ReportTable(DataTable):
+    """Daily, monthly or yearly fees (SPEC 3), with a Total row."""
+
+    empty_title = "No challans or payments in these dates."
+
+    def __init__(self, report, institute, **props):
+        from apps.finance.reports import period_text
+
+        self.institute, self.kind = institute, report.kind
+        rows = [(period_text(report.kind, row.period), row) for row in report.rows]
+        if report.rows:
+            rows.append(("Total", report.totals))
+        super().__init__(rows=rows, **props)
+
+    @property
+    def columns(self) -> list[Column]:  # type: ignore[override]
+        label = {"daily": "Date", "monthly": "Month", "yearly": "Year"}[self.kind]
+        cash = lambda value: money(value, self.institute)  # noqa: E731
+        return [
+            Column("period", label, lambda item: item[0]),
+            Column("challans", "Challans", lambda item: str(item[1].challans)),
+            Column("billed", "Billed", lambda item: cash(item[1].billed)),
+            Column("collected", "Collected", lambda item: cash(item[1].collected)),
+            Column("discounts", "Discounts", lambda item: cash(item[1].discounts)),
+            Column(
+                "outstanding", "Outstanding", lambda item: cash(item[1].outstanding)
+            ),
+        ]

@@ -37,13 +37,14 @@ from apps.finance.models import (
     ReceiptStatus,
     ReceiptSubmission,
 )
-from apps.finance.pdf import challans_pdf, receipt_pdf
+from apps.finance.pdf import challans_pdf, receipt_pdf, table_pdf
 from apps.finance.receipts import (
     approve_receipt,
     open_challans_of,
     reject_receipt,
     submit_receipt,
 )
+from apps.finance.reports import fee_report, report_csv
 from apps.finance.services import (
     OVERDUE,
     cancel_challan,
@@ -70,6 +71,7 @@ from apps.finance.ui import (
     PayTable,
     ReceiptImage,
     ReceiptInboxTable,
+    ReportTable,
     SkippedTable,
     challan_badge,
     challan_url,
@@ -1158,3 +1160,152 @@ class AdminReceiptFileView(ReceiptMixin, PortalPageView):
 
     def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
         return receipt_file_response(self.get_receipt())
+
+
+# Reports (Finance menu, roadmap 7.3c, SPEC 3 and 9.4)
+
+
+def academic_year_start(institute: Any, today: date) -> date:
+    """The first day of the current academic year (owner decision: a
+    setting, April by default)."""
+    month = institute.settings.academic_year_start_month
+    year = today.year if today.month >= month else today.year - 1
+    return date(year, month, 1)
+
+
+class FeeReportPage(ChallanMixin, ListPage):
+    kind = "daily"
+    titles = {
+        "daily": "Daily report",
+        "monthly": "Monthly report",
+        "yearly": "Yearly report",
+    }
+
+    @property
+    def title(self) -> str:  # type: ignore[override]
+        return self.titles[self.kind]
+
+    def default_range(self) -> tuple[date, date]:
+        today = timezone.localdate()
+        if self.kind == "daily":
+            return today.replace(day=1), today
+        if self.kind == "monthly":
+            return academic_year_start(self.get_institute(), today), today
+        return date(today.year - 4, 1, 1), today
+
+    def filters(self) -> dict[str, Any]:
+        params = self.request.GET
+        start, end = self.default_range()
+        chosen_start = parse_iso(search_param(params.get("from"))) or start
+        chosen_end = parse_iso(search_param(params.get("to"))) or end
+        if chosen_end < chosen_start:
+            chosen_start, chosen_end = chosen_end, chosen_start
+        return {
+            "start": chosen_start,
+            "end": chosen_end,
+            "batch": id_param(search_param(params.get("batch"))),
+        }
+
+    def report(self, filters: dict[str, Any]) -> Any:
+        return fee_report(
+            self.request.user,
+            self.kind,
+            filters["start"],
+            filters["end"],
+            batch_id=filters["batch"],
+        )
+
+    def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        export = request.GET.get("export")
+        if export in ("csv", "pdf"):
+            filters = self.filters()
+            report = self.report(filters)
+            name = f"{self.kind}-report-{filters['start']}-{filters['end']}"
+            if export == "csv":
+                response = HttpResponse(report_csv(report), content_type="text/csv")
+                response["Content-Disposition"] = f'attachment; filename="{name}.csv"'
+                return response
+            return pdf_response(self.report_pdf(report, filters), f"{name}.pdf")
+        return super().get(request, *args, **kwargs)
+
+    def report_pdf(self, report: Any, filters: dict[str, Any]) -> bytes:
+        institute = self.get_institute()
+        table = ReportTable(report, institute=institute)
+        rows = [
+            [str(column.cell(item)) for column in table.columns]
+            for item in table.props["rows"]
+        ]
+        batch = (
+            Batch.objects.for_user(self.request.user)
+            .filter(pk=filters["batch"])
+            .first()
+        )
+        return table_pdf(
+            institute,
+            title=self.title,
+            range_text=f"{date_text(filters['start'])} to {date_text(filters['end'])}",
+            headings=[column.label for column in table.columns],
+            rows=rows,
+            has_total=bool(report.rows),
+            batch=batch.name if batch else "",
+        )
+
+    def get_actions(self) -> list[Any]:
+        query = self.request.GET.copy()
+        query.pop("page", None)
+        links = []
+        for export, label, icon in (
+            ("pdf", "Print", "download"),
+            ("csv", "Export CSV", "file"),
+        ):
+            query["export"] = export
+            links.append(
+                Button(
+                    label, url=f"?{query.urlencode()}", variant="secondary", icon=icon
+                )
+            )
+        return links
+
+    def get_components(self) -> dict[str, Any]:
+        filters = self.filters()
+        batches = Batch.objects.for_user(self.request.user).order_by("name")
+        return {
+            "filters": FilterBar(
+                [
+                    {
+                        "name": "from",
+                        "label": "From",
+                        "value": filters["start"].isoformat(),
+                        "input_type": "date",
+                    },
+                    {
+                        "name": "to",
+                        "label": "To",
+                        "value": filters["end"].isoformat(),
+                        "input_type": "date",
+                    },
+                    {
+                        "name": "batch",
+                        "label": "Batch",
+                        "value": str(filters["batch"] or ""),
+                        "options": [
+                            ("", "Any batch"),
+                            *((str(b.pk), b.name) for b in batches),
+                        ],
+                    },
+                ]
+            ),
+            "table": ReportTable(self.report(filters), institute=self.get_institute()),
+        }
+
+
+class DailyReportPage(FeeReportPage):
+    kind = "daily"
+
+
+class MonthlyReportPage(FeeReportPage):
+    kind = "monthly"
+
+
+class YearlyReportPage(FeeReportPage):
+    kind = "yearly"

@@ -270,4 +270,9 @@ urlpatterns = [
         finance.AdminReceiptFileView.as_view(),
         name="receipt_file",
     ),
+    path("fees/daily/", finance.DailyReportPage.as_view(), name="fee_report_daily"),
+    path(
+        "fees/monthly/", finance.MonthlyReportPage.as_view(), name="fee_report_monthly"
+    ),
+    path("fees/yearly/", finance.YearlyReportPage.as_view(), name="fee_report_yearly"),
 ]
