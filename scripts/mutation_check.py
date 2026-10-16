@@ -7,14 +7,15 @@ Usage: uv run python scripts/mutation_check.py [name-filter] [--jobs N]
 (default origin/main): use it while building, and the full run at handover.
 
 Prints CAUGHT, MISSED or STALE per entry and exits 1 if any entry is MISSED
-or STALE. Commit first: the entries run against HEAD (cores - 2 workers at a
-time), each worker in its own
-git worktree with its own test database, so the working tree is never touched.
+or STALE. Commit first: the entries run against HEAD, one worker per core
+minus 2, each in its own git worktree with its own test database, so the
+working tree is never touched.
 
 To be fast without changing the result, each entry runs in up to 3 stages and
 stops at the first failure: the test that caught it last time (cached in
-mutation_cache.json in the shared .git folder), then the tests of the app that owns the
-file, then the full suite. An entry is MISSED only when the full suite passes.
+mutation_cache.json in the shared .git folder), then the tests of the app
+that owns the file, then the full suite. An entry is MISSED only when the
+full suite passes.
 """
 
 from __future__ import annotations
