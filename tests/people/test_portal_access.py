@@ -328,3 +328,27 @@ def test_a_blocked_student_can_still_message(school) -> None:
     assert client.get(response["Location"]).status_code == 200
     # The other student pages stay closed.
     assert client.get(reverse("student:assignment_list")).status_code == 403
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "wanted, back",
+    [
+        ("/admin/fees/defaulters/?batch=3", "/admin/fees/defaulters/?batch=3"),
+        ("https://evil.example.com/admin/", None),
+        ("//evil.example.com/admin/", None),
+        ("/admin//evil.example.com", None),
+        ("/admin/\\evil.example.com", None),
+        ("/student/fees/", None),
+        ("", None),
+    ],
+)
+def test_action_goes_back_only_to_an_admin_path(
+    school, institute_a, wanted, back
+) -> None:
+    """Roadmap 7.3c: Block / Unblock on Fee defaulters returns there."""
+    url = reverse("admin:portal_access_action", kwargs={"pk": school.student_1.pk})
+
+    response = _admin_client(institute_a).post(url, {"action": "block", "next": wanted})
+
+    assert response["Location"] == (back or reverse("admin:portal_access"))

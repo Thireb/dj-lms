@@ -429,6 +429,8 @@ Header, receipt no., date, student, challan no., amount, method, balance after, 
 Collection and defaulter reports: header, date range, table, totals row, page numbers.
 Built in 7.3c (assumed, check against the demo): Challans, Billed and Discounts count the challans of each row (daily rows by issue date, monthly and yearly rows by the challan month); Collected counts the payments made in the row's dates; Outstanding is what those challans still owe today; cancelled challans are left out. Default dates: Daily this month, Monthly the academic year so far, Yearly the last 5 years. Export CSV puts a quote before any cell that a spreadsheet would run as a formula.
 
+Fee defaulters and the Challan dashboard, built in 7.3c (assumed): a defaulter row adds up every pending or partial challan due more than the grace days ago; "Unpaid months" counts those challans. Phone is the student's guardian phone, else the first guardian's phone. Message guardian shows with the Messages feature and menu; Block / Unblock shows with the People menu and returns to the list. The Challan dashboard counts this month's challans (cancelled left out of the money), Collected is the payments made from the 1st to today, and Overdue is a pending or partial challan of this month past its due date. The defaulters count covers all months.
+
 ### 9.5 Certificate (optional, build last)
 Landscape. Institute logo, "Certificate of Completion", student name, batch and subjects, date, unique code and verify link, signature lines. Issued by admin per student on request. Rules for when to issue are manual in v1.
 

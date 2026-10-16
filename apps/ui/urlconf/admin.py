@@ -275,4 +275,12 @@ urlpatterns = [
         "fees/monthly/", finance.MonthlyReportPage.as_view(), name="fee_report_monthly"
     ),
     path("fees/yearly/", finance.YearlyReportPage.as_view(), name="fee_report_yearly"),
+    path(
+        "fees/defaulters/", finance.FeeDefaultersPage.as_view(), name="fee_defaulters"
+    ),
+    path(
+        "dashboard/challan/",
+        finance.ChallanDashboardPage.as_view(),
+        name="dashboard_challan",
+    ),
 ]

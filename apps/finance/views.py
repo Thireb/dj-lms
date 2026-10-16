@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import date
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlencode
@@ -18,6 +18,7 @@ from django.utils import timezone
 
 from apps.academics.models import Batch
 from apps.core import menus as menu_keys
+from apps.core.menus import user_has_menu
 from apps.core.query import id_param, search_param
 from apps.core.roles import Role
 from apps.finance.forms import (
@@ -44,7 +45,13 @@ from apps.finance.receipts import (
     reject_receipt,
     submit_receipt,
 )
-from apps.finance.reports import fee_report, report_csv
+from apps.finance.reports import (
+    challan_dashboard,
+    defaulters,
+    defaulters_csv,
+    fee_report,
+    report_csv,
+)
 from apps.finance.services import (
     OVERDUE,
     cancel_challan,
@@ -65,6 +72,7 @@ from apps.finance.tasks import queue_challans
 from apps.finance.ui import (
     ChallanLineTable,
     ChallanTable,
+    DefaulterTable,
     FeePlanTable,
     GuardianReceiptTable,
     PaymentTable,
@@ -89,10 +97,18 @@ from apps.ui.components import (
     FilterBar,
     Pagination,
     SectionCard,
+    StatCard,
 )
+from apps.ui.components.block_stack import BlockStack, ButtonRow
 from apps.ui.components.data import DetailList
 from apps.ui.components.forms import CrispyForm, PortalPostForm
-from apps.ui.views.pages import DetailPage, FormPage, ListPage, PortalPageView
+from apps.ui.views.pages import (
+    DashboardPage,
+    DetailPage,
+    FormPage,
+    ListPage,
+    PortalPageView,
+)
 
 PAGE_SIZE = 25
 CHALLAN_STATUS_OPTIONS = [
@@ -1309,3 +1325,204 @@ class MonthlyReportPage(FeeReportPage):
 
 class YearlyReportPage(FeeReportPage):
     kind = "yearly"
+
+
+MAX_FILTER_AMOUNT = Decimal("999999999")
+
+
+class FeeDefaultersPage(ChallanMixin, ListPage):
+    """SPEC 3 Fee Defaulters: overdue longer than the grace days (SPEC 6.1),
+    with the batch and minimum amount filters, Print and Export CSV."""
+
+    title = "Fee defaulters"
+
+    def filters(self) -> dict[str, Any]:
+        params = self.request.GET
+        raw_min = search_param(params.get("min"))
+        try:
+            minimum = Decimal(raw_min) if raw_min else None
+        except InvalidOperation:
+            minimum = None
+        if minimum is not None and not (
+            minimum.is_finite() and 0 < minimum <= MAX_FILTER_AMOUNT
+        ):
+            minimum = None
+        return {
+            "batch": id_param(search_param(params.get("batch"))),
+            "min": minimum,
+            "raw_min": raw_min,
+        }
+
+    def rows(self, filters: dict[str, Any]) -> list[Any]:
+        return defaulters(
+            self.request.user,
+            self.get_institute(),
+            timezone.localdate(),
+            batch_id=filters["batch"],
+            min_amount=filters["min"],
+        )
+
+    def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        export = request.GET.get("export")
+        if export in ("csv", "pdf"):
+            rows = self.rows(self.filters())
+            if export == "csv":
+                response = HttpResponse(defaulters_csv(rows), content_type="text/csv")
+                response["Content-Disposition"] = (
+                    'attachment; filename="defaulters.csv"'
+                )
+                return response
+            return pdf_response(self.defaulters_pdf(rows), "defaulters.pdf")
+        return super().get(request, *args, **kwargs)
+
+    def defaulters_pdf(self, rows: list[Any]) -> bytes:
+        institute = self.get_institute()
+        table_rows = [
+            [
+                f"{row.student} ({row.student.student_code})",
+                (row.guardian.get_full_name() or row.guardian.email)
+                if row.guardian
+                else "-",
+                row.phone or "-",
+                str(row.unpaid_months),
+                money(row.total_due, institute),
+                date_text(row.oldest_due),
+                "Yes" if row.blocked else "No",
+            ]
+            for row in rows
+        ]
+        total = sum((row.total_due for row in rows), Decimal("0"))
+        table_rows.append(["Total", "", "", "", money(total, institute), "", ""])
+        return table_pdf(
+            institute,
+            title="Fee defaulters",
+            range_text=f"On {date_text(timezone.localdate())}",
+            headings=[
+                "Student",
+                "Guardian",
+                "Phone",
+                "Unpaid months",
+                "Total due",
+                "Oldest due date",
+                "Portal blocked",
+            ],
+            rows=table_rows,
+            has_total=True,
+        )
+
+    def get_subtitle(self) -> str:
+        days = self.get_institute().settings.grace_days_after_due
+        return f"Students with a challan overdue for more than {days} grace days."
+
+    def get_actions(self) -> list[Any]:
+        query = self.request.GET.copy()
+        links = []
+        for export, label, icon in (
+            ("pdf", "Print", "download"),
+            ("csv", "Export CSV", "file"),
+        ):
+            query["export"] = export
+            links.append(
+                Button(
+                    label, url=f"?{query.urlencode()}", variant="secondary", icon=icon
+                )
+            )
+        return links
+
+    def get_components(self) -> dict[str, Any]:
+        filters = self.filters()
+        user = self.request.user
+        batches = Batch.objects.for_user(user).order_by("name")
+        features = getattr(self.get_institute(), "features", None) or ()
+        return {
+            "filters": FilterBar(
+                [
+                    {
+                        "name": "batch",
+                        "label": "Batch",
+                        "value": str(filters["batch"] or ""),
+                        "options": [
+                            ("", "Any batch"),
+                            *((str(b.pk), b.name) for b in batches),
+                        ],
+                    },
+                    {
+                        "name": "min",
+                        "label": "Minimum due",
+                        "value": filters["raw_min"],
+                        "placeholder": "Amount",
+                    },
+                ]
+            ),
+            "table": DefaulterTable(
+                self.rows(filters),
+                institute=self.get_institute(),
+                back_url=self.request.get_full_path(),
+                can_message="messaging" in features
+                and user_has_menu(user, menu_keys.MESSAGES),
+                can_block=user_has_menu(user, menu_keys.PEOPLE),
+            ),
+        }
+
+
+class ChallanDashboardPage(ChallanMixin, DashboardPage):
+    """SPEC 8 Challan dashboard: billed, collected and outstanding this
+    month, challans by status, waiting receipts, defaulters."""
+
+    title = "Challan dashboard"
+    menu_key = menu_keys.DASHBOARDS
+
+    def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        self.numbers = challan_dashboard(
+            request.user, self.get_institute(), timezone.localdate()
+        )
+        return super().get(request, *args, **kwargs)
+
+    def get_stat_cards(self) -> list[Any]:
+        numbers, institute = self.numbers, self.get_institute()
+        month = month_text(numbers.month)
+        return [
+            StatCard(
+                money(numbers.billed, institute),
+                f"Billed in {month}",
+                icon="receipt-text",
+                tone="lead",
+            ),
+            StatCard(
+                money(numbers.collected, institute),
+                f"Collected in {month}",
+                icon="banknote",
+            ),
+            StatCard(
+                money(numbers.outstanding, institute),
+                f"Outstanding for {month}",
+                icon="coins",
+            ),
+            StatCard(str(numbers.waiting_receipts), "Receipts waiting", icon="inbox"),
+        ]
+
+    def get_sections(self) -> list[Any]:
+        numbers = self.numbers
+        rows = [(label, str(count)) for label, count in numbers.by_status]
+        rows.append(("Defaulters (all months)", str(numbers.defaulters)))
+        blocks: list[Any] = [DetailList(rows)]
+        if user_has_menu(self.request.user, menu_keys.FINANCE):
+            blocks.append(
+                ButtonRow(
+                    items=[
+                        Button(label, url=reverse(name), variant="secondary")
+                        for label, name in (
+                            ("Challan records", "admin:challan_list"),
+                            ("Receipt inbox", "admin:receipt_inbox"),
+                            ("Fee defaulters", "admin:fee_defaulters"),
+                        )
+                    ]
+                )
+            )
+        return [
+            SectionCard(
+                title=f"Challans for {month_text(numbers.month)}",
+                icon="list",
+                body=BlockStack(blocks=blocks),
+            )
+        ]
