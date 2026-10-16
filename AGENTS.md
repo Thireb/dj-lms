@@ -78,6 +78,7 @@ Cursor users: also copy the key rules (sections 2 to 6) into `.cursor/rules/` so
 - Work on one feature at a time, following `ROADMAP.md` order.
 - ~~Small changes. One feature per branch and per commit group.~~
   Changed 2026-10-16 (owner approved): one whole roadmap item per branch (for example 6.1), with one commit group per logical step. Do not wait for a merge: start the next item on a new branch on top of the branch that waits (a stacked branch).
+  Changed again 2026-10-16 (owner approved): the item branches stay local. Each finished item is merged into a local phase branch (`phase/<n>`, `git merge --no-ff`), and the owner opens one PR per phase. The full mutation check and the phase audit run on the phase branch.
 - Commit messages: `feat(app): short text`, `fix(app): short text`, `docs: short text`.
 - Before editing, list the files you plan to change. After editing, list what changed.
 - ~~If a task is bigger than about 10 files, split it and ask which part to do first.~~

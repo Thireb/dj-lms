@@ -11,6 +11,7 @@ This project's coding rules live in `AGENTS.md` (imported above). Everything bel
 - Claude Code **builds features and audits them**.
 - Build one whole roadmap item per branch (for example 6.1), started from the latest `main`. Commit, but do not push. The user pushes and opens the PR.
 - Do not wait for a merge. Start the next item on a new branch on top of the branch that waits (a stacked branch). If an item is bigger than about 10 files, split it into stacked branches in roadmap order; the owner approved this on 2026-10-16, so do not stop to ask which part comes first (AGENTS.md 8). If a lower branch changes in review, rebase the branches above it.
+- One PR per phase (owner decision 2026-10-16). The part branches stay local. When a part is done and checked, merge it into the local phase branch `phase/<n>` with `git merge --no-ff <part>`, so each part stays one merge commit. The owner pushes `phase/<n>` and opens one PR. Run the full mutation check and the phase audit on `phase/<n>` before the handover.
 - At the start of a phase, read its docs and send the owner one list of the doc gaps and decisions, so the build does not stop for questions later.
 - Before handing over a branch, run the PR review procedure below on your own diff.
 - With every branch, write the PR description from `.github/pull_request_template.md`. Always fill "Deviations from docs": each "(assumed)" choice, each doc gap, and each part left out on purpose. Write "None" only when there is none.
@@ -77,16 +78,21 @@ When asked to review a PR (use `gh pr view <n>` and `gh pr diff <n>`, or check o
 
 ## Handover commands
 
-Give the owner commands like these, one block per stack, lowest branch first:
+At the end of a phase, give the owner one block for the phase branch (changed 2026-10-16: before, every part branch got its own PR):
 
 ```bash
-git push -u origin feat/a
-gh pr create --base main --head feat/a --title "feat(app): ..." --body-file <path to PR body>
-git push -u origin feat/b
-gh pr create --base feat/a --head feat/b --title "feat(app): ..." --body-file <path>
+git push -u origin phase/6
+gh pr create --base main --head phase/6 --title "Phase 6: ..." --body-file <path to PR body>
 ```
 
-Merge in order with a merge commit (not squash, not rebase), so the commits of the next branch stay the same. When `feat/a` is merged and its branch is deleted, GitHub moves the next PR's base to `main`.
+The PR body lists each part with its summary and "Deviations from docs", then the phase checks and the audit. Merge it with a merge commit (not squash), so the part merge commits stay in the history.
+
+A branch outside a phase (a fix or tooling) still gets its own block:
+
+```bash
+git push -u origin chore/x
+gh pr create --base main --head chore/x --title "chore: ..." --body-file <path>
+```
 
 ## Out of scope for now
 
