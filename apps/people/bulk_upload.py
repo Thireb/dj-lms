@@ -12,6 +12,7 @@ import io
 import time
 import zipfile
 from dataclasses import dataclass, field
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from django.contrib.auth.password_validation import validate_password
@@ -23,6 +24,8 @@ from apps.academics.models import Batch, ClassLabel, Subject
 from apps.accounts.models import User
 from apps.core.roles import Role
 from apps.core.tenancy import require_tenant_context
+from apps.finance.models import DiscountType, FeePlan
+from apps.finance.services import FeeChoice, check_fee_choices
 from apps.institutes.models import Institute
 from apps.people.models import Gender, StudentProfile, cnic_validator
 from apps.people.services import StudentDetails, enrol_student, split_full_name
@@ -38,7 +41,7 @@ READ_SECONDS = 5
 # Kept exactly as typed: no space clean-up for passwords.
 RAW_COLUMNS = ("student_password", "guardian_password")
 # Must be text cells in Excel, or a leading 0 is lost.
-TEXT_COLUMNS = ("phone", "guardian_phone", "cnic", *RAW_COLUMNS)
+TEXT_COLUMNS = ("phone", "guardian_phone", "cnic", "discount", *RAW_COLUMNS)
 
 REQUIRED_COLUMNS = (
     "full_name",
@@ -60,6 +63,8 @@ OPTIONAL_COLUMNS = (
     "address",
     "city",
     "guardian_password",
+    "fee_plans",  # required in each row when the institute has fees (7.1)
+    "discount",
 )
 TEMPLATE_COLUMNS = (
     "full_name",
@@ -75,6 +80,8 @@ TEMPLATE_COLUMNS = (
     "city",
     "batches",
     "subjects",
+    "fee_plans",
+    "discount",
     "student_email",
     "student_password",
     "guardian_email",
@@ -91,6 +98,15 @@ HELP_ROWS = (
         "Required. Subjects for each batch: Morning:Math|Physics; Evening:Chemistry",
     ),
     ("guardian_password", "Leave blank when the guardian already has an account."),
+    (
+        "fee_plans",
+        "Required when the institute has fees. Fee plan names: Tuition, Lab",
+    ),
+    (
+        "discount",
+        "Optional. A percent for every plan (10%) or an amount off the first plan "
+        "(500).",
+    ),
 )
 
 
@@ -107,6 +123,7 @@ class RowCheck:
     errors: list[str] = field(default_factory=list)
     selections: dict[Batch, list[Subject]] = field(default_factory=dict)
     details: StudentDetails | None = None
+    fee_choices: list[FeeChoice] | None = None  # None: no fees feature
 
     @property
     def ok(self) -> bool:
@@ -237,6 +254,8 @@ class _Lookups:
         self.subjects = by_name(Subject)
         self.labels = by_name(ClassLabel)
         self.institute = institute
+        self.fees = "fees" in (getattr(institute, "features", None) or ())
+        self.fee_plans = by_name(FeePlan) if self.fees else {}
 
 
 def _parse_subjects(text: str) -> list[tuple[str, list[str]]]:
@@ -270,6 +289,48 @@ def _check_lists(row: RowCheck, lookups: _Lookups) -> None:
                 row.errors.append(f"Unknown or inactive subject: {name}.")
             else:
                 row.selections.setdefault(batch, []).append(subject)
+
+
+DISCOUNT_HELP = "discount: write a percent like 10% or an amount like 500."
+
+
+def _check_fees(row: RowCheck, lookups: _Lookups) -> None:
+    """fee_plans (comma list) and discount (SPEC 5): a percent applies to
+    every plan, an amount to the first plan (assumed)."""
+    if not lookups.fees:
+        return
+    names = [name.strip() for name in row.values["fee_plans"].split(",")]
+    names = [name for name in names if name]
+    if not names:
+        row.errors.append("Missing: fee_plans.")
+        return
+    plans = []
+    for name in names:
+        plan = lookups.fee_plans.get(name.lower())
+        if plan is None:
+            row.errors.append(f"Unknown or inactive fee plan: {name}.")
+        else:
+            plans.append(plan)
+    text = row.values["discount"].strip().replace(",", "")
+    try:
+        value = Decimal(text.rstrip("%").strip() or "0")
+    except InvalidOperation:
+        row.errors.append(DISCOUNT_HELP)
+        return
+    if not plans:
+        return
+    if text.endswith("%"):
+        row.fee_choices = [
+            FeeChoice(plan, DiscountType.PERCENT, value) for plan in plans
+        ]
+    elif value:
+        first, *rest = plans
+        row.fee_choices = [FeeChoice(first, DiscountType.AMOUNT, value)]
+        row.fee_choices += [FeeChoice(plan) for plan in rest]
+    else:
+        row.fee_choices = [FeeChoice(plan) for plan in plans]
+    for message in check_fee_choices(row.fee_choices, set()).values():
+        row.errors.append(f"discount: {message}")
 
 
 def _check_details(row: RowCheck, lookups: _Lookups) -> None:
@@ -420,6 +481,7 @@ def check_rows(institute: Institute, rows: list[dict[str, Any]]) -> list[RowChec
                         "kept, then type the number again."
                     )
             _check_lists(row, lookups)
+            _check_fees(row, lookups)
             _check_details(row, lookups)
             _check_fields(row)
             _check_accounts(row, institute, student_emails, new_guardians)
@@ -453,6 +515,7 @@ def import_rows(institute: Institute, rows: list[dict[str, Any]]) -> ImportResul
                 guardian_name=values["guardian_name"],
                 guardian_email=values["guardian_email"],
                 guardian_password=values["guardian_password"],
+                fee_plans=row.fee_choices,
             )
         except ValidationError as error:
             row.errors.extend(error.messages)

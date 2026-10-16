@@ -109,7 +109,7 @@ Setup order the reference teaches: Campus, Classes, Batches, Subjects, Fee Plans
 - [ ] Student "Fee Details": view only (total billed, paid, due, pending challans); payment is done by the guardian.
 - [ ] Guardian "Fee & Challans": bills, due dates, paid/unpaid.
 - [ ] Reports: Daily, Monthly, Yearly collection, Fee Defaulters; set a date range, print or export.
-- [ ] Discounts per student; fee plans attached at enrolment.
+- [x] Discounts per student; fee plans attached at enrolment. Built in 7.1: a discount per plan (amount or percent) on Enrol, Edit and the bulk upload.
 
 ## 9. Teacher salary (P)
 

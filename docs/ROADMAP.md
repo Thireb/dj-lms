@@ -101,7 +101,7 @@ The product owner did not accept the current look (navigation, tables, forms, si
 
 ## Phase 7: Fees (Premium)
 
-- [ ] 7.1 Fee structures. Part 1 built: the `finance` app (`FeePlan`, `StudentFeePlan`), admin Fee plans (list with search and the students count, Add, Edit, Activate and Deactivate), the monthly fee rule with discounts, and the late fee and academic year settings (owner decisions 2026-10-16). Part 2 built: fee plans and discounts on Enrol and Edit, and the Monthly fee column on All Students. Part 3: the fee plan columns in the bulk upload.
+- [x] 7.1 Fee structures. Part 1 built: the `finance` app (`FeePlan`, `StudentFeePlan`), admin Fee plans (list with search and the students count, Add, Edit, Activate and Deactivate), the monthly fee rule with discounts, and the late fee and academic year settings (owner decisions 2026-10-16). Part 2 built: fee plans and discounts on Enrol and Edit, and the Monthly fee column on All Students. Part 3 built: the `fee_plans` and `discount` columns of the bulk upload.
 - [ ] 7.2 Bulk challan generation (Celery) and challan PDF.
 - [ ] 7.3 Process Payment (office), payments, status, fee history.
 - [ ] 7.3b Receipt inbox: guardian Fee Pay upload, admin approve/reject with message.
