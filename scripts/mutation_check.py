@@ -3592,6 +3592,66 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "    if changed:\n",
         "    if True:\n",
     ),
+    (
+        "students reach only the teachers of their batches (6.3)",
+        "apps/messaging/services.py",
+        "        admins | Q(role=Role.TEACHER, teacher_profile__in=teachers)\n",
+        "        admins | Q(role=Role.TEACHER)\n",
+    ),
+    (
+        "teachers reach the students of their batches (6.3)",
+        "apps/messaging/services.py",
+        "            | Q(role=Role.STUDENT, student_profile__in=students)\n",
+        "            | Q(role=Role.STUDENT)\n",
+    ),
+    (
+        "a message needs a reachable recipient (6.3)",
+        "apps/messaging/services.py",
+        "    if recipient is None or not can_message(sender, recipient):\n",
+        "    if recipient is None:\n",
+    ),
+    (
+        "people see only their own threads (6.3)",
+        "apps/messaging/models.py",
+        '        return scoped.filter(members__user_id=getattr(user, "pk", None)).distinct()\n',
+        "        return scoped\n",
+    ),
+    (
+        "thread state and drafts are the owner's only (6.3)",
+        "apps/messaging/models.py",
+        '        return scoped.filter(**{self.owner_field: getattr(user, "pk", None)})\n',
+        "        return scoped\n",
+    ),
+    (
+        "only a member replies (6.3)",
+        "apps/messaging/services.py",
+        "    if member is None:\n        raise ValidationError(NOT_A_MEMBER)\n",
+        "",
+    ),
+    (
+        "no reply when no one else is active (6.3)",
+        "apps/messaging/services.py",
+        "    if not others.filter(user__is_active=True).exists():\n",
+        "    if False:\n",
+    ),
+    (
+        "delete forever only from the trash (6.3)",
+        "apps/messaging/services.py",
+        "    if member.trashed_at is None:\n",
+        "    if False:\n",
+    ),
+    (
+        "unread means newer than the last read (6.3)",
+        "apps/messaging/services.py",
+        "            is_unread=Exists(newer),\n",
+        "            is_unread=Exists(_from_others(user)),\n",
+    ),
+    (
+        "a reply brings the thread back for the others (6.3)",
+        "apps/messaging/services.py",
+        "    others.update(trashed_at=None, deleted=False)\n",
+        "",
+    ),
 ]
 
 

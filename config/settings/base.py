@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     "apps.core",
     "apps.institutes",
     "apps.lectures",
+    "apps.messaging",
     "apps.notifications",
     "apps.people",
     "apps.superadmin",
