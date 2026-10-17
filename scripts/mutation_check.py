@@ -4096,6 +4096,78 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         '        if "fees" not in features or not self.can_open(menu_keys.FINANCE):\n',
         '        if "fees" not in features:\n',
     ),
+    (
+        "due soon is 3 days ahead (7.4)",
+        "apps/finance/reminders.py",
+        "        due_date__lte=today + timedelta(days=DUE_SOON_DAYS),\n",
+        "        due_date__lte=today + timedelta(days=DUE_SOON_DAYS + 1),\n",
+    ),
+    (
+        "due soon is not on the due day (7.4)",
+        "apps/finance/reminders.py",
+        "        due_date__gt=today,\n",
+        "        due_date__gte=today,\n",
+    ),
+    (
+        "due soon goes once (7.4)",
+        "apps/finance/reminders.py",
+        "        due_reminded_on__isnull=True,\n",
+        "",
+    ),
+    (
+        "overdue starts the day after (7.4)",
+        "apps/finance/reminders.py",
+        "    late = open_.filter(overdue_on__isnull=True, due_date__lt=today)\n",
+        "    late = open_.filter(overdue_on__isnull=True, due_date__lte=today)\n",
+    ),
+    (
+        "late fee is added once (7.4)",
+        "apps/finance/reminders.py",
+        "    late = open_.filter(overdue_on__isnull=True, due_date__lt=today)\n",
+        "    late = open_.filter(due_date__lt=today)\n",
+    ),
+    (
+        "no late fee when the setting is 0 (7.4)",
+        "apps/finance/reminders.py",
+        "        added = late_fee > 0  # the status stays: the balance only grows\n",
+        "        added = True\n",
+    ),
+    (
+        "overdue summary only when some (7.4)",
+        "apps/finance/reminders.py",
+        "    if overdue:\n",
+        "    if True:\n",
+    ),
+    (
+        "due notice is the guardian's (7.4)",
+        "apps/finance/notices.py",
+        '    _to_family("challan_due", challan, text, student=False)\n',
+        '    _to_family("challan_due", challan, text, student=True)\n',
+    ),
+    (
+        "payment notice is the guardian's (7.4)",
+        "apps/finance/notices.py",
+        '    _to_family("payment_recorded", challan, text, student=False)\n',
+        '    _to_family("payment_recorded", challan, text, student=True)\n',
+    ),
+    (
+        "generate sends the notice (7.4)",
+        "apps/finance/services.py",
+        "                notices.challan_generated(challan)\n",
+        "                pass\n",
+    ),
+    (
+        "approved receipt skips payment notice (7.4)",
+        "apps/finance/services.py",
+        "        if receipt is None:  # an approved receipt tells the guardian itself\n",
+        "        if True:\n",
+    ),
+    (
+        "task uses the institute date (7.4)",
+        "apps/finance/tasks.py",
+        "        today = institute_today(institute)\n",
+        "        today = date(2000, 1, 1)\n",
+    ),
 ]
 
 

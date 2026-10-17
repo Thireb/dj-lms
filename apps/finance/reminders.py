@@ -15,7 +15,6 @@ from django.db import transaction
 from apps.core.tenancy import require_tenant_context
 from apps.finance import notices
 from apps.finance.models import Challan, ChallanStatus
-from apps.finance.services import set_status
 
 DUE_SOON_DAYS = 3
 OPEN = [ChallanStatus.PENDING, ChallanStatus.PARTIAL]
@@ -63,12 +62,11 @@ def _mark_overdue(pk: int, today: date, late_fee: Any) -> int:
         challan = _lock_open(pk)
         if challan is None or challan.overdue_on is not None:
             return 0
-        added = late_fee > 0 and challan.late_fee == 0
+        added = late_fee > 0  # the status stays: the balance only grows
         if added:
             challan.late_fee = late_fee
-            set_status(challan)
         challan.overdue_on = today
-        challan.save(update_fields=["late_fee", "status", "overdue_on"])
+        challan.save(update_fields=["late_fee", "overdue_on"])
         notices.challan_overdue(challan, late_fee_added=added)
     return 1
 

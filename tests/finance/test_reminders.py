@@ -169,7 +169,8 @@ def test_overdue_adds_the_late_fee_once(billed, admin) -> None:
             method="cash",
             today=OCT,
         )
-    assert _remind(billed, DUE).overdue == 0  # due today is not overdue
+    run = _remind(billed, DUE)
+    assert (run.due_soon, run.overdue) == (0, 0)  # due today: neither
     assert _remind(billed, date(2026, 10, 11)).overdue == 1
     challan = billed.challan
     assert (challan.late_fee, challan.total, challan.balance) == (
