@@ -166,6 +166,11 @@ CELERY_BEAT_SCHEDULE = {
         "task": "apps.assessments.tasks.remind_all_quizzes",
         "schedule": crontab(minute="*/5"),
     },
+    # Fee reminders and the late fee, by each institute's date (roadmap 7.4).
+    "remind-challans": {
+        "task": "apps.finance.tasks.remind_all_challans",
+        "schedule": crontab(minute=15),
+    },
     # Notifications older than 90 days are deleted (roadmap 6.1, SPEC 7).
     "delete-old-notifications": {
         "task": "apps.notifications.tasks.delete_all_old_notifications",

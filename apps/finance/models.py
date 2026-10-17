@@ -146,6 +146,10 @@ class Challan(TenantModel):
         max_length=10, choices=ChallanStatus.choices, default=ChallanStatus.PENDING
     )
     created_at = models.DateTimeField(auto_now_add=True)
+    # The reminder job (roadmap 7.4): the day "due in 3 days" went, and the
+    # day it found the challan overdue (late fee added, notices sent).
+    due_reminded_on = models.DateField(null=True, blank=True)
+    overdue_on = models.DateField(null=True, blank=True)
 
     objects = TenantManager.from_queryset(StudentRowQuerySet)()
     unscoped = UnscopedTenantManager.from_queryset(StudentRowQuerySet)()

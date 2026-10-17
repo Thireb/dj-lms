@@ -14,6 +14,7 @@ from django.db.models import Count, Q, QuerySet
 from django.utils import timezone
 
 from apps.core.tenancy import require_tenant_context
+from apps.finance import notices
 from apps.finance.models import (
     MAX_AMOUNT,
     Challan,
@@ -328,6 +329,7 @@ def generate_challans(
                     )
                     for line in plan.lines
                 )
+                notices.challan_generated(challan)
         except IntegrityError:
             continue  # made meanwhile by another run: the skip rule again
         made.append(challan)
@@ -464,6 +466,8 @@ def record_payment(
         locked.paid += amount
         set_status(locked)
         locked.save(update_fields=["paid", "status"])
+        if receipt is None:  # an approved receipt tells the guardian itself
+            notices.payment_recorded(payment)
     return payment
 
 
