@@ -14,6 +14,9 @@ class MenuItem:
     admin_only: bool = False
     # A URL name that answers a small count badge (HTMX, every 60 seconds).
     badge: str | None = None
+    # More menu keys a sub-admin needs for this item (the page's
+    # ``extra_menu_keys``, backlog P7-1).
+    extra_menu_keys: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)

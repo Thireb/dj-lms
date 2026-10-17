@@ -1473,6 +1473,7 @@ class ChallanDashboardPage(ChallanMixin, DashboardPage):
 
     title = "Challan dashboard"
     menu_key = menu_keys.DASHBOARDS
+    extra_menu_keys = (menu_keys.FINANCE,)  # fee money (backlog P7-1)
 
     def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
         self.numbers = challan_dashboard(
@@ -1509,20 +1510,17 @@ class ChallanDashboardPage(ChallanMixin, DashboardPage):
         numbers = self.numbers
         rows = [(label, str(count)) for label, count in numbers.by_status]
         rows.append(("Defaulters (all months)", str(numbers.defaulters)))
-        blocks: list[Any] = [DetailList(rows)]
-        if user_has_menu(self.request.user, menu_keys.FINANCE):
-            blocks.append(
-                ButtonRow(
-                    items=[
-                        Button(label, url=reverse(name), variant="secondary")
-                        for label, name in (
-                            ("Challan records", "admin:challan_list"),
-                            ("Receipt inbox", "admin:receipt_inbox"),
-                            ("Fee defaulters", "admin:fee_defaulters"),
-                        )
-                    ]
+        links = ButtonRow(
+            items=[
+                Button(label, url=reverse(name), variant="secondary")
+                for label, name in (
+                    ("Challan records", "admin:challan_list"),
+                    ("Receipt inbox", "admin:receipt_inbox"),
+                    ("Fee defaulters", "admin:fee_defaulters"),
                 )
-            )
+            ]
+        )
+        blocks = [DetailList(rows), links]
         return [
             SectionCard(
                 title=f"Challans for {month_text(numbers.money.month)}",

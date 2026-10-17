@@ -4013,10 +4013,22 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "                can_block=True,\n",
     ),
     (
-        "dashboard links need Finance (7.3c)",
+        "challan dashboard needs Finance too (P7-1)",
         "apps/finance/views.py",
-        "        if user_has_menu(self.request.user, menu_keys.FINANCE):\n",
-        "        if True:\n",
+        "    extra_menu_keys = (menu_keys.FINANCE,)  # fee money (backlog P7-1)\n",
+        "",
+    ),
+    (
+        "sub-admin needs every extra menu key (P7-1)",
+        "apps/core/mixins/access.py",
+        "            if any(each not in allowed for each in needed):\n",
+        "            if key not in allowed:\n",
+    ),
+    (
+        "menu item hides without its extra keys (P7-1)",
+        "apps/ui/menus/registry.py",
+        "            if role == Role.SUB_ADMIN and not allowed_menus.issuperset(\n",
+        "            if False and not allowed_menus.issuperset(\n",
     ),
     (
         "portal action back url refuses // (7.3c)",
@@ -4203,6 +4215,24 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "apps/finance/tasks.py",
         "                run = apply_defaulter_rule(institute, institute_today(institute))\n",
         "                run = apply_defaulter_rule(institute, date(2000, 1, 1))\n",
+    ),
+    (
+        "switching the rule off opens its blocks (P7-3)",
+        "apps/institutes/views.py",
+        "        if rule_was_on and not settings.auto_block_defaulters:\n",
+        "        if False:\n",
+    ),
+    (
+        "release opens only rule blocks (P7-3)",
+        "apps/finance/access.py",
+        "    rules = PortalAccessRule.objects.filter(blocked=True, auto_blocked=True)\n",
+        "    rules = PortalAccessRule.objects.filter(blocked=True)\n",
+    ),
+    (
+        "rule-was-on comes from the database (P7-3)",
+        "apps/institutes/views.py",
+        '            .values_list("auto_block_defaulters", flat=True)\n            .first()\n        )\n',
+        '            .values_list("auto_block_defaulters", flat=True)\n            .first()\n        ) and settings.auto_block_defaulters\n',
     ),
 ]
 
