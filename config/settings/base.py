@@ -171,6 +171,13 @@ CELERY_BEAT_SCHEDULE = {
         "task": "apps.finance.tasks.remind_all_challans",
         "schedule": crontab(minute=15),
     },
+    # Block and unblock defaulters when the setting is on (roadmap 7.6).
+    # 21:30 UTC is after midnight in Pakistan (UTC+5); each institute uses
+    # its own date.
+    "apply-defaulter-rules": {
+        "task": "apps.finance.tasks.apply_all_defaulter_rules",
+        "schedule": crontab(hour=21, minute=30),
+    },
     # Notifications older than 90 days are deleted (roadmap 6.1, SPEC 7).
     "delete-old-notifications": {
         "task": "apps.notifications.tasks.delete_all_old_notifications",

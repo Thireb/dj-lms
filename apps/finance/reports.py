@@ -184,6 +184,14 @@ def defaulter_cutoff(institute: Any, today: date) -> date:
     return today - timedelta(days=institute.settings.grace_days_after_due)
 
 
+def beyond_grace(challans: Any, institute: Any, today: date) -> Any:
+    """The challans of defaulters: overdue longer than the grace days."""
+    return challans.filter(
+        status__in=[ChallanStatus.PENDING, ChallanStatus.PARTIAL],
+        due_date__lt=defaulter_cutoff(institute, today),
+    )
+
+
 def defaulters(
     user: Any,
     institute: Any,
@@ -194,10 +202,7 @@ def defaulters(
 ) -> list[DefaulterRow]:
     from apps.people.models import GuardianStudentLink, PortalAccessRule
 
-    challans = Challan.objects.for_user(user).filter(
-        status__in=[ChallanStatus.PENDING, ChallanStatus.PARTIAL],
-        due_date__lt=defaulter_cutoff(institute, today),
-    )
+    challans = beyond_grace(Challan.objects.for_user(user), institute, today)
     if batch_id:
         challans = challans.filter(student__batch_subjects__batch_id=batch_id)
     groups = (

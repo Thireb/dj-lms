@@ -108,7 +108,7 @@ The product owner did not accept the current look (navigation, tables, forms, si
 - [x] 7.3c Reports: daily, monthly, yearly, defaulters, print/export. Part 1 built: Daily, Monthly and Yearly reports (date range and batch filters, a Total row, Print as PDF with page numbers, Export CSV safe from formulas). Part 2 built: Fee defaulters (batch and minimum due filters, Message guardian, Block / Unblock that returns to the list, Print and Export CSV) and the Challan dashboard (SPEC 8).
 - [x] 7.4 Reminders. Built: notifications for challan generated, due in 3 days, overdue and payment recorded, and an hourly job (`finance.tasks.remind_all_challans`) that adds the late fee once.
 - [x] 7.5 Student and guardian fee pages. Built: student Fee details and guardian Fee and challans (KPIs, challans newest first, guardian Print), the student fee cards, the guardian Fees card, and the admin fee strip on the Main dashboard.
-- [ ] 7.6 Automatic defaulter blocking from 2.7: nightly job blocks defaulters that are not exempt and unblocks them when nothing is overdue beyond grace (SPEC 6.2, setting `auto_block_defaulters`).
+- [x] 7.6 Automatic defaulter blocking from 2.7: nightly job blocks defaulters that are not exempt and unblocks them when nothing is overdue beyond grace (SPEC 6.2, setting `auto_block_defaulters`).
 
 ## Phase 8: Payroll (Premium)
 

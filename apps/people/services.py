@@ -9,7 +9,7 @@ from typing import Any
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import Prefetch, Q, QuerySet
+from django.db.models import F, OuterRef, Prefetch, Q, QuerySet, Subquery, Sum
 
 from apps.academics.models import ClassLabel, StudentBatchSubject, TeacherBatchSubject
 from apps.academics.services import (
@@ -474,12 +474,16 @@ def _access_rule(student: StudentProfile) -> PortalAccessRule:
 
 
 @transaction.atomic
-def set_portal_blocked(student: StudentProfile, *, blocked: bool) -> PortalAccessRule:
-    """Manual block or unblock; it wins until the next automatic run (7.6)."""
+def set_portal_blocked(
+    student: StudentProfile, *, blocked: bool, by_rule: bool = False
+) -> PortalAccessRule:
+    """Manual block or unblock; it wins until the next automatic run (7.6).
+    ``by_rule`` marks a change made by the defaulter rule."""
     rule = _access_rule(student)
     changed = rule.blocked != blocked
     rule.blocked = blocked
-    rule.save(update_fields=["blocked", "changed_at"])
+    rule.auto_blocked = blocked and by_rule
+    rule.save(update_fields=["blocked", "auto_blocked", "changed_at"])
     if changed:
         text = (
             "Your student portal is paused. Contact the institute office."
@@ -506,8 +510,25 @@ def student_portal_blocked(user: object) -> bool:
 def list_portal_access(
     user: object, *, search: str = "", blocked: str = "", exempt: str = ""
 ) -> QuerySet[StudentProfile]:
-    """Students with their access rule; "yes"/"no" filter blocked and exempt."""
-    students = list_students(user, search=search).select_related("access_rule")
+    """Students with their access rule and ``fee_due`` (what their pending
+    and partly paid challans still owe); "yes"/"no" filter blocked and
+    exempt."""
+    from apps.finance.models import Challan, ChallanStatus
+
+    owed = (
+        Challan.objects.filter(
+            student=OuterRef("pk"),
+            status__in=[ChallanStatus.PENDING, ChallanStatus.PARTIAL],
+        )
+        .values("student")
+        .annotate(total=Sum(F("amount") + F("late_fee") - F("paid")))
+        .values("total")
+    )
+    students = (
+        list_students(user, search=search)
+        .select_related("access_rule", "institute")
+        .annotate(fee_due=Subquery(owed))
+    )
     for name, value in (("blocked", blocked), ("exempt", exempt)):
         if value == "yes":
             students = students.filter(**{f"access_rule__{name}": True})

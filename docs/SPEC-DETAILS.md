@@ -106,7 +106,7 @@ Menu key `institute`: `institute_admin`, and a `sub_admin` granted Institute.
 | Leave Approval (student / teacher) | Name, From, To, Days, Reason, Status | status | Approve, Reject (teacher leave: shows clashing lectures) |
 | Message Monitor | Date, From, To, Subject, Last message | search, role | Open |
 | Manage Users (sub-admin) | Name, Email, Allowed menus, Status | status | Edit, Deactivate |
-| Portal Access | Student, Class, Guardian, Fee due, Blocked, Exempt | blocked, exempt | Block, Unblock, Exempt (2.7 adds search and Remove exemption; Fee due comes with Phase 7) |
+| Portal Access | Student, Class, Guardian, Fee due, Blocked, Exempt | blocked, exempt | Block, Unblock, Exempt (2.7 adds search and Remove exemption; Fee due built in 7.6) |
 
 ### Teacher
 
@@ -287,6 +287,7 @@ Full name*, Institute name*, Phone*, Email, Website, Message*. Saved for Super A
 - Owner decision 2026-10-16 (Phase 6 audit P6-8): Messages stay open for a blocked student, so they can write to the office; "Access paused" has a "Message the office" button. Every other student page stays closed.
 - If auto-block is on: a nightly job blocks every student who is a defaulter and not exempt, and unblocks once no challan is overdue beyond grace.
 - Manual block and unblock always win until the next auto run changes them. A student marked Exempt is never auto-blocked.
+- Built in 7.6 (assumed, check against the demo): the run is nightly, by each institute's own date. It unblocks only the students it blocked itself (`auto_blocked`), when nothing of theirs is overdue beyond grace or when they became exempt; a manual block is never undone by the run, and a manual unblock of a defaulter lasts until the next run. Turning the setting off changes nothing: students blocked by the rule stay blocked until an admin unblocks them. The student is told when the state changes (as in 6.2). Portal access shows "Yes, auto" for a block by the rule, and "Fee due" (what the pending and partly paid challans still owe).
 
 ### 6.3 Attendance
 - Attendance is per lecture per student, one row each.
