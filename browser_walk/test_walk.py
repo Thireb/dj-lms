@@ -25,6 +25,7 @@ from apps.assessments.models import (
     QuizAttempt,
     Submission,
 )
+from apps.finance.models import Challan, FeePlan, ReceiptSubmission
 from apps.institutes.models import Institute
 from apps.lectures.models import Lecture, LectureStatus, RecurringSchedule
 from apps.messaging.models import ThreadMember
@@ -46,9 +47,16 @@ USERS = {
     "student": "demo-student@example.com",
     "guardian": "demo-guardian@example.com",
 }
-# Not pages: a file download and the HTMX parts that pages reload.
+# Not pages: file downloads (the template, PDFs, receipt files) and the
+# HTMX parts that pages reload.
 SKIPPED = {
     "admin:student_bulk_template",
+    "admin:challan_pdf",
+    "admin:challan_print",
+    "admin:payment_receipt",
+    "admin:receipt_file",
+    "guardian:challan_pdf",
+    "guardian:receipt_file",
     "admin:message_unread",
     "teacher:message_unread",
     "student:message_unread",
@@ -127,6 +135,10 @@ def _teacher() -> dict[str, int] | None:
     return _pk(TeacherProfile.unscoped.filter(user__email=DEMO_TEACHER).first())
 
 
+def _challan(status: str) -> Callable[[], dict[str, int] | None]:
+    return lambda: _pk(Challan.unscoped.filter(status=status).order_by("pk").first())
+
+
 def _demo_thread(email: str) -> Callable[[], dict[str, int] | None]:
     def build() -> dict[str, int] | None:
         row = ThreadMember.unscoped.filter(user__email=email).order_by("pk").first()
@@ -171,6 +183,11 @@ OBJECTS: dict[str, Callable[[], dict[str, int] | None]] = {
     "teacher:message_thread": _demo_thread(DEMO_TEACHER),
     "student:message_thread": _demo_thread(DEMO_STUDENT),
     "guardian:message_thread": _demo_thread("demo-guardian@example.com"),
+    "admin:fee_plan_edit": _first(FeePlan),
+    "admin:challan_detail": _challan("partial"),
+    "admin:challan_pay": _challan("pending"),
+    "admin:student_fee_history": _student,
+    "admin:receipt_detail": _first(ReceiptSubmission),
 }
 
 

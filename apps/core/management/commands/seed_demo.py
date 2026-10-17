@@ -1,5 +1,5 @@
 """Demo data (dev only): Demo Institute on Premium, sign-ins, SPEC 10 people,
-demo lectures, their attendance and demo assignments."""
+demo lectures, their attendance, demo assignments, messages and fees."""
 
 from __future__ import annotations
 
@@ -13,6 +13,7 @@ from apps.assessments.demo import reset_assignments, seed_assignments
 from apps.attendance.demo import reset_attendance, seed_attendance
 from apps.core.features import PLAN_CODE_PREMIUM
 from apps.core.roles import Role
+from apps.finance.demo import reset_fees, seed_fees
 from apps.institutes.models import Institute, Plan
 from apps.lectures.demo import reset_lectures, seed_lectures
 from apps.messaging.demo import reset_messages, seed_messages
@@ -61,6 +62,7 @@ class Command(BaseCommand):
         seed_attendance(institute)
         seed_assignments(institute)
         seed_messages(institute)
+        seed_fees(institute)
         self.stdout.write(self.style.SUCCESS("Demo data ready."))
 
     def _demo_institute(self) -> Institute:
@@ -96,6 +98,7 @@ class Command(BaseCommand):
         institute = Institute.objects.filter(name=DEMO_INSTITUTE_NAME).first()
         if institute is not None:
             deleted += reset_messages(institute)
+            deleted += reset_fees(institute)
             deleted += reset_assignments(institute)
             deleted += reset_attendance(institute)
             deleted += reset_lectures(institute)
