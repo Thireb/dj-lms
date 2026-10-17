@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from datetime import date
 
+from django.core.exceptions import ValidationError
 from kombu.exceptions import OperationalError as KombuOperationalError
 
 from apps.core.tenancy import tenant_context
@@ -23,18 +24,32 @@ logger = logging.getLogger(__name__)
 def generate_challans_task(
     institute_id: int, month: str, due_date: str, student_ids: list[int]
 ) -> int:
-    """Bulk challan generation (roadmap 7.2). Ids and ISO dates only."""
+    """Bulk challan generation (roadmap 7.2). Ids and ISO dates only.
+
+    A run that starts after midnight can find the due date in the past
+    (the admin chose "today"): the date check refuses it. The run is
+    logged as a warning, not lost without a trace (external re-audit)."""
     institute = Institute.objects.filter(pk=institute_id, is_active=True).first()
     if institute is None:
         return 0
     with tenant_context(institute):
         students = list(StudentProfile.objects.filter(pk__in=student_ids))
-        made = generate_challans(
-            institute,
-            date.fromisoformat(month),
-            date.fromisoformat(due_date),
-            students,
-        )
+        try:
+            made = generate_challans(
+                institute,
+                date.fromisoformat(month),
+                date.fromisoformat(due_date),
+                students,
+            )
+        except ValidationError:
+            logger.warning(
+                "Challan run for institute %s, month %s: the due date %s is "
+                "past, so no challans were made. Generate them again.",
+                institute.pk,
+                month,
+                due_date,
+            )
+            return 0
     return len(made)
 
 

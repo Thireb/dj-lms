@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import date
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -26,6 +27,7 @@ from apps.academics.models import Batch
 from apps.core import menus as menu_keys
 from apps.core.menus import user_has_menu
 from apps.core.query import id_param, search_param
+from apps.core.responses import error_response
 from apps.core.roles import Role
 from apps.finance.forms import (
     ChallanConfirmForm,
@@ -118,6 +120,8 @@ from apps.ui.views.pages import (
     ListPage,
     PortalPageView,
 )
+
+logger = logging.getLogger(__name__)
 
 PAGE_SIZE = 25
 CHALLAN_STATUS_OPTIONS = [
@@ -841,12 +845,21 @@ CONTENT_TYPES = {
 }
 
 
-def receipt_file_response(receipt: ReceiptSubmission) -> HttpResponse:
+def receipt_file_response(
+    request: HttpRequest, receipt: ReceiptSubmission
+) -> HttpResponse:
     """Stream a private receipt file. Shown in the browser, never sniffed
-    as another type, never cached by a shared cache."""
+    as another type, never cached by a shared cache. A file missing on disk
+    gives the styled 404 page, not a 500 (external re-audit item 2)."""
     suffix = Path(receipt.file.name).suffix.lower()
+    try:
+        handle = receipt.file.open("rb")
+    except FileNotFoundError:
+        # The id only: never the file path or the student's details.
+        logger.warning("Receipt %s: the file is missing on disk.", receipt.pk)
+        return error_response(request, 404)
     response = FileResponse(
-        receipt.file.open("rb"),
+        handle,
         content_type=CONTENT_TYPES.get(suffix, "application/octet-stream"),
         as_attachment=False,
         filename=f"{receipt.number}{suffix}",
@@ -986,7 +999,8 @@ class GuardianReceiptFileView(GuardianFeeMixin, PortalPageView):
 
     def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
         rows = ReceiptSubmission.objects.for_user(request.user)
-        return receipt_file_response(get_object_or_404(rows, pk=self.kwargs["pk"]))
+        receipt = get_object_or_404(rows, pk=self.kwargs["pk"])
+        return receipt_file_response(request, receipt)
 
 
 class ReceiptMixin(ChallanMixin):
@@ -1184,7 +1198,7 @@ class AdminReceiptFileView(ReceiptMixin, PortalPageView):
     http_method_names = ["get"]
 
     def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
-        return receipt_file_response(self.get_receipt())
+        return receipt_file_response(request, self.get_receipt())
 
 
 # Reports (Finance menu, roadmap 7.3c, SPEC 3 and 9.4)

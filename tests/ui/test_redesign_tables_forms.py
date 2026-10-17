@@ -108,7 +108,8 @@ def _render(form) -> str:
 
 def test_section_has_title_description_and_labelled_fieldset() -> None:
     html = _render(_SectionForm())
-    assert '<h3 id="section-contact"' in html
+    # An h2: a form section sits right under the page h1 (re-audit 4b).
+    assert '<h2 id="section-contact"' in html
     assert "How we reach you." in html
     assert 'aria-labelledby="section-contact"' in html
     assert re.search(r"<fieldset[^>]*md:grid-cols-2", html)
@@ -120,7 +121,7 @@ def test_section_without_title_is_one_column() -> None:
             return Layout(Section(None, "name"))
 
     html = _render(Plain())
-    assert "<h3" not in html
+    assert "<h2" not in html
     assert "aria-labelledby" not in html
     assert "md:grid-cols-[15rem" not in html
 

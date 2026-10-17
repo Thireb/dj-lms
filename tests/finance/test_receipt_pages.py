@@ -72,7 +72,9 @@ def test_fee_pay_form_and_history(fees_school, admin, owing) -> None:
 
 
 @pytest.mark.django_db
-def test_files_are_private(fees_school, admin, owing) -> None:
+def test_files_are_private(fees_school, admin, owing, settings) -> None:
+    # The view sets nosniff itself, not only through SecurityMiddleware.
+    settings.SECURE_CONTENT_TYPE_NOSNIFF = False
     _send(fees_school, owing)
     receipt = ReceiptSubmission.unscoped.get()
     mine = reverse("guardian:receipt_file", kwargs={"pk": receipt.pk})
@@ -85,6 +87,32 @@ def test_files_are_private(fees_school, admin, owing) -> None:
     admin_url = reverse("admin:receipt_file", kwargs={"pk": receipt.pk})
     assert signed_in(admin).get(admin_url).status_code == 200
     assert signed_in(fees_school.teacher_1.user).get(admin_url).status_code == 403
+
+
+@pytest.mark.django_db
+def test_a_file_missing_on_disk_gives_the_404_page(
+    fees_school, admin, owing, caplog
+) -> None:
+    """External re-audit item 2: was a 500 (FileNotFoundError)."""
+    import logging
+    import os
+
+    _send(fees_school, owing)
+    receipt = ReceiptSubmission.unscoped.get()
+    path = receipt.file.path
+    os.remove(path)
+    urls = [
+        (fees_school.guardian_1.user, "guardian:receipt_file"),
+        (admin, "admin:receipt_file"),
+    ]
+    with caplog.at_level(logging.WARNING, logger="apps.finance.views"):
+        for user, name in urls:
+            url = reverse(name, kwargs={"pk": receipt.pk})
+            response = signed_in(user).get(url)
+            assert response.status_code == 404
+            assert "Page not found" in response.content.decode()
+    assert f"Receipt {receipt.pk}: the file is missing on disk." in caplog.text
+    assert path not in caplog.text and receipt.file.name not in caplog.text
 
 
 @pytest.mark.django_db

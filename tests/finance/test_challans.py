@@ -238,3 +238,36 @@ def test_other_institute_challan_is_404(billed, admin) -> None:
     Challan.unscoped.filter(pk=challan.pk).update(institute=billed.teacher_b.institute)
     detail = reverse("admin:challan_detail", kwargs={"pk": challan.pk})
     assert signed_in(admin).get(detail).status_code == 404
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "utc_time, made",
+    [
+        ((18, 30), 1),  # 23:30 in Karachi on 10 Oct: the due day is today
+        ((19, 30), 0),  # 00:30 in Karachi on 11 Oct: the due day is past
+    ],
+)
+def test_a_late_challan_run_is_logged_not_lost(
+    billed, monkeypatch, caplog, utc_time, made
+) -> None:
+    """External re-audit: the admin queues a run with due date "today" just
+    before midnight; the task starts after midnight."""
+    import logging
+    from datetime import UTC, datetime
+
+    from apps.finance.tasks import generate_challans_task
+
+    moment = datetime(2026, 10, 10, *utc_time, tzinfo=UTC)
+    monkeypatch.setattr(timezone, "now", lambda: moment)
+    institute = billed.morning.institute
+    with caplog.at_level(logging.WARNING, logger="apps.finance.tasks"):
+        count = generate_challans_task(
+            institute.pk, "2026-10-01", "2026-10-10", [billed.student_1.pk]
+        )
+    assert count == made
+    assert Challan.unscoped.filter(institute=institute).count() == made
+    warned = (
+        f"Challan run for institute {institute.pk}, month 2026-10-01" in caplog.text
+    )
+    assert warned is (made == 0)

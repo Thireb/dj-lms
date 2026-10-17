@@ -363,6 +363,19 @@ After the owner decisions of 2026-10-17 (P7-1, P7-2 and P7-3 fixed on `phase/7`)
 | P7-4 | Fee notices for sub-admins (receipt submitted, challans overdue) wait for stored sub-admin menus (backlog S15): the jobs load users from the database, where a sub-admin has no menus yet. Owner decision 2026-10-17: close it with S15; S15 adds a test that a sub-admin with Finance gets "receipt submitted". | Low | [ ] |
 | P7-5 | The bulk print test counted PDF pages with a regular expression that cut a compressed stream ending in a carriage return, so it failed on some dates. Fixed: the counter keeps the end bytes. | Low | [x] |
 
+## External re-audit of Phases 5 to 7 (2026-10-17, after PR #70)
+
+All items were fixed in PR #71 (R6 was found during the work) (branch `fix/phase-5-7-reaudit`).
+
+| # | Item | Priority | Status |
+|---|---|---|---|
+| R1 | 3 broker-down tests (`tests/lectures/test_broker_down.py`) failed in the full serial run with Redis up. They passed alone. Cause: the Celery app copies the settings at first use and keeps its connection pool, so after a test that queued a task, the save went to the live Redis and no lecture was made. Reproduced with `tests/finance/test_challans.py` run first. Fixed: the `broker_down` fixture sets the app config, resets the app and kombu pools, and restores them after the test. | Medium | [x] |
+| R2 | A receipt file missing on disk made the guardian and admin file views answer 500 (`FileNotFoundError`). Now they show the styled 404 page and log a warning with the receipt id only. | Medium | [x] |
+| R3 | With "Auto-approve guardian receipts" on, a `CHANGED` error from `approve_receipt` (the balance changed after the save) reached the guardian as an error, although the receipt was saved. Now the receipt stays waiting, the office gets the normal "receipt submitted" notice, and a warning is logged. | Medium | [x] |
+| R4 | axe best-practice rules: the action column header was empty (`empty-table-header`); form section titles (`h3`) and standalone empty states (`h3`) came right after the page `h1` (`heading-order`, 36 pages). Fixed in the shared `DataTable`, form `Section` and `EmptyState` (framed: `h2`; inside a card: `h3`). The browser walk now also runs these 2 rules. | Low | [x] |
+| R5 | `generate_challans_task` raised an unlogged `ValidationError` when it started after midnight on a run with due date "today". It now logs a warning (institute, month, due date) and makes no challans; the admin generates them again. | Low | [x] |
+| R6 | Found while checking R1: 5 mutation entries printed CAUGHT only because the flaky broker tests failed in every full-suite mutation run. With R1 fixed they showed MISSED or STALE: `nosniff` (SecurityMiddleware sets it too), "print only on the guardian list" (the mutation changed nothing), "due soon goes once" and "late fee is added once" (the query filter and the lock check cover each other), and the guardian receipt file entry (its text changed with R2). Fixed: tests that catch each one, and 2 new entries for the lock checks. | Medium | [x] |
+
 ## Later (deployment hardening, Phase 12)
 
 | # | Item | Priority | Status |
