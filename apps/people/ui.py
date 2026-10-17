@@ -216,6 +216,20 @@ def _access(student: StudentProfile) -> tuple[bool, bool]:
     return rule.blocked, rule.exempt
 
 
+def _blocked_badge(student: StudentProfile) -> Badge:
+    if not _access(student)[0]:
+        return _yes_no(False, "danger")
+    auto = student.access_rule.auto_blocked
+    return Badge("Yes, auto" if auto else "Yes", tone="danger")
+
+
+def _fee_due(student: StudentProfile) -> str:
+    from apps.finance.ui import money
+
+    due = getattr(student, "fee_due", None)
+    return money(due, student.institute) if due else "-"
+
+
 def _yes_no(value: bool, yes_tone: str) -> Badge:
     return Badge("Yes", tone=yes_tone) if value else Badge("No", tone="neutral")
 
@@ -261,13 +275,15 @@ def _access_actions(student: StudentProfile) -> ButtonRow:
 
 
 class PortalAccessTable(DataTable):
-    """SPEC 3 Portal Access. Fee due comes with Phase 7."""
+    """SPEC 3 Portal Access. "Fee due" is what the open challans still owe
+    (roadmap 7.6); a block by the defaulter rule shows "Yes, auto"."""
 
     columns = [
         Column("name", "Student", person),
         Column("class_label", "Class", lambda s: s.class_label or ""),
         Column("guardian", "Guardian", _guardians),
-        Column("blocked", "Blocked", lambda s: _yes_no(_access(s)[0], "danger")),
+        Column("fee_due", "Fee due", _fee_due),
+        Column("blocked", "Blocked", _blocked_badge),
         Column("exempt", "Exempt", lambda s: _yes_no(_access(s)[1], "info")),
         Column("actions", "", _access_actions),
     ]

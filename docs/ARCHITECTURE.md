@@ -182,6 +182,7 @@ Set up in 3.2: `config/celery.py`, broker `REDIS_URL`, no result backend. Tests 
 - Lecture reminders. Built in 6.2: `lectures.tasks.remind_all_lectures` every 5 minutes sends "starts soon" once for each scheduled lecture in the next 15 minutes (`Lecture.reminded_at`; a new start time clears it).
 - Quiz reminders. Built in 6.2: `assessments.tasks.remind_all_quizzes` every 5 minutes sends "opens soon" once for each published quiz that opens in the next hour (`Quiz.reminded_at`; a new time or Back to draft clears it).
 - Fee reminders. Built in 7.4: `finance.tasks.remind_all_challans` every hour, by each institute's own date. It sends "due in 3 days" once (`Challan.due_reminded_on`) and, the day after the due date, adds the late fee once and sends "overdue" (`Challan.overdue_on`).
+- Defaulter rule. Built in 7.6: `finance.tasks.apply_all_defaulter_rules` nightly at 21:30 UTC, by each institute's own date, when "Auto-block defaulters" is on (SPEC 6.2).
 - Bulk challan generation.
 - Challan and lecture reminders.
 - Monthly payroll run.

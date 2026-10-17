@@ -314,6 +314,10 @@ class PortalAccessRule(TenantModel):
     )
     blocked = models.BooleanField(default=False)
     exempt = models.BooleanField(default=False)
+    # True while the block comes from the nightly defaulter rule (7.6); a
+    # manual block or unblock clears it, so the rule never undoes a manual
+    # block.
+    auto_blocked = models.BooleanField(default=False)
     changed_at = models.DateTimeField(auto_now=True)
 
     objects = TenantManager.from_queryset(PortalAccessRuleQuerySet)()

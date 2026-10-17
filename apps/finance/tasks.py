@@ -9,6 +9,7 @@ from kombu.exceptions import OperationalError as KombuOperationalError
 
 from apps.core.tenancy import tenant_context
 from apps.core.timezone_utils import institute_today
+from apps.finance.access import apply_defaulter_rule
 from apps.finance.reminders import remind_challans
 from apps.finance.services import generate_challans
 from apps.institutes.models import Institute
@@ -68,3 +69,20 @@ def remind_all_challans() -> int:
                 continue
         handled += run.due_soon + run.overdue
     return handled
+
+
+@shared_task
+def apply_all_defaulter_rules() -> int:
+    """Nightly: the automatic defaulter rule for each institute with the
+    setting on, by its own date (roadmap 7.6). One institute that fails is
+    logged and skipped."""
+    changed = 0
+    for institute in Institute.objects.filter(is_active=True):
+        with tenant_context(institute):
+            try:
+                run = apply_defaulter_rule(institute, institute_today(institute))
+            except Exception:
+                logger.exception("Defaulter rule: institute %s failed.", institute.pk)
+                continue
+        changed += run.blocked + run.unblocked
+    return changed
