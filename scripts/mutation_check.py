@@ -4168,6 +4168,42 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "        today = institute_today(institute)\n",
         "        today = date(2000, 1, 1)\n",
     ),
+    (
+        "defaulter rule needs the setting (7.6)",
+        "apps/finance/access.py",
+        "    if not institute.settings.auto_block_defaulters:\n",
+        "    if False:\n",
+    ),
+    (
+        "defaulter rule skips exempt (7.6)",
+        "apps/finance/access.py",
+        "        if pk not in rules or not (rules[pk].blocked or rules[pk].exempt)\n",
+        "        if pk not in rules or not rules[pk].blocked\n",
+    ),
+    (
+        "defaulter rule opens only its own blocks (7.6)",
+        "apps/finance/access.py",
+        "        if rule.auto_blocked and (pk not in owing or rule.exempt)\n",
+        "        if pk not in owing or rule.exempt\n",
+    ),
+    (
+        "defaulter rule opens a new exempt (7.6)",
+        "apps/finance/access.py",
+        "        if rule.auto_blocked and (pk not in owing or rule.exempt)\n",
+        "        if rule.auto_blocked and pk not in owing\n",
+    ),
+    (
+        "manual block is not an auto block (7.6)",
+        "apps/people/services.py",
+        "    rule.auto_blocked = blocked and by_rule\n",
+        "    rule.auto_blocked = blocked\n",
+    ),
+    (
+        "defaulter task uses the institute date (7.6)",
+        "apps/finance/tasks.py",
+        "                run = apply_defaulter_rule(institute, institute_today(institute))\n",
+        "                run = apply_defaulter_rule(institute, date(2000, 1, 1))\n",
+    ),
 ]
 
 
