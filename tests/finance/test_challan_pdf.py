@@ -22,9 +22,11 @@ from tests.lectures.conftest import signed_in
 def _pages(pdf: bytes) -> int:
     """Count the page objects, also inside compressed object streams."""
     text = pdf
-    for stream in re.findall(rb"stream\r?\n(.*?)\r?\nendstream", pdf, re.S):
+    # Keep the end-of-line bytes: the compressed data can end with b"\r".
+    # decompressobj leaves anything after the zlib stream unused.
+    for stream in re.findall(rb"stream\r?\n(.*?)endstream", pdf, re.S):
         try:
-            text += zlib.decompress(stream)
+            text += zlib.decompressobj().decompress(stream)
         except zlib.error:
             continue
     return len(re.findall(rb"/Type\s*/Page\b", text))

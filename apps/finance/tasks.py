@@ -8,6 +8,8 @@ from datetime import date
 from kombu.exceptions import OperationalError as KombuOperationalError
 
 from apps.core.tenancy import tenant_context
+from apps.core.timezone_utils import institute_today
+from apps.finance.reminders import remind_challans
 from apps.finance.services import generate_challans
 from apps.institutes.models import Institute
 from apps.people.models import StudentProfile
@@ -47,3 +49,22 @@ def queue_challans(
     except KombuOperationalError:
         logger.warning("Broker unavailable; making %s challans now.", len(ids))
     generate_challans_task(*args)
+
+
+@shared_task
+def remind_all_challans() -> int:
+    """Every hour: "due in 3 days", "overdue" and the late fee for each
+    institute, by its own local date (roadmap 7.4). The job marks each
+    challan, so a second run in a day sends nothing. One institute that
+    fails is logged and skipped."""
+    handled = 0
+    for institute in Institute.objects.filter(is_active=True):
+        today = institute_today(institute)
+        with tenant_context(institute):
+            try:
+                run = remind_challans(institute, today)
+            except Exception:
+                logger.exception("Fee reminders: institute %s failed.", institute.pk)
+                continue
+        handled += run.due_soon + run.overdue
+    return handled
