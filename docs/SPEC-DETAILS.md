@@ -278,6 +278,7 @@ Full name*, Institute name*, Phone*, Email, Website, Message*. Saved for Super A
 - Challan amount = monthly fee at generation time (frozen on the challan).
 - Balance = amount - sum of payments. Status: `pending` (no payment), `partial` (some), `paid` (balance 0).
 - Overdue = status pending or partial and today is after due date. Defaulter = overdue longer than grace days.
+- Owner decision 2026-10-17 (backlog P7-2): "today" for fees is the institute's date (its time zone), on every page, PDF and job. A viewer in another zone sees the same "this month" and "overdue" as the office.
 - A cancelled challan cannot receive payments. Cancelling a challan with payments is blocked.
 - Approving a receipt creates a Payment (method Online, reference from the receipt) against the chosen challans, oldest first. Over-payment beyond balance is rejected at submit time.
 - Rejecting a receipt changes nothing on the challan.

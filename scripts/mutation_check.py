@@ -4234,6 +4234,24 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         '            .values_list("auto_block_defaulters", flat=True)\n            .first()\n        )\n',
         '            .values_list("auto_block_defaulters", flat=True)\n            .first()\n        ) and settings.auto_block_defaulters\n',
     ),
+    (
+        "institute today uses the institute zone (P7-2)",
+        "apps/core/timezone_utils.py",
+        '    zone = _valid_zone(getattr(institute, "timezone", "") or "UTC")\n',
+        '    zone = "UTC"\n',
+    ),
+    (
+        "pages take the institute date (P7-2)",
+        "apps/ui/views/pages.py",
+        "        return institute_today(self.get_institute())\n",
+        "        return __import__('django.utils.timezone').utils.timezone.localdate()\n",
+    ),
+    (
+        "fee list badges take the institute date (P7-2)",
+        "apps/finance/ui.py",
+        "        self.institute, self.print_url = institute, print_url\n        self.today = institute_today(institute)  # backlog P7-2\n",
+        "        self.institute, self.print_url = institute, print_url\n        self.today = __import__('django.utils.timezone').utils.timezone.localdate()\n",
+    ),
 ]
 
 

@@ -18,6 +18,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.core.tenancy import require_tenant_context
+from apps.core.timezone_utils import institute_today
 from apps.finance import notices
 from apps.finance.models import (
     Challan,
@@ -89,7 +90,7 @@ def submit_receipt(
     from apps.people.services import next_number
 
     require_tenant_context(student.institute)
-    today = today or timezone.localdate()
+    today = today or institute_today(student.institute)
     if not GuardianStudentLink.objects.filter(
         guardian__user=guardian, student=student
     ).exists():
@@ -171,7 +172,7 @@ def approve_receipt(receipt: ReceiptSubmission, *, by: Any) -> ReceiptSubmission
                 method=PaymentMethod.ONLINE,
                 reference=locked.reference or locked.number,
                 by=by,
-                today=max(locked.paid_on, timezone.localdate()),
+                today=max(locked.paid_on, institute_today(locked.institute)),
                 receipt=locked,
             )
             left -= part

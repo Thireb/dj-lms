@@ -7,6 +7,7 @@ from typing import Any
 
 from django.urls import reverse
 
+from apps.core.timezone_utils import institute_today
 from apps.ui.components import Badge, Column, ConfirmDialog, DataTable
 from apps.ui.components.actions import IconButton
 from apps.ui.components.base import Component
@@ -94,6 +95,7 @@ class ChallanTable(DataTable):
 
     def __init__(self, rows, institute, **props):
         self.institute = institute
+        self.today = institute_today(institute)  # backlog P7-2
         super().__init__(rows=rows, **props)
 
     @property
@@ -111,7 +113,7 @@ class ChallanTable(DataTable):
             Column("paid", "Paid", lambda c: cash(c.paid)),
             Column("due", "Due", lambda c: cash(c.balance)),
             Column("due_date", "Due date", lambda c: date_text(c.due_date)),
-            Column("status", "Status", challan_badge),
+            Column("status", "Status", lambda c: challan_badge(c, self.today)),
             Column("actions", "", self.open_button),
         ]
 
@@ -411,6 +413,7 @@ class OwnChallanTable(DataTable):
 
     def __init__(self, rows, institute, print_url=None, **props):
         self.institute, self.print_url = institute, print_url
+        self.today = institute_today(institute)  # backlog P7-2
         super().__init__(rows=rows, **props)
 
     @property
@@ -421,7 +424,7 @@ class OwnChallanTable(DataTable):
             Column("amount", "Amount", lambda c: money(c.total, self.institute)),
             Column("paid", "Paid", lambda c: money(c.paid, self.institute)),
             Column("due_date", "Due date", lambda c: date_text(c.due_date)),
-            Column("status", "Status", challan_badge),
+            Column("status", "Status", lambda c: challan_badge(c, self.today)),
         ]
         if self.print_url is not None:
             columns.append(Column("actions", "", self.print_button))

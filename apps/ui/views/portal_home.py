@@ -17,6 +17,7 @@ from apps.assessments.services import answers_to_grade
 from apps.attendance.services import lectures_to_mark, student_summaries
 from apps.attendance.ui import attendance_value, classes_note
 from apps.core.roles import Role
+from apps.core.timezone_utils import institute_today
 from apps.finance.reports import FeeTotals, academic_year_start, fee_totals
 from apps.finance.ui import money
 from apps.lectures.services import lectures_today_count, upcoming_lectures
@@ -53,7 +54,7 @@ class YearFees:
 
 
 def year_fees(student: Any, institute: Any) -> YearFees:
-    since = academic_year_start(institute, timezone.localdate())
+    since = academic_year_start(institute, institute_today(institute))
     return YearFees(year=fee_totals(student, since), now=fee_totals(student))
 
 

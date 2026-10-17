@@ -10,8 +10,8 @@ from typing import Any
 
 from django.db.models import F, Q, Sum
 from django.template.loader import render_to_string
-from django.utils import timezone
 
+from apps.core.timezone_utils import institute_today
 from apps.finance.models import Challan, ChallanStatus
 from apps.finance.ui import date_text, money, month_text
 from apps.finance.words import amount_in_words
@@ -137,7 +137,7 @@ def challan_html(challans: list[Challan], institute: Any) -> str:
             "copies": COPIES,
             "payment_text": PAYMENT_TEXT,
             "late_fee": money(late_fee, institute) if late_fee else "",
-            "printed": date_text(timezone.localdate()),
+            "printed": date_text(institute_today(institute)),
         },
     )
 
@@ -211,7 +211,7 @@ def table_pdf(
             "headings": headings,
             "rows": rows,
             "has_total": has_total,
-            "printed": date_text(timezone.localdate()),
+            "printed": date_text(institute_today(institute)),
         },
     )
     return HTML(string=html).write_pdf()
