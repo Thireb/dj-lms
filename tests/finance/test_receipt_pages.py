@@ -72,7 +72,9 @@ def test_fee_pay_form_and_history(fees_school, admin, owing) -> None:
 
 
 @pytest.mark.django_db
-def test_files_are_private(fees_school, admin, owing) -> None:
+def test_files_are_private(fees_school, admin, owing, settings) -> None:
+    # The view sets nosniff itself, not only through SecurityMiddleware.
+    settings.SECURE_CONTENT_TYPE_NOSNIFF = False
     _send(fees_school, owing)
     receipt = ReceiptSubmission.unscoped.get()
     mine = reverse("guardian:receipt_file", kwargs={"pk": receipt.pk})

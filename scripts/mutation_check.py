@@ -3919,8 +3919,8 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
     (
         "a guardian opens only their child's receipt files (7.3b)",
         "apps/finance/views.py",
-        "        rows = ReceiptSubmission.objects.for_user(request.user)\n        return receipt_file_response(",
-        "        rows = ReceiptSubmission.objects.all()\n        return receipt_file_response(",
+        "        rows = ReceiptSubmission.objects.for_user(request.user)\n        receipt = get_object_or_404(",
+        "        rows = ReceiptSubmission.objects.all()\n        receipt = get_object_or_404(",
     ),
     (
         "finance admins hear about new receipts (7.3b)",
@@ -4076,7 +4076,7 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "print only on the guardian list (7.5)",
         "apps/finance/views.py",
         "        if self.print_name:\n",
-        "        if True:\n            name = 'guardian:challan_pdf'\n        if self.print_name:\n",
+        "        if True:\n",
     ),
     (
         "guardian pdf skips cancelled (7.5)",
@@ -4287,6 +4287,18 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "apps/ui/templates/ui/components/empty_state.html",
         '{% if framed %}<h2 class="text-base font-semibold text-text">{{ title }}</h2>',
         '{% if framed %}<h3 class="text-base font-semibold text-text">{{ title }}</h3>',
+    ),
+    (
+        "due soon lock check (7.4)",
+        "apps/finance/reminders.py",
+        "        if challan is None or challan.due_reminded_on is not None:\n",
+        "        if challan is None:\n",
+    ),
+    (
+        "overdue lock check (7.4)",
+        "apps/finance/reminders.py",
+        "        if challan is None or challan.overdue_on is not None:\n",
+        "        if challan is None:\n",
     ),
 ]
 

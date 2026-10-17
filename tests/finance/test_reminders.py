@@ -156,6 +156,41 @@ def test_a_paid_challan_gets_no_reminders(billed) -> None:
     assert billed.challan.late_fee == 0
 
 
+@pytest.mark.django_db
+def test_the_job_skips_challans_already_reminded(billed, monkeypatch) -> None:
+    """The query leaves out a challan already reminded or found overdue, so
+    the hourly job does not load it again (the lock check is the second
+    guard, below)."""
+    from apps.finance import reminders
+
+    _remind(billed, date(2026, 10, 7))
+    _remind(billed, date(2026, 10, 11))
+    called = []
+    monkeypatch.setattr(reminders, "_remind_due", lambda pk, today: called.append(pk))
+    monkeypatch.setattr(
+        reminders, "_mark_overdue", lambda pk, today, fee: called.append(pk)
+    )
+    _remind(billed, date(2026, 10, 8))
+    _remind(billed, date(2026, 10, 12))
+    assert called == []
+
+
+@pytest.mark.django_db
+def test_the_locked_row_is_checked_again(billed) -> None:
+    """Two runs at the same time: the second finds the row already marked
+    under the lock and sends nothing."""
+    from apps.finance.reminders import _mark_overdue, _remind_due
+
+    pk = billed.challan.pk
+    with tenant_context(billed.morning.institute):
+        assert _remind_due(pk, date(2026, 10, 7)) == 1
+        assert _remind_due(pk, date(2026, 10, 7)) == 0
+        assert _mark_overdue(pk, date(2026, 10, 11), Decimal("250")) == 1
+        assert _mark_overdue(pk, date(2026, 10, 11), Decimal("250")) == 0
+    billed.challan.refresh_from_db()
+    assert billed.challan.late_fee == Decimal("250.00")
+
+
 # Overdue and the late fee
 
 
