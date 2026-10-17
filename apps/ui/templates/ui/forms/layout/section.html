@@ -1,7 +1,7 @@
 <section class="section min-w-0 grid gap-x-10 gap-y-4 {% if legend %}md:grid-cols-[15rem_minmax(0,1fr)]{% endif %} {{ css_class }}">
   {% if legend %}
     <div>
-      <h3 id="{{ section_id }}" class="text-base font-semibold text-text">{{ legend }}</h3>
+      <h2 id="{{ section_id }}" class="text-base font-semibold text-text">{{ legend }}</h2>
       {% if description %}<p class="mt-1 text-sm text-muted">{{ description }}</p>{% endif %}
     </div>
   {% endif %}

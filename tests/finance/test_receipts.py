@@ -221,6 +221,42 @@ def test_auto_approve_setting(fees_school, two_months) -> None:
 
 
 @pytest.mark.django_db
+def test_auto_approve_failure_leaves_the_receipt_waiting(
+    fees_school, admin, two_months, monkeypatch, caplog
+) -> None:
+    """External re-audit item 3: the balance changes between the save and
+    the approval (an office payment), so approve_receipt raises CHANGED.
+    The receipt stays waiting, the office is told, the guardian sees no
+    error."""
+    import logging
+
+    from apps.finance import receipts
+    from apps.notifications.models import Notification
+
+    settings = fees_school.morning.institute.settings
+    settings.auto_approve_guardian_receipts = True
+    settings.save()
+    real_approve = receipts.approve_receipt
+
+    def pay_first_then_approve(receipt, *, by):
+        record_payment(
+            two_months[0], amount=Decimal("1000"), paid_on=TODAY, method="cash"
+        )
+        return real_approve(receipt, by=by)
+
+    monkeypatch.setattr(receipts, "approve_receipt", pay_first_then_approve)
+    with caplog.at_level(logging.WARNING, logger="apps.finance.receipts"):
+        receipt = _submit(fees_school, two_months, amount="1500")
+    assert receipt.status == ReceiptStatus.WAITING
+    assert ReceiptSubmission.unscoped.get().status == ReceiptStatus.WAITING
+    assert Payment.unscoped.count() == 1  # the office payment only
+    # unscoped: test assertion outside a tenant context.
+    note = Notification.unscoped.get(user=admin, event="receipt_submitted")
+    assert receipt.number in note.text and "approved automatically" not in note.text
+    assert f"Receipt {receipt.pk}: auto-approve failed" in caplog.text
+
+
+@pytest.mark.django_db
 def test_scopes(fees_school, admin, two_months) -> None:
     _submit(fees_school, two_months)
     with tenant_context(admin.institute):

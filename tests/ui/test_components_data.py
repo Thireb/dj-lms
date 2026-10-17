@@ -27,6 +27,17 @@ def test_data_table_renders_rows() -> None:
     assert "data-table" in html
 
 
+def test_an_action_column_header_has_a_hidden_label() -> None:
+    """External re-audit item 4a (axe empty-table-header)."""
+    table = DataTable(
+        rows=[{"name": "Alex"}],
+        columns=[Column("name", "Name"), Column("actions", "")],
+    )
+    html = str(table)
+    assert '<span class="sr-only">Actions</span></th>' in html
+    assert html.count("sr-only") == 1  # a named column keeps its own label
+
+
 def test_badge_renders() -> None:
     html = str(Badge("Active", tone="success"))
     assert "Active" in html
@@ -57,6 +68,14 @@ def test_empty_state_renders() -> None:
     html = str(EmptyState("Nothing here", action=Button("Add item", url="#")))
     assert "Nothing here" in html
     assert "empty-state" in html
+
+
+def test_empty_state_heading_follows_the_page() -> None:
+    """External re-audit item 4b (axe heading-order): a framed empty state
+    stands on the page under the h1, so its title is an h2; inside a card
+    (which has an h2 title) it is an h3."""
+    assert ">Nothing here</h2>" in str(EmptyState("Nothing here"))
+    assert ">Nothing here</h3>" in str(EmptyState("Nothing here", framed=False))
 
 
 def test_badge_tones_use_theme_colors() -> None:

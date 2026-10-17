@@ -3,9 +3,10 @@ in Chromium, on the `seed_demo` data.
 
 Run it with `./scripts/browser-walk.sh` (not part of `uv run pytest`). A page
 fails when it does not answer 200, scrolls sideways or logs a console error.
-axe (WCAG A and AA) findings are listed; `WALK_AXE_FAIL=1` makes them fail
-too. `WALK_SHOTS=<dir>` saves a screenshot of each page. `WALK_ONLY=<text>`
-walks only the routes whose name has that text (for example `teacher:quiz`).
+axe findings (WCAG A and AA, empty table headers, heading order) are
+listed; `WALK_AXE_FAIL=1` makes them fail too. `WALK_SHOTS=<dir>` saves a
+screenshot of each page. `WALK_ONLY=<text>` walks only the routes whose
+name has that text (for example `teacher:quiz`).
 """
 
 from __future__ import annotations
@@ -35,9 +36,14 @@ from django.test import Client
 from django.urls import URLPattern, URLResolver, get_resolver, reverse
 
 AXE = "https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.10.2/axe.min.js"
+# WCAG A and AA, plus two best-practice rules from the external re-audit
+# (item 4): empty table headers and heading levels that jump.
 AXE_RUN = (
-    "axe.run({runOnly: ['wcag2a', 'wcag2aa']})"
-    ".then(r => r.violations.map(v => v.id + ' x' + v.nodes.length))"
+    "axe.run({runOnly: ['wcag2a', 'wcag2aa']}).then(first => "
+    "axe.run({runOnly: {type: 'rule', values: "
+    "['empty-table-header', 'heading-order']}})"
+    ".then(second => [...first.violations, ...second.violations]))"
+    ".then(found => found.map(v => v.id + ' x' + v.nodes.length))"
 )
 WIDTHS = (360, 1440)
 USERS = {

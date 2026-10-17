@@ -21,11 +21,34 @@ from tests.lectures.test_schedule_services import _in_context
 DEAD_BROKER = "redis://127.0.0.1:1/0"  # nothing listens on port 1
 
 
+def _reset_pools(app) -> None:
+    """Drop the cached broker connections and producers, so the next queue
+    call connects with the current broker URL (external re-audit item 1)."""
+    from kombu import pools
+
+    app._pool = None
+    app.amqp._producer_pool = None
+    pools.reset()  # kombu keeps producer pools per connection, process-wide
+
+
 @pytest.fixture
 def broker_down(settings):
-    """Real queueing against a broker that refuses the connection."""
+    """Real queueing against a broker that refuses the connection.
+
+    The Celery app copies the settings at first use and keeps its
+    connection pool, so an earlier test that queued a task leaves it
+    pointing at the live Redis. Set the app config itself and reset the
+    pools; restore both afterwards."""
+    from config.celery import app
+
     settings.CELERY_TASK_ALWAYS_EAGER = False
     settings.CELERY_BROKER_URL = DEAD_BROKER
+    saved = (app.conf.task_always_eager, app.conf.broker_url)
+    app.conf.task_always_eager, app.conf.broker_url = False, DEAD_BROKER
+    _reset_pools(app)
+    yield
+    app.conf.task_always_eager, app.conf.broker_url = saved
+    _reset_pools(app)
 
 
 @pytest.mark.django_db

@@ -8,6 +8,7 @@ on, a receipt is approved as soon as it is sent.
 
 from __future__ import annotations
 
+import logging
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
@@ -33,6 +34,8 @@ from apps.people.models import GuardianStudentLink
 MAX_FILE_BYTES = 5 * 1024 * 1024  # SPEC 4.17: up to 5 MB
 IMAGE_FORMATS = {".jpg": "JPEG", ".jpeg": "JPEG", ".png": "PNG", ".webp": "WEBP"}
 FILE_HELP = "Upload a JPG, PNG, WEBP or PDF file of up to 5 MB."
+logger = logging.getLogger(__name__)
+
 CHANGED = (
     "The chosen challans now owe {balance}, less than this receipt. Reject it "
     "with a reason, so the guardian can send a new one."
@@ -131,9 +134,23 @@ def submit_receipt(
         receipt.save()
         receipt.challans.set(challans)
     if student.institute.settings.auto_approve_guardian_receipts:
-        receipt = approve_receipt(receipt, by=None)
+        receipt = _try_auto_approve(receipt)
     notices.receipt_submitted(receipt)
     return receipt
+
+
+def _try_auto_approve(receipt: ReceiptSubmission) -> ReceiptSubmission:
+    """Auto-approve, or leave the receipt waiting for the office when the
+    challans changed after the save (CHANGED): the guardian's receipt is
+    sent, so the guardian sees no error (external re-audit item 3)."""
+    try:
+        return approve_receipt(receipt, by=None)
+    except ValidationError:
+        logger.warning(
+            "Receipt %s: auto-approve failed; it waits for the office.", receipt.pk
+        )
+        receipt.refresh_from_db()
+        return receipt
 
 
 def _locked_waiting(receipt: ReceiptSubmission) -> ReceiptSubmission:
