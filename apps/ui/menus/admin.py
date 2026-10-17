@@ -20,6 +20,7 @@ class AdminMenu:
                         "admin:dashboard_challan",
                         "receipt",
                         feature="fees",
+                        extra_menu_keys=(menu_keys.FINANCE,),
                     ),
                 ),
             ),

@@ -151,3 +151,35 @@ def test_portal_access_shows_fee_due_and_auto_blocks(rule_on, admin) -> None:
     html = signed_in(admin).get(reverse("admin:portal_access")).content.decode()
     assert "Fee due" in html and "Rs 8,100" in html and "Rs 800" in html
     assert html.count("Yes, auto") == 2
+
+
+# Backlog P7-3 (owner decision 2026-10-17): switching the rule off opens
+# the students it blocked; manual blocks stay.
+
+
+@pytest.mark.django_db
+def test_switching_the_rule_off_opens_its_blocks(rule_on, admin) -> None:
+    from tests.institutes.test_settings_views import _settings_payload
+
+    _run(rule_on)
+    _in_tenant(rule_on, set_portal_blocked, rule_on.student_new, blocked=True)
+    client = signed_in(admin)
+    url = reverse("admin:institute_settings")
+    response = client.post(url, _settings_payload(auto_block_defaulters="on"))
+    assert response.status_code == 302
+    assert _blocked(rule_on.student_1, rule_on.student_2) == [True, True]
+    response = client.post(url, _settings_payload(), follow=True)
+    html = response.content.decode()
+    assert "Auto-block is off: 2 students blocked by it can use" in html
+    assert _blocked(rule_on.student_1, rule_on.student_2) == [False, False]
+    assert _blocked(rule_on.student_new) == [True]  # the manual block stays
+    assert not _rule(rule_on.student_1).auto_blocked
+
+
+@pytest.mark.django_db
+def test_saving_with_the_rule_off_changes_nothing(owing, admin) -> None:  # noqa: F811
+    from tests.institutes.test_settings_views import _settings_payload
+
+    _in_tenant(owing, set_portal_blocked, owing.student_1, blocked=True)
+    signed_in(admin).post(reverse("admin:institute_settings"), _settings_payload())
+    assert _blocked(owing.student_1) == [True]

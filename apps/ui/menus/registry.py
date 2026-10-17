@@ -72,6 +72,10 @@ def resolve_menu_groups(
         for item in group.items:
             if item.feature and item.feature not in features:
                 continue
+            if role == Role.SUB_ADMIN and not allowed_menus.issuperset(
+                item.extra_menu_keys
+            ):
+                continue
             url = safe_reverse(item.url_name)
             disabled = url is None
             post_only = item.post_only or item.url_name == "accounts:logout"

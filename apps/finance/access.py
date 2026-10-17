@@ -49,3 +49,18 @@ def apply_defaulter_rule(institute: Any, today: date) -> AccessRun:
     for pk in to_open:
         set_portal_blocked(students[pk], blocked=False)
     return AccessRun(blocked=len(to_block), unblocked=len(to_open))
+
+
+def release_auto_blocks(institute: Any) -> int:
+    """The setting was switched off (backlog P7-3, owner decision
+    2026-10-17): open every student the rule blocked. Manual blocks stay."""
+    require_tenant_context(institute)
+    rules = PortalAccessRule.objects.filter(blocked=True, auto_blocked=True)
+    students = list(
+        StudentProfile.objects.filter(pk__in=rules.values("student_id")).select_related(
+            "user"
+        )
+    )
+    for student in students:
+        set_portal_blocked(student, blocked=False)
+    return len(students)

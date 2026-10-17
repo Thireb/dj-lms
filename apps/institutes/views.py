@@ -60,6 +60,14 @@ class InstituteSettingsPage(FormPage):
     def on_form_valid(self, form: InstituteSettingsForm) -> None:
         institute = self.get_institute()
         settings = institute.settings
+        # Read from the database: form validation already copied the new
+        # values onto ``settings`` (a ModelForm instance).
+        rule_was_on = (
+            type(settings)
+            .objects.filter(pk=settings.pk)
+            .values_list("auto_block_defaulters", flat=True)
+            .first()
+        )
         update_institute_settings(
             institute,
             settings,
@@ -101,3 +109,17 @@ class InstituteSettingsPage(FormPage):
             ],
         )
         messages.success(self.request, "Institute settings updated.")
+        if rule_was_on and not settings.auto_block_defaulters:
+            self.release_auto_blocks(institute)
+
+    def release_auto_blocks(self, institute: Institute) -> None:
+        from apps.finance.access import release_auto_blocks
+
+        opened = release_auto_blocks(institute)
+        if opened:
+            noun = "student" if opened == 1 else "students"
+            messages.success(
+                self.request,
+                f"Auto-block is off: {opened} {noun} blocked by it can use "
+                "the portal again.",
+            )

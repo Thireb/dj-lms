@@ -278,14 +278,30 @@ def test_dashboard_page(owing, admin) -> None:
     assert "Defaulters (all months)" in html
     assert reverse("admin:fee_defaulters") in html
     institute = owing.morning.institute
-    dashboards = _sub_admin_view(
-        ChallanDashboardPage, DASHBOARD, institute, ["dashboards"]
-    )
-    assert dashboards.status_code == 200
-    assert reverse("admin:challan_list") not in dashboards.content.decode()
-    assert (
-        _sub_admin_view(
-            ChallanDashboardPage, DASHBOARD, institute, ["finance"]
-        ).status_code
-        == 403
-    )
+    # Backlog P7-1: a sub-admin needs Dashboards and Finance.
+    for menus, status in (
+        (["dashboards"], 403),
+        (["finance"], 403),
+        (["dashboards", "finance"], 200),
+    ):
+        response = _sub_admin_view(ChallanDashboardPage, DASHBOARD, institute, menus)
+        assert response.status_code == status
+    assert reverse("admin:challan_list") in response.content.decode()
+
+
+def test_challan_menu_item_needs_finance() -> None:
+    """Backlog P7-1: the menu shows the Challan dashboard to a sub-admin
+    only with the Finance menu too."""
+    from types import SimpleNamespace
+
+    from apps.ui.menus.admin import AdminMenu
+    from apps.ui.menus.registry import resolve_menu_groups
+
+    def items(menus):
+        user = SimpleNamespace(role=Role.SUB_ADMIN, allowed_menus=menus)
+        institute = SimpleNamespace(features={"fees"})
+        groups = resolve_menu_groups(AdminMenu.groups(), user=user, institute=institute)
+        return {item.url_name for group in groups for item in group.items}
+
+    assert "admin:dashboard_challan" not in items(["dashboards"])
+    assert "admin:dashboard_challan" in items(["dashboards", "finance"])
