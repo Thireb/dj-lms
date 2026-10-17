@@ -336,6 +336,29 @@ Full review of roadmap 6.1 to 6.3 on the local `phase/6` branch (one PR for the 
 | P6-8 | A blocked student (portal access paused) cannot open Messages, because every `/student/` page shows "Access paused". The page shows the institute phone (SPEC 6.2). Decide if a blocked student may still message the office. Owner decision 2026-10-16: yes. Messages stay open while blocked (the reach rule does not change), and "Access paused" has a "Message the office" button. | Low | [x] |
 | P6-9 | A notification text keeps the time in the zone the recipient had when it was made; a later time zone change does not rewrite old notifications. Accepted: the zone name is in the text. | Low | [x] |
 
+## Phase 7 audit (2026-10-17, on `phase/7`)
+
+This was a full review of roadmap 7.1 to 7.6 and the demo fees, on the local `phase/7` branch (one PR for the phase).
+- **Checks:** pytest 2719 passed. Ruff and makemigrations are clean. The mutation check gave 690 caught, 0 missed, 0 stale.
+- **Browser walk:** `./scripts/browser-walk.sh` opened 242 pages for the 5 demo roles at 360px and 1440px. All answered 200, with no sideways scroll, no console errors and no axe WCAG A/AA findings.
+- **Screenshots** at both widths: Fee defaulters, the Challan dashboard, the student and guardian fee pages, and the 3 dashboards.
+- **Security pass:**
+  - `unscoped` appears only in the demo resets.
+  - Every finance view gets `allowed_roles` from its mixin.
+  - There is no `|safe`.
+  - The actions are POST forms with CSRF.
+  - The receipt files are private, with `nosniff` and `no-store`.
+  - The Block / Unblock "next" accepts only an `/admin/` path.
+- **By hand:** the challan page, the PDF and the reports show and count the late fee.
+
+| # | Item | Priority | Status |
+|---|---|---|---|
+| P7-1 | The Challan dashboard uses the Dashboards menu key (FEATURES 11 menu), so a sub-admin with Dashboards but without Finance sees this month's fee totals. The Main dashboard fee strip needs Finance. Decide if the Challan dashboard should need Finance too. | Low | [ ] |
+| P7-2 | The dashboards and fee pages take "today" in the viewer's own zone; the reminder and defaulter jobs use the institute's zone. Near midnight a viewer in another zone can see a different "this month" or "overdue". | Low | [ ] |
+| P7-3 | Turning "Auto-block defaulters" off leaves the students the rule blocked still blocked (assumed; SPEC 6.2 says nothing). Decide if switching it off should open them. | Low | [ ] |
+| P7-4 | Fee notices for sub-admins (receipt submitted, challans overdue) wait for stored sub-admin menus (backlog S15): the jobs load users from the database, where a sub-admin has no menus yet. | Low | [ ] |
+| P7-5 | The bulk print test counted PDF pages with a regular expression that cut a compressed stream ending in a carriage return, so it failed on some dates. Fixed: the counter keeps the end bytes. | Low | [x] |
+
 ## Later (deployment hardening, Phase 12)
 
 | # | Item | Priority | Status |
