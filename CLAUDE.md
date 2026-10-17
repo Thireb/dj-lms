@@ -33,9 +33,10 @@ This project's coding rules live in `AGENTS.md` (imported above). Everything bel
 ## Commands
 
 - Tests, full suite: `uv run pytest -n auto` (parallel, about 40 s). While building, run only the files you changed: `uv run pytest tests/<app>/test_x.py`.
+- Tests, serial: `uv run pytest -q -p no:cacheprovider` (about 4 min). Run it at every phase audit and every handover of a fix branch. The parallel run gives each worker a fresh process, so it hides tests that depend on the test order (backlog R1).
 - The test database is kept between runs (`--reuse-db` in `pyproject.toml`). After switching to a branch with other migrations, add `--create-db` once.
-- Mutation check while building: `uv run python scripts/mutation_check.py --changed` (only the entries for files changed since `origin/main`). Run the full check once at handover.
-- Browser walk: `./scripts/browser-walk.sh` opens every portal page as its demo role at 360px and 1440px (status, sideways scroll, console errors, axe). `WALK_ONLY=teacher:quiz` walks some routes; `WALK_SHOTS=<dir>` saves screenshots. Add new pk routes to `OBJECTS` in `browser_walk/test_walk.py`.
+- Mutation check while building: `uv run python scripts/mutation_check.py --changed` (only the entries for files changed since `origin/main`). Run the full check once at handover. A catch counts only when it is confirmed: the failing test, run alone, fails with the mutation and passes without it. An entry with "false catches" in its line is MISSED: fix that test (it depends on the test order or is broken) or write a test that catches the entry (backlog R6).
+- Browser walk: `./scripts/browser-walk.sh` opens every portal page as its demo role at 360px and 1440px (status, sideways scroll, console errors, axe WCAG A/AA plus the best-practice rules `empty-table-header` and `heading-order`). `WALK_ONLY=teacher:quiz` walks some routes; `WALK_SHOTS=<dir>` saves screenshots. Add new pk routes to `OBJECTS` in `browser_walk/test_walk.py`.
 - Lint: `uv run ruff check .`
 - Format check: `uv run ruff format --check .`
 - Build CSS (needed before UI tests): `./scripts/build-app-css.sh`
@@ -45,9 +46,16 @@ This project's coding rules live in `AGENTS.md` (imported above). Everything bel
 When asked to review a PR (use `gh pr view <n>` and `gh pr diff <n>`, or check out the branch):
 
 1. Check scope: did the PR stay within the roadmap items and backlog ids it names? List anything extra.
-2. Run pytest, ruff check and ruff format --check. Report exact results.
-3. Mutation-test every fix: undo it, confirm a test fails, then restore it. A fix with no failing test is a gap. Run `uv run python scripts/mutation_check.py` (commit first: entries run on HEAD in throwaway worktrees, one per core minus 2, so the working tree stays free; `--jobs N` changes the count). Every entry must print CAUGHT. Add an entry for each new fix.
+2. Run pytest (parallel and, at a phase audit or for a fix branch, serial), ruff check and ruff format --check. Report exact results.
+3. Mutation-test every fix: undo it, confirm a test fails, then restore it. A fix with no failing test is a gap. Run `uv run python scripts/mutation_check.py` (commit first: entries run on HEAD in throwaway worktrees, one per core minus 2, so the working tree stays free; `--jobs N` changes the count). Every entry must print CAUGHT. Add an entry for each new fix. Do not read "1 failed" as enough: the tool confirms each catch, and a MISSED line names any false catches.
 4. Probe real output, not only unit tests: render pages, check HTML, run the failing case by hand.
+   Then check how each new feature fails, not only how it works (external re-audit of Phases 5 to 7). For each item that applies, write a test or say why it cannot happen:
+   - a stored file is missing on disk, or the upload is empty or of the wrong type;
+   - the broker (Redis) is down, or a queued task runs late (after midnight, after a due date, after the data changed);
+   - the data changes between two steps (between a save and an automatic follow-up, between a check and a write): the second step fails cleanly and the user sees no error for a saved action;
+   - a job runs twice, or two runs overlap: nothing is sent or added twice;
+   - another time zone: the date of the institute, not of the viewer or the server;
+   - the tests pass in another order (the serial run).
 5. Security pass, in this order:
    - Tenant isolation: the manager must fail closed; no unscoped queries in views; `unscoped` only where `AGENTS.md` allows it.
    - Access control: every view declares `allowed_roles`; admin views use `MenuRequiredMixin`.

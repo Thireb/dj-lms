@@ -12,11 +12,13 @@
 
 ## Checks
 
-- pytest:
+- pytest (parallel):
+- pytest (serial, phase audits and fix branches):
 - ruff check / ruff format --check:
 - makemigrations --check:
-- Mutation check:
+- Mutation check (every catch confirmed):
 - Browser probe (360px and 1440px):
+- Failure modes checked (CLAUDE.md review step 4):
 
 ## Security pass
 

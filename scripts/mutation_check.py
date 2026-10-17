@@ -12,10 +12,17 @@ minus 2, each in its own git worktree with its own test database, so the
 working tree is never touched.
 
 To be fast without changing the result, each entry runs in up to 3 stages and
-stops at the first failure: the test that caught it last time (cached in
-mutation_cache.json in the shared .git folder), then the tests of the app
-that owns the file, then the full suite. An entry is MISSED only when the
-full suite passes.
+stops at the first confirmed failure: the test that caught it last time
+(cached in mutation_cache.json in the shared .git folder), then the tests of
+the app that owns the file, then the full suite. An entry is MISSED only when
+no stage has a confirmed failure.
+
+A failure counts only when it is confirmed (backlog R6): the failing test,
+run alone, fails with the mutation and passes without it. Otherwise it is a
+false catch (a test that fails because of the test order, or one that is
+broken without the mutation): the stage runs again without that test, and
+the summary names it. Before R6, a flaky test made entries print CAUGHT
+that no test caught.
 """
 
 from __future__ import annotations
@@ -4322,6 +4329,8 @@ OLD_CACHE = ROOT / ".mutation_cache.json"  # before worktrees; read once
 # longer exists, 5 = no tests collected. Move on to the next stage.
 NO_VERDICT = {4, 5}
 FAILED_LINE = re.compile(r"^FAILED (\S+?)(?: - |$)", re.M)
+# False catches to skip in one stage before the stage gives up.
+MAX_FALSE_CATCHES = 3
 
 
 class Worker:
@@ -4376,23 +4385,48 @@ def stages(name: str, path: str, cache: dict[str, str]) -> list[list[str]]:
     return found
 
 
+def confirmed(worker: Worker, test: str, path: str, mutated_source: str) -> bool:
+    """The test alone fails with the mutation and passes without it."""
+    target = worker.path / path
+    if worker.pytest([test]).returncode in {0, *NO_VERDICT}:
+        return False
+    worker.restore(path)
+    clean = worker.pytest([test]).returncode == 0
+    target.write_text(mutated_source)
+    return clean
+
+
 def check(entry, worker: Worker, cache: dict[str, str]) -> tuple[str, str, str]:
     name, path, original, mutated = entry
     target = worker.path / path
     source = target.read_text()
     if original not in source:
         return "STALE", f"text not found in {path}", ""
-    target.write_text(source.replace(original, mutated, 1))
+    mutated_source = source.replace(original, mutated, 1)
+    target.write_text(mutated_source)
     summary = "no tests ran"
+    false_catches: list[str] = []
     try:
         for targets in stages(name, path, cache):
-            result = worker.pytest(targets)
-            if result.returncode in NO_VERDICT:
-                continue
-            summary = (result.stdout.strip().splitlines() or ["no output"])[-1]
-            if result.returncode != 0:
+            skipped: list[str] = []
+            while len(skipped) <= MAX_FALSE_CATCHES:
+                deselect = [f"--deselect={test}" for test in skipped]
+                result = worker.pytest([*targets, *deselect])
+                if result.returncode in NO_VERDICT or result.returncode == 0:
+                    if result.returncode == 0:
+                        summary = result.stdout.strip().splitlines()[-1]
+                    break
+                summary = (result.stdout.strip().splitlines() or ["no output"])[-1]
                 failed = FAILED_LINE.search(result.stdout)
-                return "CAUGHT", summary, failed.group(1) if failed else ""
+                if failed is None:  # an import or collection error: caught
+                    return "CAUGHT", summary, ""
+                test = failed.group(1)
+                if confirmed(worker, test, path, mutated_source):
+                    return "CAUGHT", summary, test
+                skipped.append(test)
+                false_catches.append(test)
+        if false_catches:
+            summary += f" (false catches: {', '.join(false_catches)})"
         return "MISSED", summary, ""
     finally:
         worker.restore(path)

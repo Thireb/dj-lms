@@ -71,6 +71,7 @@ Cursor users: also copy the key rules (sections 2 to 6) into `.cursor/rules/` so
 - New view: test allowed role passes, every other role gets 403, other institute gets 404.
 - New `for_user` scope: test that a user cannot see another user's records (teacher vs teacher, guardian vs unlinked student).
 - Money, payroll, challan, and attendance logic: unit tests with real numbers.
+- How a feature fails, not only how it works: a missing file, the broker down, a late or repeated job, data that changes between two steps, another time zone (the CLAUDE.md review procedure, step 4, has the list).
 - Run `pytest` and `ruff check` before saying a task is done.
 
 ## 8. Workflow
