@@ -4252,6 +4252,42 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "        self.institute, self.print_url = institute, print_url\n        self.today = institute_today(institute)  # backlog P7-2\n",
         "        self.institute, self.print_url = institute, print_url\n        self.today = __import__('django.utils.timezone').utils.timezone.localdate()\n",
     ),
+    (
+        "missing receipt file gives 404 (re-audit 2)",
+        "apps/finance/views.py",
+        "    except FileNotFoundError:\n",
+        "    except ZeroDivisionError:\n",
+    ),
+    (
+        "failed auto-approve leaves it waiting (re-audit 3)",
+        "apps/finance/receipts.py",
+        "        return approve_receipt(receipt, by=None)\n    except ValidationError:\n",
+        "        return approve_receipt(receipt, by=None)\n    except ZeroDivisionError:\n",
+    ),
+    (
+        "late challan run is logged (re-audit)",
+        "apps/finance/tasks.py",
+        '        except ValidationError:\n            logger.warning(\n                "Challan run',
+        '        except ZeroDivisionError:\n            logger.warning(\n                "Challan run',
+    ),
+    (
+        "action column header has a label (re-audit 4a)",
+        "apps/ui/templates/ui/components/data_table.html",
+        '{% else %}<span class="sr-only">Actions</span>{% endif %}',
+        "{% else %}{% endif %}",
+    ),
+    (
+        "form section heading is h2 (re-audit 4b)",
+        "apps/ui/templates/ui/forms/layout/section.html",
+        '<h2 id="{{ section_id }}" class="text-base font-semibold text-text">{{ legend }}</h2>',
+        '<h3 id="{{ section_id }}" class="text-base font-semibold text-text">{{ legend }}</h3>',
+    ),
+    (
+        "standalone empty state heading is h2 (re-audit 4b)",
+        "apps/ui/templates/ui/components/empty_state.html",
+        '{% if framed %}<h2 class="text-base font-semibold text-text">{{ title }}</h2>',
+        '{% if framed %}<h3 class="text-base font-semibold text-text">{{ title }}</h3>',
+    ),
 ]
 
 
