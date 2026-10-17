@@ -16,7 +16,6 @@ from django.db.models import Q
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
-from django.utils import timezone
 from django.utils.cache import patch_cache_control
 
 from apps.academics.models import Batch, ClassLabel
@@ -700,7 +699,7 @@ class AdminDashboardPage(DashboardPage):
         features = getattr(institute, "features", None) or ()
         if "fees" not in features or not self.can_open(menu_keys.FINANCE):
             return []
-        numbers = month_money(self.request.user, timezone.localdate())
+        numbers = month_money(self.request.user, self.institute_today())
         month = month_text(numbers.month)
         return [
             StatCard(

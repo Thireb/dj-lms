@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from typing import Any
 
 from django.core.exceptions import ImproperlyConfigured
@@ -12,6 +13,7 @@ from apps.core.mixins.access import (
     RoleRequiredMixin,
     TenantRequiredMixin,
 )
+from apps.core.timezone_utils import institute_today
 from apps.ui.components.forms import CrispyForm, PortalPostForm
 from apps.ui.components.layout import PageHeader, SidebarShell, TopNavShell
 from apps.ui.components.page_layouts import (
@@ -78,6 +80,11 @@ class PortalPageView(
         return getattr(self.request, "institute", None) or getattr(
             self.request.user, "institute", None
         )
+
+    def institute_today(self) -> date:
+        """Today in the institute's zone: fee dates follow the institute's
+        calendar, not the viewer's (backlog P7-2)."""
+        return institute_today(self.get_institute())
 
     def build_page_body(self, context: dict[str, Any]):
         header = context["header"]

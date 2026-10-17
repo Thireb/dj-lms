@@ -20,7 +20,6 @@ from django.http import (
 )
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
-from django.utils import timezone
 from django.utils.functional import cached_property
 
 from apps.academics.models import Batch
@@ -321,7 +320,7 @@ class ChallanGeneratePage(ChallanMixin, DetailPage):
         )
 
     def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
-        today = timezone.localdate()
+        today = self.institute_today()
         self.form = ChallanGenerateForm(
             initial={"month": month_start(today)},
             batches=self.batches(),
@@ -344,7 +343,7 @@ class ChallanGeneratePage(ChallanMixin, DetailPage):
             month = month_start(data["month"])
             due = data["due_date"] or default_due_date(self.get_institute(), month)
             try:
-                check_challan_dates(month, due, timezone.localdate())
+                check_challan_dates(month, due, self.institute_today())
             except ValidationError as error:
                 for name, errors in error.message_dict.items():
                     self.form.add_error(name, errors)
@@ -378,7 +377,7 @@ class ChallanGeneratePage(ChallanMixin, DetailPage):
             messages.error(request, "No student to make a challan for.")
             return HttpResponseRedirect(request.path)
         try:
-            check_challan_dates(month, due, timezone.localdate())
+            check_challan_dates(month, due, self.institute_today())
         except ValidationError as error:
             messages.error(request, " ".join(error.messages))
             return HttpResponseRedirect(request.path)
@@ -746,7 +745,7 @@ class ChallanPayPage(ChallanMixin, FormPage):
             "cancel_url": challan_url(self.challan),
             "initial": {
                 "amount": self.challan.balance,
-                "paid_on": timezone.localdate(),
+                "paid_on": self.institute_today(),
                 "method": PaymentMethod.CASH,
             },
         }
@@ -888,7 +887,7 @@ class GuardianFeePayPage(GuardianFeeMixin, DetailPage):
             initial={
                 "challans": [pk for pk, _ in choices],
                 "amount": total or None,
-                "paid_on": timezone.localdate(),
+                "paid_on": self.institute_today(),
             },
         )
 
@@ -1204,7 +1203,7 @@ class FeeReportPage(ChallanMixin, ListPage):
         return self.titles[self.kind]
 
     def default_range(self) -> tuple[date, date]:
-        today = timezone.localdate()
+        today = self.institute_today()
         if self.kind == "daily":
             return today.replace(day=1), today
         if self.kind == "monthly":
@@ -1359,7 +1358,7 @@ class FeeDefaultersPage(ChallanMixin, ListPage):
         return defaulters(
             self.request.user,
             self.get_institute(),
-            timezone.localdate(),
+            self.institute_today(),
             batch_id=filters["batch"],
             min_amount=filters["min"],
         )
@@ -1398,7 +1397,7 @@ class FeeDefaultersPage(ChallanMixin, ListPage):
         return table_pdf(
             institute,
             title="Fee defaulters",
-            range_text=f"On {date_text(timezone.localdate())}",
+            range_text=f"On {date_text(self.institute_today())}",
             headings=[
                 "Student",
                 "Guardian",
@@ -1477,7 +1476,7 @@ class ChallanDashboardPage(ChallanMixin, DashboardPage):
 
     def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
         self.numbers = challan_dashboard(
-            request.user, self.get_institute(), timezone.localdate()
+            request.user, self.get_institute(), self.institute_today()
         )
         return super().get(request, *args, **kwargs)
 

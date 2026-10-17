@@ -11,9 +11,9 @@ from typing import Any
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.db.models import Count, Q, QuerySet
-from django.utils import timezone
 
-from apps.core.tenancy import require_tenant_context
+from apps.core.tenancy import get_current_institute, require_tenant_context
+from apps.core.timezone_utils import institute_today
 from apps.finance import notices
 from apps.finance.models import (
     MAX_AMOUNT,
@@ -302,7 +302,7 @@ def generate_challans(
     from apps.people.services import next_number
 
     require_tenant_context(institute)
-    today = today or timezone.localdate()
+    today = today or institute_today(institute)
     month = month_start(month)
     check_challan_dates(month, due_date, today)
     made = []
@@ -351,7 +351,7 @@ def cancel_challan(challan: Challan) -> Challan:
 
 def is_overdue(challan: Challan, today: date | None = None) -> bool:
     """SPEC 6.1: pending or partial, and today is after the due date."""
-    today = today or timezone.localdate()
+    today = today or institute_today(challan.institute)
     open_ = challan.status in (ChallanStatus.PENDING, ChallanStatus.PARTIAL)
     return open_ and today > challan.due_date
 
@@ -374,7 +374,7 @@ def list_challans(
     if batch_id:
         rows = rows.filter(student__batch_subjects__batch_id=batch_id).distinct()
     if status == OVERDUE:
-        today = today or timezone.localdate()
+        today = today or institute_today(get_current_institute())
         rows = rows.filter(
             status__in=[ChallanStatus.PENDING, ChallanStatus.PARTIAL],
             due_date__lt=today,
@@ -432,7 +432,7 @@ def record_payment(
     from apps.people.services import next_number
 
     require_tenant_context(challan.institute)
-    today = today or timezone.localdate()
+    today = today or institute_today(challan.institute)
     with transaction.atomic():
         locked = Challan.objects.select_for_update().get(pk=challan.pk)
         errors: dict[str, str] = {}
