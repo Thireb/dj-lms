@@ -351,6 +351,10 @@ This was a full review of roadmap 7.1 to 7.6 and the demo fees, on the local `ph
   - The Block / Unblock "next" accepts only an `/admin/` path.
 - **By hand:** the challan page, the PDF and the reports show and count the late fee.
 
+After the owner decisions of 2026-10-17 (P7-1, P7-2 and P7-3 fixed on `phase/7`):
+- **Checks:** pytest 2725 passed. Ruff and makemigrations are clean. The mutation check gave 698 caught, 0 missed, 0 stale.
+- **Browser walk:** 242 pages, all clean.
+
 | # | Item | Priority | Status |
 |---|---|---|---|
 | P7-1 | The Challan dashboard uses the Dashboards menu key (FEATURES 11 menu), so a sub-admin with Dashboards but without Finance sees this month's fee totals. The Main dashboard fee strip needs Finance. Decide if the Challan dashboard should need Finance too. Owner decision 2026-10-17: yes. A sub-admin needs Dashboards and Finance for the page and its menu item (`extra_menu_keys`). | Low | [x] |
