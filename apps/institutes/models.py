@@ -76,6 +76,11 @@ class InstituteSettings(TenantModel):
     )
     join_window_minutes = models.PositiveSmallIntegerField(default=10)
     fee_due_day = models.PositiveSmallIntegerField(default=10)
+    # Phase 7 owner decisions (2026-10-16): a fixed late fee added to a
+    # challan not paid in full by its due date (0 = none), and the month the
+    # academic year starts (for "fee paid % this academic year").
+    late_fee = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    academic_year_start_month = models.PositiveSmallIntegerField(default=4)
     grace_days_after_due = models.PositiveSmallIntegerField(default=5)
     auto_block_defaulters = models.BooleanField(default=False)
     auto_approve_guardian_receipts = models.BooleanField(default=False)

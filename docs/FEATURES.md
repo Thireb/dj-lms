@@ -56,7 +56,7 @@ Setup order the reference teaches: Campus, Classes, Batches, Subjects, Fee Plans
 - [x] All Students list with Active/Inactive status.
 - [x] Bulk upload from an Excel template (one student per row; error rows reported). Fee plan columns come with Phase 7.
 - [x] Student Attendance History. Built in 4.2: one student at a time (a search by name, code, email or phone, or the row action on All students).
-- [ ] **Portal Access:** block a student from the student portal (for example unpaid fees); automatic blocking of fee defaulters can be on or off; single students can be exempted. Blocked student sees a "blocked" page. Built in 2.7: manual block and unblock, exemptions, the Access paused page. Automatic blocking of defaulters comes with roadmap 7.6 (backlog S9).
+- [x] **Portal Access:** block a student from the student portal (for example unpaid fees); automatic blocking of fee defaulters can be on or off; single students can be exempted. Blocked student sees a "blocked" page. Built in 2.7: manual block and unblock, exemptions, the Access paused page. Built in 7.6: automatic blocking of defaulters (backlog S9) and the Fee due column.
 
 ## 4. Teachers (Admin)
 
@@ -100,16 +100,16 @@ Setup order the reference teaches: Campus, Classes, Batches, Subjects, Fee Plans
 
 ## 8. Fees (P)
 
-- [ ] **Generate challan:** pick students, month, due date; bulk generate; print.
-- [ ] Challan Dashboard and Challan Records.
-- [ ] **Process payment:** office records cash or transfer against a challan (amount, date, method).
-- [ ] **Receipt inbox:** guardians upload proof of payment; admin approves or rejects with an optional message. Optional auto-approve setting.
-- [ ] **Fee Pay (guardian):** choose child, months/year paid for, amount, optional reference, upload receipt (JPG, PNG, WEBP, PDF), submit. Status starts as Waiting.
-- [ ] After approval the challan shows Paid.
-- [ ] Student "Fee Details": view only (total billed, paid, due, pending challans); payment is done by the guardian.
-- [ ] Guardian "Fee & Challans": bills, due dates, paid/unpaid.
-- [ ] Reports: Daily, Monthly, Yearly collection, Fee Defaulters; set a date range, print or export.
-- [ ] Discounts per student; fee plans attached at enrolment.
+- [x] **Generate challan:** pick students, month, due date; bulk generate; print. Built in 7.2: Generate challans with a preview, a Celery task, and PDFs (one challan or the filtered list).
+- [x] Challan Dashboard and Challan Records.
+- [x] **Process payment:** office records cash or transfer against a challan (amount, date, method). Built in 7.3, with partial payments, a receipt PDF and each student's fee history.
+- [x] **Receipt inbox:** guardians upload proof of payment; admin approves or rejects with an optional message. Optional auto-approve setting. Built in 7.3b (a reject needs a reason, SPEC 4.9).
+- [x] **Fee Pay (guardian):** choose child, months/year paid for, amount, optional reference, upload receipt (JPG, PNG, WEBP, PDF), submit. Status starts as Waiting. Built in 7.3b (the child is the one chosen in the header).
+- [x] After approval the challan shows Paid. Built in 7.3b (Partial when the receipt covers part of it).
+- [x] Student "Fee Details": view only (total billed, paid, due, pending challans); payment is done by the guardian. Built in 7.5.
+- [x] Guardian "Fee & Challans": bills, due dates, paid/unpaid. Built in 7.5, with Print (the challan PDF) for the chosen child.
+- [x] Reports: Daily, Monthly, Yearly collection, Fee Defaulters; set a date range, print or export.
+- [x] Discounts per student; fee plans attached at enrolment. Built in 7.1: a discount per plan (amount or percent) on Enrol, Edit and the bulk upload.
 
 ## 9. Teacher salary (P)
 
@@ -157,7 +157,7 @@ Main dashboard: campus hero, clock, 4 stat cards (students, teachers, batches, l
 Dashboard: welcome banner, subject/batch chips, up-next card with countdown, 4 stat cards (lectures, students, batches, subjects), quick actions. Built in R4c: welcome banner with chips, an empty up-next card, and stat cards for students, batches and subjects. Built in 3.4: the up-next card with a countdown and a "Lectures today" card. Built for backlog AT2: a fifth card, "Attendance to take" (finished lectures with students and no marks). Quick actions come later.
 
 **Student (left sidebar):** Dashboard | Academics (My Lectures, My Attendance, Leave Requests, Homework, Lesson Plans, Assignments, Quizzes & Exams, Documents) | Messages | Finance (Fee Details) | Account (My Profile, Settings, Sign Out).
-Dashboard: attendance %, homework done %, upcoming count, fee paid %, up-next card, fee KPIs (billed, paid, due, pending challans). Built in R4c: welcome banner with code, class and batch/subject chips, and an up-next card (with a countdown and Join since 3.4). Built in 4.3: attendance % and "Lectures today" cards. The other KPIs come with their phases.
+Dashboard: attendance %, homework done %, upcoming count, fee paid %, up-next card, fee KPIs (billed, paid, due, pending challans). Built in R4c: welcome banner with code, class and batch/subject chips, and an up-next card (with a countdown and Join since 3.4). Built in 4.3: attendance % and "Lectures today" cards. Built in 7.5: "Fee paid this year" (%) and "Fee due" (with the pending challans). The other KPIs come with their phases.
 
 **Guardian (left sidebar):** Dashboard | Academics (Lectures Schedule, Homework, Lesson Plans, Assignments, Quizzes & Exams, Class Attendance) | Finance (Fee & Challans, Fee Pay) | Communication (Messages) | Account (Student Profile, Account Settings, Sign Out).
 Dashboard: child switcher in the header, billed / paid / outstanding / upcoming classes, homework progress and 6-month trend chart. One guardian login can cover several children; every page follows the chosen child. Built in R4c: welcome banner, a "Your children" card (code, class, batches, status) and an upcoming classes card (the next 5 classes with the child's name since 3.4). The child switcher is built in 4.2 (header, kept in the session; shown with two or more children). Built in 4.3: each child's attendance % in "Your children". The other KPIs come with their phases.

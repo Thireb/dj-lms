@@ -2,6 +2,7 @@ from django.urls import path
 
 from apps.assessments import views as assessments
 from apps.attendance import views as attendance
+from apps.finance import views as finance
 from apps.lectures import views as lectures
 from apps.messaging import views as messaging
 from apps.people import views as people
@@ -54,5 +55,18 @@ urlpatterns = [
         "messages/drafts/<int:pk>/delete/",
         messaging.PAGES["guardian"]["draft_delete"].as_view(),
         name="message_draft_delete",
+    ),
+    # Fees (Phase 7)
+    path("fees/", finance.GuardianFeesPage.as_view(), name="fee_list"),
+    path(
+        "fees/challans/<int:pk>/pdf/",
+        finance.GuardianChallanPdfView.as_view(),
+        name="challan_pdf",
+    ),
+    path("fees/pay/", finance.GuardianFeePayPage.as_view(), name="fee_pay"),
+    path(
+        "fees/receipts/<int:pk>/file/",
+        finance.GuardianReceiptFileView.as_view(),
+        name="receipt_file",
     ),
 ]

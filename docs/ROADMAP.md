@@ -101,14 +101,15 @@ The product owner did not accept the current look (navigation, tables, forms, si
 
 ## Phase 7: Fees (Premium)
 
-- [ ] 7.1 Fee structures.
-- [ ] 7.2 Bulk challan generation (Celery) and challan PDF.
-- [ ] 7.3 Process Payment (office), payments, status, fee history.
-- [ ] 7.3b Receipt inbox: guardian Fee Pay upload, admin approve/reject with message.
-- [ ] 7.3c Reports: daily, monthly, yearly, defaulters, print/export.
-- [ ] 7.4 Reminders.
-- [ ] 7.5 Student and guardian fee pages.
-- [ ] 7.6 Automatic defaulter blocking from 2.7: nightly job blocks defaulters that are not exempt and unblocks them when nothing is overdue beyond grace (SPEC 6.2, setting `auto_block_defaulters`).
+- [x] 7.1 Fee structures. Part 1 built: the `finance` app (`FeePlan`, `StudentFeePlan`), admin Fee plans (list with search and the students count, Add, Edit, Activate and Deactivate), the monthly fee rule with discounts, and the late fee and academic year settings (owner decisions 2026-10-16). Part 2 built: fee plans and discounts on Enrol and Edit, and the Monthly fee column on All Students. Part 3 built: the `fee_plans` and `discount` columns of the bulk upload.
+- [x] 7.2 Bulk challan generation (Celery) and challan PDF. Part 1 built: `Challan` and `ChallanLine`, Generate challans (month, due date, all active or one batch, a preview with a tick per student and the skipped list, then a Celery task), Challan records (search, month, batch and status filters, overdue shown), the challan page and Cancel. Part 2 built: the challan PDF with WeasyPrint (three labelled copies on one A4 page; Print these challans prints the filtered list, one challan per page).
+- [x] 7.3 Process Payment (office), payments, status, fee history. Built: `Payment`, Process payment (search by challan no., name or ID, then Record payment: amount up to the balance, date, method, reference, note), the challan status rule, the payments on the challan page, the receipt PDF (SPEC 9.3) and each student's Fee history (challans, payments, billed, paid, due).
+- [x] 7.3b Receipt inbox: guardian Fee Pay upload, admin approve/reject with message. Part 1 built: private file storage (`PRIVATE_MEDIA_ROOT`, owner decision 2026-10-16), `ReceiptSubmission`, and the rules: a guardian sends a JPG, PNG, WEBP or PDF up to 5 MB (checked from the content) for open challans of their child, up to the balance; approve records the payments oldest challan first; reject needs a reason; the auto-approve setting. Part 2 built: guardian Fee pay (the form and the history of sent receipts), the admin Receipt inbox (status and date filters), the receipt page with the photo, Approve and Reject, the private file views (no sniffing, no shared cache) and the notifications (admins with Finance on a new receipt, the guardian on approve or reject).
+- [x] 7.3c Reports: daily, monthly, yearly, defaulters, print/export. Part 1 built: Daily, Monthly and Yearly reports (date range and batch filters, a Total row, Print as PDF with page numbers, Export CSV safe from formulas). Part 2 built: Fee defaulters (batch and minimum due filters, Message guardian, Block / Unblock that returns to the list, Print and Export CSV) and the Challan dashboard (SPEC 8).
+- [x] 7.4 Reminders. Built: notifications for challan generated, due in 3 days, overdue and payment recorded, and an hourly job (`finance.tasks.remind_all_challans`) that adds the late fee once.
+- [x] 7.5 Student and guardian fee pages. Built: student Fee details and guardian Fee and challans (KPIs, challans newest first, guardian Print), the student fee cards, the guardian Fees card, and the admin fee strip on the Main dashboard.
+- [x] 7.6 Automatic defaulter blocking from 2.7: nightly job blocks defaulters that are not exempt and unblocks them when nothing is overdue beyond grace (SPEC 6.2, setting `auto_block_defaulters`).
+- [x] 7.7 Phase 7 audit (findings in BACKLOG.md "Phase 7 audit"): the CLAUDE.md PR review procedure on the whole phase, every page opened as each demo role at 360px and 1440px, the open backlog re-checked.
 
 ## Phase 8: Payroll (Premium)
 

@@ -27,12 +27,19 @@ def update_campus_profile(
     return institute
 
 
+MAX_LATE_FEE = 100000  # a guard against typing mistakes
+
+
 def validate_settings_ranges(settings: InstituteSettings) -> None:
     errors: dict[str, str] = {}
     if not 1 <= settings.fee_due_day <= 28:
         errors["fee_due_day"] = "Fee due day must be between 1 and 28."
     if settings.join_window_minutes > 120:
         errors["join_window_minutes"] = "Join window cannot exceed 120 minutes."
+    if not 0 <= settings.late_fee <= MAX_LATE_FEE:
+        errors["late_fee"] = f"Late fee must be between 0 and {MAX_LATE_FEE:,}."
+    if not 1 <= settings.academic_year_start_month <= 12:
+        errors["academic_year_start_month"] = "Choose a month."
     if settings.grace_days_after_due > 60:
         errors["grace_days_after_due"] = "Grace days cannot exceed 60."
     if settings.teacher_leave_days_per_year > 365:

@@ -43,6 +43,8 @@ Menu key `institute`: `institute_admin`, and a `sub_admin` granted Institute.
 | Join window (minutes before start students can join) | number | 10 |
 | Fee due day of month | number 1-28 | 10 |
 | Grace days after due date | number | 5 |
+| Late fee (owner decision 2026-10-16; added once to a challan not paid in full by its due date; 0 = none) | money, 0 to 100,000 | 0 |
+| Academic year starts in (owner decision 2026-10-16; for "fee paid % this academic year") | month | April |
 | Auto-block defaulters from student portal | on/off | off |
 | Auto-approve guardian receipts | on/off | off |
 | Require admin approval for homework | on/off | off |
@@ -104,7 +106,7 @@ Menu key `institute`: `institute_admin`, and a `sub_admin` granted Institute.
 | Leave Approval (student / teacher) | Name, From, To, Days, Reason, Status | status | Approve, Reject (teacher leave: shows clashing lectures) |
 | Message Monitor | Date, From, To, Subject, Last message | search, role | Open |
 | Manage Users (sub-admin) | Name, Email, Allowed menus, Status | status | Edit, Deactivate |
-| Portal Access | Student, Class, Guardian, Fee due, Blocked, Exempt | blocked, exempt | Block, Unblock, Exempt (2.7 adds search and Remove exemption; Fee due comes with Phase 7) |
+| Portal Access | Student, Class, Guardian, Fee due, Blocked, Exempt | blocked, exempt | Block, Unblock, Exempt (2.7 adds search and Remove exemption; Fee due built in 7.6) |
 
 ### Teacher
 
@@ -154,6 +156,7 @@ Same lists as the student for the chosen child, plus:
 - Logins: Student email* + password*, Guardian email* + password*. Emails must be different and unique in the system.
 - Existing guardian: if the guardian email already belongs to a guardian of this institute, the new student is linked to that guardian (one guardian, many children). The password, name and phone typed are ignored. If the email belongs to any other account, show "This email is already used by another account." and do not say which role or institute uses it.
 - Validation: at least one batch, each batch has at least one subject, at least one fee plan.
+- Built in 7.1 (assumed, check against the demo): with the fees feature, Enrol and Edit show one row per active fee plan (and any inactive plan the student already has): a tick, Discount (no discount, amount or percent) and its value. A percent is 0 to 100; an amount is at most the plan amount. The monthly fee is shown on All Students ("Monthly fee"), not as a live total on the form. Institutes without fees see no fee rows.
 
 ### 4.2 Add / edit teacher
 Full name*, Phone*, Email (login)*, Password*, CNIC (optional), Address, Joining date, Status. Batches* (multi) with subjects* per batch.
@@ -163,6 +166,7 @@ Name*, Status. Name unique per institute.
 
 ### 4.4 Fee plan
 Name*, Amount* (greater than 0), Status.
+Built in 7.1 (assumed, check against the demo): the name is unique per institute, ignoring case; the amount is a monthly amount with 2 decimals, at most 10,000,000. A new amount counts only for challans made after the change. Deactivate keeps the plan on students who have it; it is not offered on new enrolments.
 
 ### 4.5 Add lecture
 Title*, Date*, Start time*, Duration (minutes)*, Teacher* (admin only; teacher is fixed when a teacher creates it), Batch*, Subjects* (only those assigned to the chosen teacher in that batch), Delivery mode* (S) Manual link / In person, Meeting link (required if Manual link), Description.
@@ -188,9 +192,11 @@ Rules chosen in 3.2 (ASSUMED, compare with the demo):
 
 ### 4.7 Generate challans
 Month* (month picker), Due date* (default from settings), Students: all active / by batch / pick students. Preview table (student, amount) with a checkbox per row. Skip rule: a student who already has a non-cancelled challan for that month is skipped and listed.
+Built in 7.2 (assumed, check against the demo): "pick students" is the preview: every planned student is ticked, and the admin unticks the ones to leave out. A student with no fee plan is skipped and listed too. The due date is today or later and not before the month; empty means the fee due day of that month. The challan number is `CH-YYYYMM-NNNN`, a running number per institute and month. Generate queues a Celery task; when the broker is down the challans are made in the request. Running it twice makes no duplicates (the skip rule is checked again for each challan).
 
 ### 4.8 Process payment
 Search challan or student*, Amount* (up to balance), Date* (default today), Method* (S) Cash / Bank transfer / Online / Other, Reference, Note. Allows partial payment.
+Built in 7.3 (assumed, check against the demo): the search lists pending and partly paid challans (by challan no., student name or ID); the amount starts at the balance; the date cannot be in the future; the receipt number is `PAY-YYYYMM-NNNN` by the month paid. The balance includes a late fee once it is added. Each payment has a receipt PDF; each student has a Fee history page (from the challan page).
 
 ### 4.9 Reject receipt
 Reason* (short text, shown to guardian).
@@ -231,6 +237,7 @@ Date*, Batch*, Subject, Student (optional, for one-student reports), Topic cover
 
 ### 4.17 Fee Pay (guardian)
 Child* (S), Challan(s) or months* (multi), Amount* (default = selected balance), Paid on* (date), Reference (text), Receipt file* (JPG, PNG, WEBP, PDF, up to 5 MB). On submit: status `waiting`, admins notified.
+Built in 7.3b (assumed, check against the demo): the guardian chooses open challans (pending or partly paid) of the child chosen in the header; the amount is up to their balance; the date is not in the future. The file type is checked from its content (an image must open as that type, a PDF must start like one) and the file is stored privately under a random name (owner decision: private local disk). The number is `RCP-NNNN`. Approving records one payment per challan, oldest first, with method Online and the receipt's reference (or its number); it is refused if the challans now owe less than the receipt (for example the office was paid meanwhile). With auto-approve on, a receipt is approved as it is sent.
 
 ### 4.18 Leave request
 From*, To*, Reason*. For teachers, show days used and remaining.
@@ -260,6 +267,7 @@ Full name*, Institute name*, Phone*, Email, Website, Message*. Saved for Super A
   `full_name*, father_name, cnic, dob (YYYY-MM-DD), gender, class_label, phone, guardian_name*, guardian_phone*, address, city, batches* (comma list), subjects* (BatchName:Subject1|Subject2; next batch after a semicolon), fee_plans* (comma list), discount, student_email*, student_password*, guardian_email*, guardian_password*`
 - Steps: download template, upload, preview with row-level errors, confirm to import valid rows only.
 - Built in 2.6 without `fee_plans` and `discount` (they come with Phase 7). Limits: one `.xlsx` file up to 1 MB (20 MB unpacked), student rows within the first 1,000 sheet rows, and 15 students per file until the import runs in Celery (backlog S8). Phone, CNIC and password columns are Text cells in the template; a phone typed as a number is an error, because Excel drops the leading 0. Passwords are kept exactly as typed. The check step runs the same field checks as the import (lengths), so a row marked Ready imports. Column names are not case sensitive. Batch, subject and class names must match active rows of the institute (case is ignored). `guardian_password` may be blank when the guardian already has an account, or when an earlier row in the same file creates that guardian.
+- Built in 7.1 (assumed, check against the demo): with the fees feature, `fee_plans` is required (names of active plans, separated by commas, case ignored); `discount` is optional: a percent such as `10%` applies to every listed plan, an amount such as `500` comes off the first plan. `discount` is a Text cell in the template, so Excel keeps the % sign. Without the fees feature both columns are ignored.
 - The checked rows stay on the server in the admin's session; the page gets only a random id (valid 30 minutes, used once). Import checks every row again and enrols each good row in its own transaction.
 - Errors listed per row (missing field, unknown batch/subject/plan, duplicate email). Import is all-or-nothing per row, never partial per row.
 
@@ -270,6 +278,7 @@ Full name*, Institute name*, Phone*, Email, Website, Message*. Saved for Super A
 - Challan amount = monthly fee at generation time (frozen on the challan).
 - Balance = amount - sum of payments. Status: `pending` (no payment), `partial` (some), `paid` (balance 0).
 - Overdue = status pending or partial and today is after due date. Defaulter = overdue longer than grace days.
+- Owner decision 2026-10-17 (backlog P7-2): "today" for fees is the institute's date (its time zone), on every page, PDF and job. A viewer in another zone sees the same "this month" and "overdue" as the office.
 - A cancelled challan cannot receive payments. Cancelling a challan with payments is blocked.
 - Approving a receipt creates a Payment (method Online, reference from the receipt) against the chosen challans, oldest first. Over-payment beyond balance is rejected at submit time.
 - Rejecting a receipt changes nothing on the challan.
@@ -279,6 +288,7 @@ Full name*, Institute name*, Phone*, Email, Website, Message*. Saved for Super A
 - Owner decision 2026-10-16 (Phase 6 audit P6-8): Messages stay open for a blocked student, so they can write to the office; "Access paused" has a "Message the office" button. Every other student page stays closed.
 - If auto-block is on: a nightly job blocks every student who is a defaulter and not exempt, and unblocks once no challan is overdue beyond grace.
 - Manual block and unblock always win until the next auto run changes them. A student marked Exempt is never auto-blocked.
+- Built in 7.6 (assumed, check against the demo): the run is nightly, by each institute's own date. It unblocks only the students it blocked itself (`auto_blocked`), when nothing of theirs is overdue beyond grace or when they became exempt; a manual block is never undone by the run, and a manual unblock of a defaulter lasts until the next run. Owner decision 2026-10-17 (backlog P7-3): turning the setting off opens at once every student the rule blocked; manual blocks stay. The student is told when the state changes (as in 6.2). Portal access shows "Yes, auto" for a block by the rule, and "Fee due" (what the pending and partly paid challans still owe).
 
 ### 6.3 Attendance
 - Attendance is per lecture per student, one row each.
@@ -384,6 +394,7 @@ Lectures counted = lectures with status `finished` in the month, taught by the t
 - Groups (assumed in 6.1): class alerts are the lecture events and "Quiz opens soon"; fee alerts are the challan, receipt and payment events; every other event is a system notice and always goes. Inactive users get nothing. A notification has a short text and a link to a page in the site.
 - Owner decisions 2026-10-16 (Phase 6): a recurring schedule sends one notification per save or edit, not one per lecture; a reply to a broadcast goes only to the sender, in a new private thread; the Messages pages and the compose form say "Institute admins can read all messages."
 - Assumed for 6.2: only the events of built features are hooked (lectures, assignments, quizzes, portal access); each later phase hooks its own. "Lecture changed" means a new start time, duration, teacher or link. "Starts in 15 minutes" and "Quiz opens soon" (1 hour before Opens) come from the 5-minute job. "Submission received" goes for the first answer only. "Quiz graded" goes when the teacher marks the attempt; an MCQ-only quiz is graded at submit and notifies the guardian only. A guardian's notification names the child.
+- Built in 7.4 (assumed, check against the demo): "Challan generated" goes to the student and the guardians when the challan is made. "Due in 3 days" goes to the guardians once, 1 to 3 days before the due date. On the first day after the due date, a challan still pending or partly paid gets the late fee (when the setting is more than 0) and "Overdue" goes to the guardians; the finance admins get one notice per run with the count, linked to Challan records filtered to overdue. A challan gets the late fee only once, and only on that day: a late fee set later is not added to challans already overdue. "Payment recorded" goes to the guardians for an office payment; an approved receipt sends "Receipt approved" instead. Student links go to Fee details, guardian links to Fee and challans. Sub-admins get the overdue notice only when their Finance menu is stored (backlog S15).
 - Built in 6.2 (assumed, check against the demo): the person who makes a change gets no notification about it. "Graded" goes again when the teacher changes the marks, with the new marks. A portal block or unblock goes to the student only when the state changes (the guardian portal is never blocked, SPEC 6.2). Texts show times in each recipient's own zone.
 
 ## 8. Dashboards (KPI definitions)
@@ -406,6 +417,7 @@ Lectures counted = lectures with status `finished` in the month, taught by the t
 - Footer: payment instructions text (editable in settings), signature line, note about late fee (if set).
 - Three copies on one page: Institute, Student, Bank/Office (labelled).
 - Bulk print: all selected challans in one PDF, 1 per page.
+- Built in 7.2 (assumed, check against the demo): A4 landscape, the three copies side by side. No logo yet (no upload storage for it; the institute name, address and phone print instead). "Total payable" is the amount, plus a late fee once added, minus what is paid; the amount in words uses thousand and million. "Previous balance" is the unpaid total of the student's older challans, shown and not added. The payment text is one fixed sentence until a settings field exists. Bulk print takes the Challan records filters, leaves out cancelled challans and stops at 300 challans. Print colours come from `ui/print/tokens.css` (the Lexicon tokens).
 
 ### 9.2 Salary slip
 - Header as above. Title "Salary Slip", slip no., month.
@@ -418,6 +430,11 @@ Header, receipt no., date, student, challan no., amount, method, balance after, 
 
 ### 9.4 Report prints
 Collection and defaulter reports: header, date range, table, totals row, page numbers.
+Built in 7.3c (assumed, check against the demo): Challans, Billed and Discounts count the challans of each row (daily rows by issue date, monthly and yearly rows by the challan month); Collected counts the payments made in the row's dates; Outstanding is what those challans still owe today; cancelled challans are left out. Default dates: Daily this month, Monthly the academic year so far, Yearly the last 5 years. Export CSV puts a quote before any cell that a spreadsheet would run as a formula.
+
+Fee defaulters and the Challan dashboard, built in 7.3c (assumed): a defaulter row adds up every pending or partial challan due more than the grace days ago; "Unpaid months" counts those challans. Phone is the student's guardian phone, else the first guardian's phone. Message guardian shows with the Messages feature and menu; Block / Unblock shows with the People menu and returns to the list. The Challan dashboard counts this month's challans (cancelled left out of the money), Collected is the payments made from the 1st to today, and Overdue is a pending or partial challan of this month past its due date. The defaulters count covers all months.
+
+Built in 7.5 (assumed, check against the demo): student Fee details and guardian Fee and challans show the KPIs (total billed, paid, due, pending challans) over every month, then the challans newest first; cancelled challans are left out. "Amount" is the challan amount plus any late fee. Only the guardian list has Print (SPEC 3), which prints the challan PDF of that child. The student dashboard shows "Fee paid this year" (paid of billed for the challans from the academic year start month, rounded down; "-" when nothing is billed) and "Fee due" (every month). The guardian dashboard has a Fees card: per child, billed and paid this academic year, and what is due now. The admin Main dashboard fee strip (billed, collected, outstanding this month, and receipts waiting) shows only with the fees feature and the Finance menu.
 
 ### 9.5 Certificate (optional, build last)
 Landscape. Institute logo, "Certificate of Completion", student name, batch and subjects, date, unique code and verify link, signature lines. Issued by admin per student on request. Rules for when to issue are manual in v1.
@@ -427,8 +444,9 @@ Landscape. Institute logo, "Certificate of Completion", student name, batch and 
 Built by management command: `uv run python manage.py seed_demo` (needs `DEBUG` and `SEED_DEMO_PASSWORD`; `--reset` removes it). Roadmap 2.8 built the people and academics part below. Each later phase adds the rows for its own models.
 
 - Built in 2.8: 3 classes, 4 batches, 6 subjects, 5 teachers, 52 students (30 active, 22 inactive), 20 guardians, 1 admin, 1 sub-admin, 1 blocked and 1 exempt student. Sign-ins: `demo-admin`, `demo-sub`, `demo-super`, `demo-teacher`, `demo-student` and `demo-guardian` `@example.com`.
+- Built in Phase 7: 3 fee plans (Tuition 4,500 for every active student, Lab 1,000 for every third, Transport 1,500 for every fourth; one 10% and one Rs 500 discount); challans for the last 2 months and this month; the older months are paid in full except by 4 defaulters (students 2, 6, 9 and 13; student 6 is the exempt one, student 2 is a `demo-guardian` child); this month is due a week from today and is mixed paid, partial and pending; 3 waiting receipts (one from `demo-guardian`); late fee 200, added to the 6 overdue challans. `--reset` deletes the fee rows and receipt files before the people.
 - Every student needs a guardian, so "20 guardians (one with two children)" cannot cover 52 students. Decided in 2.8: `demo-guardian` has exactly two children; the other 19 guardians share the other 50 students (2 or 3 each).
-- Waiting for later phases: the sub-admin's Finance and People menus (9.3c; until then `demo-sub` gets 403 on admin pages, backlog S15), fee plans, challans and defaulters (Phase 7), lectures and attendance (Phases 3 and 4), and the rest of the list.
+- Waiting for later phases: the sub-admin's Finance and People menus (9.3c; until then `demo-sub` gets 403 on admin pages, backlog S15), lectures and attendance (Phases 3 and 4), and the rest of the list.
 
 - 1 institute "Demo Institute" on Premium plan, Asia/Karachi, currency Rs.
 - 3 class labels, 4 batches, 6 subjects, 3 fee plans.

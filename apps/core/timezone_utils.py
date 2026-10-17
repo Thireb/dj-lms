@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import date
 from typing import TYPE_CHECKING, Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -65,3 +66,9 @@ def _valid_zone(name: str) -> str:
     except ZoneInfoNotFoundError:
         return "UTC"
     return name
+
+
+def institute_today(institute: Institute) -> date:
+    """Today's date in the institute's zone (UTC when the zone is unknown)."""
+    zone = _valid_zone(getattr(institute, "timezone", "") or "UTC")
+    return timezone.localdate(timezone=ZoneInfo(zone))

@@ -12,6 +12,7 @@ from urllib.parse import urlencode
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
+from django.db.models import Q
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
@@ -22,6 +23,8 @@ from apps.core import menus as menu_keys
 from apps.core.menus import user_has_menu
 from apps.core.query import id_param, search_param
 from apps.core.roles import Role
+from apps.finance.models import FeePlan, StudentFeePlan
+from apps.finance.services import monthly_fees
 from apps.people.bulk_upload import (
     RowCheck,
     UploadError,
@@ -59,6 +62,7 @@ from apps.people.services import (
 from apps.people.ui import (
     BulkPreviewTable,
     PortalAccessTable,
+    StudentFeeTable,
     StudentTable,
     TeacherTable,
     people_summary,
@@ -70,7 +74,7 @@ from apps.ui.components.actions import (
     SignOutForm,
 )
 from apps.ui.components.block_stack import BlockStack
-from apps.ui.components.data import EmptyState
+from apps.ui.components.data import EmptyState, StatCard
 from apps.ui.components.forms import CrispyForm, PortalPostForm
 from apps.ui.components.layout import (
     HeroBanner,
@@ -198,6 +202,12 @@ class StudentListPage(PeopleListPage):
     first_label = "Enrol your first student"
     table_class = StudentTable
     filter_keys = ("q", "batch", "class_label", "status")
+
+    def get_table(self, rows: list[Any], filtered: bool) -> Any:
+        institute = self.get_institute()
+        if not rows or "fees" not in (getattr(institute, "features", None) or ()):
+            return super().get_table(rows, filtered)
+        return StudentFeeTable(rows, fees=monthly_fees(rows), institute=institute)
 
     def get_rows(self, filters: dict[str, str]) -> Any:
         return list_students(
@@ -339,11 +349,33 @@ def _student_details(data: dict[str, Any]) -> StudentDetails:
     )
 
 
-class StudentEnrolPage(PeopleFormPage):
+class StudentFeesMixin:
+    """Fee plans on the student forms when the institute has fees (7.1)."""
+
+    def has_fees(self) -> bool:
+        return "fees" in (getattr(self.get_institute(), "features", None) or ())
+
+    def fee_form_kwargs(self, current: dict | None = None) -> dict[str, Any]:
+        if not self.has_fees():
+            return {}
+        current = current or {}
+        plans = FeePlan.objects.for_user(self.request.user).filter(
+            Q(is_active=True) | Q(pk__in=list(current))
+        )
+        return {"fee_plans": list(plans.order_by("name")), "current_fees": current}
+
+    def fee_choices(self, form: Any) -> list | None:
+        return form.fee_choices() if self.has_fees() else None
+
+
+class StudentEnrolPage(StudentFeesMixin, PeopleFormPage):
     title = "Enrol student"
     url_prefix = "student"
     form_class = StudentEnrolForm
     success_message = "Student enrolled."
+
+    def get_form_kwargs(self) -> dict[str, Any]:
+        return {**super().get_form_kwargs(), **self.fee_form_kwargs()}
 
     def save(self, form: StudentEnrolForm) -> None:
         data = form.cleaned_data
@@ -356,10 +388,11 @@ class StudentEnrolPage(PeopleFormPage):
             guardian_name=data["guardian_name"],
             guardian_email=data["guardian_email"],
             guardian_password=data["guardian_password"],
+            fee_plans=self.fee_choices(form),
         )
 
 
-class StudentEditPage(ProfileEditPage):
+class StudentEditPage(StudentFeesMixin, ProfileEditPage):
     title = "Edit student"
     url_prefix = "student"
     model = StudentProfile
@@ -367,7 +400,15 @@ class StudentEditPage(ProfileEditPage):
     success_message = "Student saved."
 
     def get_form_kwargs(self) -> dict[str, Any]:
-        return {**super().get_form_kwargs(), "current_label": self.profile.class_label}
+        current = {
+            row.fee_plan_id: row
+            for row in StudentFeePlan.objects.filter(student=self.profile)
+        }
+        return {
+            **super().get_form_kwargs(),
+            "current_label": self.profile.class_label,
+            **self.fee_form_kwargs(current),
+        }
 
     def get_initial(self) -> dict[str, Any]:
         student = self.profile
@@ -392,6 +433,7 @@ class StudentEditPage(ProfileEditPage):
             _student_details(data),
             email=data["email"],
             selections=form.selections(),
+            fee_plans=self.fee_choices(form),
         )
 
 
@@ -647,6 +689,37 @@ class AdminDashboardPage(DashboardPage):
             for index, (label, icon, url_name) in enumerate(allowed)
         ]
 
+    def get_stat_cards(self) -> list[Any]:
+        """SPEC 8 fee strip: billed, collected and outstanding this month,
+        and the receipts waiting (fees feature and Finance menu)."""
+        from apps.finance.reports import month_money
+        from apps.finance.ui import money, month_text
+
+        institute = self.get_institute()
+        features = getattr(institute, "features", None) or ()
+        if "fees" not in features or not self.can_open(menu_keys.FINANCE):
+            return []
+        numbers = month_money(self.request.user, self.institute_today())
+        month = month_text(numbers.month)
+        return [
+            StatCard(
+                money(numbers.billed, institute),
+                f"Billed in {month}",
+                icon="receipt-text",
+            ),
+            StatCard(
+                money(numbers.collected, institute),
+                f"Collected in {month}",
+                icon="banknote",
+            ),
+            StatCard(
+                money(numbers.outstanding, institute),
+                f"Outstanding for {month}",
+                icon="coins",
+            ),
+            StatCard(str(numbers.waiting_receipts), "Receipts waiting", icon="inbox"),
+        ]
+
     def get_sections(self) -> list[Any]:
         data = self.data
         show_names = self.can_open(menu_keys.PEOPLE)
@@ -774,7 +847,15 @@ class PortalAccessActionView(ProfileObjectMixin, PortalPageView):
             setter, values, done = action
             setter(student, **values)
             messages.success(request, done.format(name=student))
-        return HttpResponseRedirect(reverse("admin:portal_access"))
+        return HttpResponseRedirect(admin_back_url(request.POST.get("next", "")))
+
+
+def admin_back_url(wanted: str) -> str:
+    """Back to the admin page the action came from (the Fee defaulters list),
+    only a path under /admin/; else Portal access."""
+    home = reverse("admin:home")
+    ok = wanted.startswith(home) and "//" not in wanted and wanted.isprintable()
+    return wanted if ok and "\\" not in wanted else reverse("admin:portal_access")
 
 
 # Guardian child switcher (backlog LC7, UI-GUIDELINES: guardian top bar)

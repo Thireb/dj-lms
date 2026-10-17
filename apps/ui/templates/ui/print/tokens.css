@@ -1,0 +1,10 @@
+/* Lexicon tokens for printed PDFs (WeasyPrint cannot use the Tailwind
+   build). The same values as UI-GUIDELINES section 2; keep them in step. */
+:root {
+  --primary: #002DA8;
+  --text: #16182B;
+  --ink-2: #4A5068;
+  --muted: #636A85;
+  --border: #E6E8F0;
+  --border-strong: #C9CEDD;
+}

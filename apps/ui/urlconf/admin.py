@@ -5,6 +5,7 @@ from django.urls import path
 from apps.academics import views as academics
 from apps.assessments import views as assessments
 from apps.attendance import views as attendance
+from apps.finance import views as finance
 from apps.institutes.views import CampusProfilePage, InstituteSettingsPage
 from apps.lectures import views as lectures
 from apps.messaging import views as messaging
@@ -204,5 +205,82 @@ urlpatterns = [
         "messages/monitor/<int:pk>/",
         messaging.MonitorThreadPage.as_view(),
         name="message_monitor_thread",
+    ),
+    # Fees (Phase 7)
+    path("fee-plans/", finance.FeePlanListPage.as_view(), name="fee_plan_list"),
+    path("fee-plans/add/", finance.FeePlanCreatePage.as_view(), name="fee_plan_create"),
+    path(
+        "fee-plans/<int:pk>/edit/",
+        finance.FeePlanEditPage.as_view(),
+        name="fee_plan_edit",
+    ),
+    path(
+        "fee-plans/<int:pk>/status/",
+        finance.FeePlanStatusView.as_view(),
+        name="fee_plan_status",
+    ),
+    path("challans/", finance.ChallanListPage.as_view(), name="challan_list"),
+    path(
+        "challans/generate/",
+        finance.ChallanGeneratePage.as_view(),
+        name="challan_generate",
+    ),
+    path(
+        "challans/<int:pk>/", finance.ChallanDetailPage.as_view(), name="challan_detail"
+    ),
+    path(
+        "challans/<int:pk>/cancel/",
+        finance.ChallanCancelView.as_view(),
+        name="challan_cancel",
+    ),
+    path("challans/print/", finance.ChallanPrintView.as_view(), name="challan_print"),
+    path(
+        "challans/<int:pk>/pdf/", finance.ChallanPdfView.as_view(), name="challan_pdf"
+    ),
+    path(
+        "challans/<int:pk>/pay/", finance.ChallanPayPage.as_view(), name="challan_pay"
+    ),
+    path("payments/", finance.PaymentProcessPage.as_view(), name="payment_process"),
+    path(
+        "payments/<int:pk>/receipt/",
+        finance.PaymentReceiptView.as_view(),
+        name="payment_receipt",
+    ),
+    path(
+        "students/<int:pk>/fees/",
+        finance.StudentFeeHistoryPage.as_view(),
+        name="student_fee_history",
+    ),
+    path("receipts/", finance.ReceiptInboxPage.as_view(), name="receipt_inbox"),
+    path(
+        "receipts/<int:pk>/", finance.ReceiptDetailPage.as_view(), name="receipt_detail"
+    ),
+    path(
+        "receipts/<int:pk>/approve/",
+        finance.ReceiptApproveView.as_view(),
+        name="receipt_approve",
+    ),
+    path(
+        "receipts/<int:pk>/reject/",
+        finance.ReceiptRejectView.as_view(),
+        name="receipt_reject",
+    ),
+    path(
+        "receipts/<int:pk>/file/",
+        finance.AdminReceiptFileView.as_view(),
+        name="receipt_file",
+    ),
+    path("fees/daily/", finance.DailyReportPage.as_view(), name="fee_report_daily"),
+    path(
+        "fees/monthly/", finance.MonthlyReportPage.as_view(), name="fee_report_monthly"
+    ),
+    path("fees/yearly/", finance.YearlyReportPage.as_view(), name="fee_report_yearly"),
+    path(
+        "fees/defaulters/", finance.FeeDefaultersPage.as_view(), name="fee_defaulters"
+    ),
+    path(
+        "dashboard/challan/",
+        finance.ChallanDashboardPage.as_view(),
+        name="dashboard_challan",
     ),
 ]

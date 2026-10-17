@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     "apps.accounts",
     "apps.core",
     "apps.institutes",
+    "apps.finance",
     "apps.lectures",
     "apps.messaging",
     "apps.notifications",
@@ -48,6 +49,13 @@ REMEMBER_ME_SECONDS = 60 * 60 * 24 * 14
 # Client IP for sign-in limits: a header your proxy always sets, for example
 # HTTP_X_REAL_IP. Empty means REMOTE_ADDR (no proxy).
 TRUSTED_PROXY_IP_HEADER = os.environ.get("TRUSTED_PROXY_IP_HEADER", "")
+
+# Private uploads (guardian fee receipts, roadmap 7.3b; owner decision
+# 2026-10-16): outside static and never served directly; a view that checks
+# the user's access streams each file. Use a persistent volume in production.
+PRIVATE_MEDIA_ROOT = Path(
+    os.environ.get("PRIVATE_MEDIA_ROOT") or BASE_DIR / "private_media"
+)
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = ("ui/forms",)
@@ -157,6 +165,18 @@ CELERY_BEAT_SCHEDULE = {
     "remind-quizzes": {
         "task": "apps.assessments.tasks.remind_all_quizzes",
         "schedule": crontab(minute="*/5"),
+    },
+    # Fee reminders and the late fee, by each institute's date (roadmap 7.4).
+    "remind-challans": {
+        "task": "apps.finance.tasks.remind_all_challans",
+        "schedule": crontab(minute=15),
+    },
+    # Block and unblock defaulters when the setting is on (roadmap 7.6).
+    # 21:30 UTC is after midnight in Pakistan (UTC+5); each institute uses
+    # its own date.
+    "apply-defaulter-rules": {
+        "task": "apps.finance.tasks.apply_all_defaulter_rules",
+        "schedule": crontab(hour=21, minute=30),
     },
     # Notifications older than 90 days are deleted (roadmap 6.1, SPEC 7).
     "delete-old-notifications": {

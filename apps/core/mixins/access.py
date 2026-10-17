@@ -80,9 +80,12 @@ class TenantRequiredMixin:
 
 
 class MenuRequiredMixin:
-    """Admin views: sub_admin must have ``menu_key`` in ``user.allowed_menus``."""
+    """Admin views: sub_admin must have ``menu_key`` in ``user.allowed_menus``,
+    and every key of ``extra_menu_keys`` too (a page that shows another
+    menu's data, such as the Challan dashboard, backlog P7-1)."""
 
     menu_key: str | None = None
+    extra_menu_keys: tuple[str, ...] = ()
     self_service: bool = False
     admin_only: bool = False
 
@@ -121,6 +124,7 @@ class MenuRequiredMixin:
 
         if key and role == Role.SUB_ADMIN:
             allowed = getattr(user, "allowed_menus", None) or []
-            if key not in allowed:
+            needed = (key, *getattr(self, "extra_menu_keys", ()))
+            if any(each not in allowed for each in needed):
                 return forbidden_response(request)
         return super().dispatch(request, *args, **kwargs)

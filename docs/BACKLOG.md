@@ -155,7 +155,7 @@ Status: `[ ]` open, `[x]` done. Priority: **High** = fix before merge or before 
 | S6 | The URL walker only checked roles outside `allowed_roles`, so adding `Role.TEACHER` to an admin page passed every test (found by the 2.5a mutation check). Fixed: the walker now asserts admin portal views allow only `institute_admin` and `sub_admin`. | 2.5a build | Medium | [x] |
 | S7 | `DetailPageBody` rendered its cards without `request`, so a form inside a card had no CSRF token (same cause as S2). Fixed with `render_child`; test added. | 2.6 build | Medium | [x] |
 | S8 | Bulk upload runs in the web request: about 0.55 s of password hashing per row, so files were capped at 50 rows; the Phase 2 audit (H6) lowered the cap to 15 and set the gunicorn timeout to 120 s in DEPLOYMENT.md. Move the import to a Celery task when Celery arrives (roadmap 3.2), then raise the cap. Celery is set up in 3.2; the move is its own branch (it needs a progress page). | 2.6 build | Low | [ ] |
-| S9 | Automatic defaulter blocking (SPEC 6.2) is not part of 2.7: it needs challans and overdue data from Phase 7. Build it as roadmap 7.6 on top of the 2.7 block and exempt fields; manual block and unblock must still win until the next run. | 2.4 planning | High | [ ] |
+| S9 | Automatic defaulter blocking (SPEC 6.2) is not part of 2.7: it needs challans and overdue data from Phase 7. Build it as roadmap 7.6 on top of the 2.7 block and exempt fields; manual block and unblock must still win until the next run. Done in 7.6 (Phase 7 PR). | 2.4 planning | High | [x] |
 | S10 | Layout forms never showed non-field errors (`whole_uni_form.html`), so "Passwords do not match." and service errors mapped to the whole form were hidden. Fixed; test added. | Phase 2 audit | Medium | [x] |
 
 ## Phase 2 audit (external review, fixed in one PR)
@@ -200,7 +200,7 @@ Claims the audit tested that did not hold: overlong cells do not give a 500 on i
 | S12 | WhiteNoise is not installed, so static files do not load with `DEBUG=False`. New dependency (ask first). | Phase 2 audit M7 | High before deploy | [ ] |
 | S13 | No `/health/` route for the uptime check. Fixed: `/health/` checks the database (200 or 503, no details), open to everyone, not cached, not redirected to https. | Phase 2 audit M7 | High before deploy | [x] |
 | S14 | The sign-in limits need one shared cache; `prod.py` uses Redis when `REDIS_URL` is set, but the `redis` package is not installed (new dependency, ask first). Fixed in 3.2: `redis` and `celery` added with the owner's approval. | Phase 2 audit H1 | High before deploy | [x] |
-| S15 | Sub-admins have no `allowed_menus` until 9.3c, so `demo-sub` gets 403 on every admin page. 9.3c must add the field, the seed grants (Finance and People per SPEC 10) and tests; the dashboard already hides people names without People. | Phase 2 audit M9 | Medium | [ ] |
+| S15 | Sub-admins have no `allowed_menus` until 9.3c, so `demo-sub` gets 403 on every admin page. 9.3c must add the field, the seed grants (Finance and People per SPEC 10) and tests; the dashboard already hides people names without People. Also closes P7-4: test that a sub-admin with Finance gets the fee notices. | Phase 2 audit M9 | Medium | [ ] |
 | S16 | openpyxl parses XML without `defusedxml`. No attack worked against Python 3.13's expat limits; add `defusedxml` as defense in depth when dependencies are next reviewed. | Phase 2 audit | Low | [ ] |
 | S17 | No automated browser test: the 360px layout was checked once with headless Chromium. Add one with the JS test runner (B18). Partly done 2026-10-16: `./scripts/browser-walk.sh` opens every portal page at 360px and 1440px (status, sideways scroll, console errors, axe) and runs at each handover. It is not in CI yet (it needs Chromium and loads axe from a CDN). | Phase 2 audit | Low | [ ] |
 | S18 | The notification bell in the admin top bar was a near-black icon on the dark bar (rgb(12,27,31) on rgb(0,48,61)), so it looked cut off in the Phase 2 walkthrough video. The bell now inherits the bar's light text colour, and its hover uses `bg-primary/20` instead of the light `bg-page`. Checked in Chromium at 1280px and 390px. | Phase 2 walkthrough | Low | [x] |
@@ -335,6 +335,33 @@ Full review of roadmap 6.1 to 6.3 on the local `phase/6` branch (one PR for the 
 | P6-7 | Polling: each portal page now loads 2 small HTMX parts (the bell count and the Messages badge) and refreshes both every 60 seconds, on top of "Up next" every 30 seconds (P3-8). Join them into one request, or use a longer interval, before large institutes. | Low | [ ] |
 | P6-8 | A blocked student (portal access paused) cannot open Messages, because every `/student/` page shows "Access paused". The page shows the institute phone (SPEC 6.2). Decide if a blocked student may still message the office. Owner decision 2026-10-16: yes. Messages stay open while blocked (the reach rule does not change), and "Access paused" has a "Message the office" button. | Low | [x] |
 | P6-9 | A notification text keeps the time in the zone the recipient had when it was made; a later time zone change does not rewrite old notifications. Accepted: the zone name is in the text. | Low | [x] |
+
+## Phase 7 audit (2026-10-17, on `phase/7`)
+
+This was a full review of roadmap 7.1 to 7.6 and the demo fees, on the local `phase/7` branch (one PR for the phase).
+- **Checks:** pytest 2719 passed. Ruff and makemigrations are clean. The mutation check gave 690 caught, 0 missed, 0 stale.
+- **Browser walk:** `./scripts/browser-walk.sh` opened 242 pages for the 5 demo roles at 360px and 1440px. All answered 200, with no sideways scroll, no console errors and no axe WCAG A/AA findings.
+- **Screenshots** at both widths: Fee defaulters, the Challan dashboard, the student and guardian fee pages, and the 3 dashboards.
+- **Security pass:**
+  - `unscoped` appears only in the demo resets.
+  - Every finance view gets `allowed_roles` from its mixin.
+  - There is no `|safe`.
+  - The actions are POST forms with CSRF.
+  - The receipt files are private, with `nosniff` and `no-store`.
+  - The Block / Unblock "next" accepts only an `/admin/` path.
+- **By hand:** the challan page, the PDF and the reports show and count the late fee.
+
+After the owner decisions of 2026-10-17 (P7-1, P7-2 and P7-3 fixed on `phase/7`):
+- **Checks:** pytest 2725 passed. Ruff and makemigrations are clean. The mutation check gave 698 caught, 0 missed, 0 stale.
+- **Browser walk:** 242 pages, all clean.
+
+| # | Item | Priority | Status |
+|---|---|---|---|
+| P7-1 | The Challan dashboard uses the Dashboards menu key (FEATURES 11 menu), so a sub-admin with Dashboards but without Finance sees this month's fee totals. The Main dashboard fee strip needs Finance. Decide if the Challan dashboard should need Finance too. Owner decision 2026-10-17: yes. A sub-admin needs Dashboards and Finance for the page and its menu item (`extra_menu_keys`). | Low | [x] |
+| P7-2 | The dashboards and fee pages take "today" in the viewer's own zone; the reminder and defaulter jobs use the institute's zone. Near midnight a viewer in another zone can see a different "this month" or "overdue". Owner decision 2026-10-17: every fee date uses the institute's date (`institute_today`); times in notifications stay in each recipient's zone. | Low | [x] |
+| P7-3 | Turning "Auto-block defaulters" off leaves the students the rule blocked still blocked (assumed; SPEC 6.2 says nothing). Decide if switching it off should open them. Owner decision 2026-10-17: yes. Saving the settings with the rule switched off opens every student the rule blocked; manual blocks stay. | Low | [x] |
+| P7-4 | Fee notices for sub-admins (receipt submitted, challans overdue) wait for stored sub-admin menus (backlog S15): the jobs load users from the database, where a sub-admin has no menus yet. Owner decision 2026-10-17: close it with S15; S15 adds a test that a sub-admin with Finance gets "receipt submitted". | Low | [ ] |
+| P7-5 | The bulk print test counted PDF pages with a regular expression that cut a compressed stream ending in a carriage return, so it failed on some dates. Fixed: the counter keeps the end bytes. | Low | [x] |
 
 ## Later (deployment hardening, Phase 12)
 

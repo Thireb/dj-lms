@@ -86,6 +86,7 @@ class StudentMenu:
                         "Fee details",
                         "student:fee_details",
                         "coins",
+                        menu_key="fee_details",
                         feature="fees",
                     ),
                 ),

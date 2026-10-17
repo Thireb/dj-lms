@@ -29,13 +29,21 @@ from apps.assessments.models import (
     QuizQuestion,
     Submission,
 )
+from apps.core.features import ALL_FEATURE_KEYS
 from apps.core.roles import Role
 from apps.core.tenancy import tenant_context
+from apps.finance.models import Challan, FeePlan, Payment, ReceiptSubmission
+from apps.institutes.models import Plan
 from apps.lectures.models import Lecture, LectureStatus, RecurringSchedule
 from apps.messaging.models import Draft, Thread, ThreadMember
 from apps.notifications.models import Notification
 from apps.notifications.services import notify
-from apps.people.models import StudentProfile, TeacherProfile
+from apps.people.models import (
+    GuardianProfile,
+    GuardianStudentLink,
+    StudentProfile,
+    TeacherProfile,
+)
 from apps.people.services import create_student_profile, create_teacher_profile
 from apps.ui.views.pages import PortalPageView
 from django.test import Client
@@ -398,6 +406,92 @@ def _thread(institute) -> int:
     return thread.pk
 
 
+def _challan(institute) -> int:
+    # unscoped: test setup outside a tenant context.
+    existing = Challan.unscoped.filter(institute=institute).first()
+    if existing is not None:
+        return existing.pk
+    today = timezone.localdate()
+    return Challan.unscoped.create(
+        institute=institute,
+        student_id=_student(institute),
+        number="CH-WALKER-0001",
+        month=today.replace(day=1),
+        issue_date=today,
+        due_date=today,
+        amount=1000,
+    ).pk
+
+
+def _payment(institute) -> int:
+    # unscoped: test setup outside a tenant context.
+    challan = Challan.unscoped.get(pk=_challan(institute))
+    payment, _ = Payment.unscoped.get_or_create(
+        institute=institute,
+        number="PAY-WALKER-0001",
+        defaults={
+            "challan": challan,
+            "student_id": challan.student_id,
+            "amount": 100,
+            "paid_on": challan.issue_date,
+            "method": "cash",
+        },
+    )
+    return payment.pk
+
+
+def _link_walker_guardian(institute, student_pk: int) -> None:
+    """Link the student to the walker guardian when that user exists (the
+    guardian routes show only their children)."""
+    guardian = User.objects.filter(email="guardian-walker@example.com").first()
+    if guardian is not None:
+        # unscoped: test setup outside a tenant context.
+        profile, _ = GuardianProfile.unscoped.get_or_create(
+            institute=institute, user=guardian
+        )
+        GuardianStudentLink.unscoped.get_or_create(
+            institute=institute, guardian=profile, student_id=student_pk
+        )
+
+
+def _guardian_challan(institute) -> int:
+    pk = _challan(institute)
+    # unscoped: test setup outside a tenant context.
+    _link_walker_guardian(institute, Challan.unscoped.get(pk=pk).student_id)
+    return pk
+
+
+def _receipt(institute) -> int:
+    """A receipt with a file, for a student linked to the walker guardian
+    when that user exists (the guardian route shows only their children)."""
+    from django.core.files.base import ContentFile
+
+    # unscoped: test setup outside a tenant context.
+    existing = ReceiptSubmission.unscoped.filter(institute=institute).first()
+    student_pk = _student(institute)
+    _link_walker_guardian(institute, student_pk)
+    if existing is not None:
+        return existing.pk
+    receipt = ReceiptSubmission(
+        institute=institute,
+        student_id=student_pk,
+        number="RCP-WALKER",
+        amount=100,
+        paid_on=timezone.localdate(),
+    )
+    receipt.file.save("walker.pdf", ContentFile(b"%PDF-1.4\n"), save=False)
+    receipt.save()
+    return receipt.pk
+
+
+def _fee_plan(institute) -> int:
+    # unscoped: test setup outside a tenant context.
+    plan, _ = FeePlan.unscoped.get_or_create(
+        institute=institute, name="Walker", defaults={"amount": 1000}
+    )
+    return plan.pk
+
+
 def _draft(institute) -> int:
     email = "drafter-walker@example.com"
     owner = User.objects.filter(email=email).first() or make_user(
@@ -451,6 +545,18 @@ ROUTE_OBJECTS = {
     "student:quiz_event": _live_quiz,
     "student:quiz_attempt": _attempt,
     "notifications:open": _notification,
+    **{f"admin:fee_plan_{action}": _fee_plan for action in ("edit", "status")},
+    **{f"admin:challan_{action}": _challan for action in ("detail", "cancel", "pdf")},
+    "admin:challan_print": _challan,  # no pk: makes a challan to print
+    "admin:challan_pay": _challan,
+    "admin:payment_receipt": _payment,
+    "admin:student_fee_history": _student,
+    **{
+        f"admin:receipt_{action}": _receipt
+        for action in ("detail", "approve", "reject", "file")
+    },
+    "guardian:receipt_file": _receipt,
+    "guardian:challan_pdf": _guardian_challan,
     **{
         f"{portal}:message_{action}": _thread
         for portal in ("admin", "teacher", "student", "guardian")
@@ -527,6 +633,13 @@ def test_roles_outside_allowed_roles_get_403(route: Route, institute_a) -> None:
 @pytest.mark.django_db
 @pytest.mark.parametrize("route", PRODUCT_ROUTES, ids=lambda r: r.name)
 def test_an_allowed_role_gets_through(route: Route, institute_a) -> None:
+    feature = getattr(route.view_class, "feature_key", None)
+    if feature and feature not in institute_a.features:
+        # A Premium feature (fees): the walker's institute is on Basic.
+        institute_a.plan = Plan.objects.create(
+            code="walker-all", name="Walker", feature_keys=sorted(ALL_FEATURE_KEYS)
+        )
+        institute_a.save()
     statuses = {}
     for role in route.view_class.allowed_roles:
         client = Client()

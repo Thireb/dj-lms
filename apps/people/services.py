@@ -9,7 +9,7 @@ from typing import Any
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import Prefetch, Q, QuerySet
+from django.db.models import F, OuterRef, Prefetch, Q, QuerySet, Subquery, Sum
 
 from apps.academics.models import ClassLabel, StudentBatchSubject, TeacherBatchSubject
 from apps.academics.services import (
@@ -20,6 +20,7 @@ from apps.academics.services import (
 from apps.accounts.models import User
 from apps.core.roles import Role
 from apps.core.tenancy import require_tenant_context
+from apps.finance.services import set_student_fee_plans
 from apps.institutes.models import Institute
 from apps.notifications.services import notify
 from apps.people.models import (
@@ -36,16 +37,22 @@ STUDENT_CODE_PREFIX = "STU"
 TEACHER_CODE_PREFIX = "TCH"
 
 
-def next_code(institute: Institute, prefix: str) -> str:
-    """Return the next code for the prefix. Numbers are never reused."""
+def next_number(institute: Institute, key: str) -> int:
+    """The next number for a key (at most 8 characters). Numbers are never
+    reused; the row lock keeps two saves from getting the same one."""
     require_tenant_context(institute)
     with transaction.atomic():
         sequence, _ = CodeSequence.objects.select_for_update().get_or_create(
-            institute=institute, prefix=prefix
+            institute=institute, prefix=key
         )
         sequence.last_number += 1
         sequence.save(update_fields=["last_number"])
-    return f"{prefix}-{sequence.last_number:03d}"
+    return sequence.last_number
+
+
+def next_code(institute: Institute, prefix: str) -> str:
+    """Return the next code for the prefix, like STU-054."""
+    return f"{prefix}-{next_number(institute, prefix):03d}"
 
 
 @transaction.atomic
@@ -386,6 +393,7 @@ def enrol_student(
     guardian_name: str,
     guardian_email: str,
     guardian_password: str,
+    fee_plans: list | None = None,
 ) -> StudentProfile:
     """Create the student account, profile, links and guardian in one step.
 
@@ -408,6 +416,8 @@ def enrol_student(
     student.student_code = next_code(institute, STUDENT_CODE_PREFIX)
     student.save()
     _set_pairs(student, selections)
+    if fee_plans is not None:  # None: the institute has no fees feature
+        set_student_fee_plans(student, fee_plans)
     first_name, last_name = split_full_name(guardian_name)
     enrol_guardian(
         student,
@@ -427,8 +437,10 @@ def update_student(
     *,
     email: str,
     selections: Selections,
+    fee_plans: list | None = None,
 ) -> StudentProfile:
-    """Edit details, sign-in email and batches. The guardian link stays."""
+    """Edit details, sign-in email, batches and (with fees) the fee plans.
+    The guardian link stays."""
     require_tenant_context(student.institute)
     user = student.user
     user.email = _check_email_free(email, "email", user=user)
@@ -438,6 +450,8 @@ def update_student(
     _apply_details(student, details)
     student.save()
     _set_pairs(student, selections)
+    if fee_plans is not None:
+        set_student_fee_plans(student, fee_plans)
     return student
 
 
@@ -460,12 +474,16 @@ def _access_rule(student: StudentProfile) -> PortalAccessRule:
 
 
 @transaction.atomic
-def set_portal_blocked(student: StudentProfile, *, blocked: bool) -> PortalAccessRule:
-    """Manual block or unblock; it wins until the next automatic run (7.6)."""
+def set_portal_blocked(
+    student: StudentProfile, *, blocked: bool, by_rule: bool = False
+) -> PortalAccessRule:
+    """Manual block or unblock; it wins until the next automatic run (7.6).
+    ``by_rule`` marks a change made by the defaulter rule."""
     rule = _access_rule(student)
     changed = rule.blocked != blocked
     rule.blocked = blocked
-    rule.save(update_fields=["blocked", "changed_at"])
+    rule.auto_blocked = blocked and by_rule
+    rule.save(update_fields=["blocked", "auto_blocked", "changed_at"])
     if changed:
         text = (
             "Your student portal is paused. Contact the institute office."
@@ -492,8 +510,25 @@ def student_portal_blocked(user: object) -> bool:
 def list_portal_access(
     user: object, *, search: str = "", blocked: str = "", exempt: str = ""
 ) -> QuerySet[StudentProfile]:
-    """Students with their access rule; "yes"/"no" filter blocked and exempt."""
-    students = list_students(user, search=search).select_related("access_rule")
+    """Students with their access rule and ``fee_due`` (what their pending
+    and partly paid challans still owe); "yes"/"no" filter blocked and
+    exempt."""
+    from apps.finance.models import Challan, ChallanStatus
+
+    owed = (
+        Challan.objects.filter(
+            student=OuterRef("pk"),
+            status__in=[ChallanStatus.PENDING, ChallanStatus.PARTIAL],
+        )
+        .values("student")
+        .annotate(total=Sum(F("amount") + F("late_fee") - F("paid")))
+        .values("total")
+    )
+    students = (
+        list_students(user, search=search)
+        .select_related("access_rule", "institute")
+        .annotate(fee_due=Subquery(owed))
+    )
     for name, value in (("blocked", blocked), ("exempt", exempt)):
         if value == "yes":
             students = students.filter(**{f"access_rule__{name}": True})

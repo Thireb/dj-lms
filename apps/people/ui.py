@@ -122,6 +122,25 @@ class StudentTable(DataTable):
     empty_title = "No students match these filters."
 
 
+class StudentFeeTable(StudentTable):
+    """All Students with "Monthly fee" (SPEC 3), when the institute has fees.
+    ``fees`` maps a student pk to the monthly fee (one query per page)."""
+
+    def __init__(self, rows, fees, institute, **props):
+        self.fees, self.institute = fees, institute
+        super().__init__(rows, **props)
+
+    @property
+    def columns(self) -> list[Column]:  # type: ignore[override]
+        from apps.finance.ui import money
+
+        fee = Column(
+            "fee", "Monthly fee", lambda s: money(self.fees.get(s.pk), self.institute)
+        )
+        base = list(StudentTable.columns)
+        return [*base[:-2], fee, *base[-2:]]
+
+
 def _row_result(row) -> BlockStack:
     if row.ok:
         return BlockStack(blocks=[Badge("Ready", tone="success")])
@@ -197,6 +216,20 @@ def _access(student: StudentProfile) -> tuple[bool, bool]:
     return rule.blocked, rule.exempt
 
 
+def _blocked_badge(student: StudentProfile) -> Badge:
+    if not _access(student)[0]:
+        return _yes_no(False, "danger")
+    auto = student.access_rule.auto_blocked
+    return Badge("Yes, auto" if auto else "Yes", tone="danger")
+
+
+def _fee_due(student: StudentProfile) -> str:
+    from apps.finance.ui import money
+
+    due = getattr(student, "fee_due", None)
+    return money(due, student.institute) if due else "-"
+
+
 def _yes_no(value: bool, yes_tone: str) -> Badge:
     return Badge("Yes", tone=yes_tone) if value else Badge("No", tone="neutral")
 
@@ -242,13 +275,15 @@ def _access_actions(student: StudentProfile) -> ButtonRow:
 
 
 class PortalAccessTable(DataTable):
-    """SPEC 3 Portal Access. Fee due comes with Phase 7."""
+    """SPEC 3 Portal Access. "Fee due" is what the open challans still owe
+    (roadmap 7.6); a block by the defaulter rule shows "Yes, auto"."""
 
     columns = [
         Column("name", "Student", person),
         Column("class_label", "Class", lambda s: s.class_label or ""),
         Column("guardian", "Guardian", _guardians),
-        Column("blocked", "Blocked", lambda s: _yes_no(_access(s)[0], "danger")),
+        Column("fee_due", "Fee due", _fee_due),
+        Column("blocked", "Blocked", _blocked_badge),
         Column("exempt", "Exempt", lambda s: _yes_no(_access(s)[1], "info")),
         Column("actions", "", _access_actions),
     ]

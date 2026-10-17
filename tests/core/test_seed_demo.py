@@ -318,3 +318,52 @@ def test_seed_demo_adds_assessments_once(demo_env) -> None:
     assert not quizzes.all().exists() and not attempts.all().exists()
     assert not assignments.exists() and not answers.exists()
     assert not questions.all().exists()  # all(): a new query, not the cache
+
+
+@pytest.mark.django_db
+def test_seed_demo_adds_fees_once_and_reset_removes_them(demo_env) -> None:
+    """SPEC 10: 3 fee plans, 3 months of challans (paid, partial, pending,
+    overdue), 3 waiting receipts, 4 defaulters."""
+    from apps.core.tenancy import tenant_context
+    from apps.finance.models import (
+        Challan,
+        FeePlan,
+        Payment,
+        ReceiptStatus,
+        ReceiptSubmission,
+    )
+    from apps.finance.reports import defaulters
+
+    call_command("seed_demo")
+    call_command("seed_demo")
+    institute = Institute.objects.get(name="Demo Institute")
+    # unscoped: test assertions outside a tenant context.
+    assert FeePlan.unscoped.filter(institute=institute).count() == 3
+    challans = Challan.unscoped.filter(institute=institute)
+    assert challans.count() == 3 * 30
+    assert challans.values("month").distinct().count() == 3
+    assert {"paid", "partial", "pending"} <= set(
+        challans.values_list("status", flat=True)
+    )
+    late = challans.filter(late_fee=Decimal("200"))
+    assert late.count() == 6 and late.filter(overdue_on__isnull=False).count() == 6
+    receipts = ReceiptSubmission.unscoped.filter(institute=institute)
+    assert receipts.filter(status=ReceiptStatus.WAITING).count() == 3
+    admin = User.objects.get(email="demo-admin@example.com")
+    from apps.core.timezone_utils import institute_today
+
+    with tenant_context(institute):
+        rows = defaulters(admin, institute, institute_today(institute))
+    assert len(rows) == 4
+    exempt = PortalAccessRule.unscoped.get(student__user__email__contains="-06@")
+    assert exempt.exempt and exempt.student.pk in {r.student.pk for r in rows}
+
+    files = [receipt.file.path for receipt in receipts]
+    call_command("seed_demo", "--reset")
+    import os
+
+    assert not Challan.unscoped.filter(institute=institute).exists()
+    assert not Payment.unscoped.filter(institute=institute).exists()
+    assert not any(os.path.exists(path) for path in files)
+    call_command("seed_demo")
+    assert Challan.unscoped.filter(institute=institute).count() == 90

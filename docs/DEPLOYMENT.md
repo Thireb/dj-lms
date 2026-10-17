@@ -21,12 +21,13 @@ All run as Docker containers.
 - **PostgreSQL:** main database (Pethost service or our container).
 - **Redis:** Celery broker and cache (Pethost service or our container).
 - **Object storage:** Cloudflare R2 or S3 for uploads, PDFs, recordings. Do not rely on container disk.
+- **Private uploads (owner decision 2026-10-16):** fee receipts are stored on local disk at `PRIVATE_MEDIA_ROOT`, outside the web root. Mount a persistent volume there (shared by web and worker) and include it in backups. S3 can replace it later with a settings change.
 
 ## 2. Docker config
 
 - One `Dockerfile` for the app image, shared by web, worker and beat.
 - One production compose file in the repo root that defines all services.
-- Image build: install dependencies, build Tailwind CSS, collect static files.
+- Image build: install the WeasyPrint system libraries (`libpango-1.0-0`, `libpangoft2-1.0-0`, `libharfbuzz-subset0` on Debian or Ubuntu), install dependencies, build Tailwind CSS, collect static files.
 - Start command (web): `gunicorn config.wsgi --timeout 120`. Keep the 120 s timeout until the bulk upload runs in Celery (backlog S8): a 15-row import hashes up to 30 passwords in one request.
 - Start command (worker): `celery -A config worker -l info`.
 - Start command (beat): `celery -A config beat -l info`.
